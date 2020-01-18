@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="Perms:jar">
+    <output-path>$USER_HOME$/Desktop/Plugins</output-path>
+    <root id="archive" name="Perms.jar">
+      <element id="module-output" name="Perms" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/jetbrains/annotations/17.0.0/annotations-17.0.0.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>
