@@ -20,7 +20,7 @@ public abstract class Subject {
     private final String name;
 
     private ArrayList<PPermission> ownPermissions = new ArrayList<>();
-    private WeakList<Inheritance> inherited = new WeakList<>();
+    private ArrayList<Inheritance> inherited = new ArrayList<>();
 
     public Subject(String name, String type){
         this.type = type;
@@ -49,6 +49,7 @@ public abstract class Subject {
      * @return list of inheritances
      */
     protected ArrayList<Inheritance> getInheritances(){
+        this.inherited.removeIf((i) -> !i.isValid());
         return Lists.newArrayList(this.inherited);
     }
 

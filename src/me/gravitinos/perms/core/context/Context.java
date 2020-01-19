@@ -9,12 +9,22 @@ public class Context {
     private String serverName = "";
     private String worldName = "";
 
+    public static final Context CONTEXT_NONE = new Context("|-|", "|-|");
+
     public Context(String serverName, String worldName) {
         this.serverName = serverName;
         this.worldName = worldName;
     }
 
     public Context(){}
+
+    public static Context fromString(){
+
+    }
+    public String toString(){
+        String str = "";
+        str += "world="
+    }
 
     /**
      * Set the serverName
@@ -48,6 +58,9 @@ public class Context {
      * @return whether this context applies
      */
     public boolean applies(Context context){
+        if(this.equals(CONTEXT_NONE)){
+            return false;
+        }
         if(!this.serverName.equals("") && !context.serverName.equals(this.serverName)){
             return false;
         }

@@ -1,21 +1,21 @@
 package me.gravitinos.perms.core.backend.sql;
 
 import me.gravitinos.perms.core.backend.DataManager;
-import me.gravitinos.perms.core.subject.ImmutablePermissionList;
-import me.gravitinos.perms.core.subject.Inheritance;
-import me.gravitinos.perms.core.subject.PPermission;
-import me.gravitinos.perms.core.subject.Subject;
+import me.gravitinos.perms.core.cache.CachedInheritance;
+import me.gravitinos.perms.core.cache.CachedSubject;
+import me.gravitinos.perms.core.subject.*;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 
 public class SQLHandler extends DataManager {
     private DataSource dataSource;
-    public SQLHandler(DataSource source){
-        this.dataSource = source;
-    }
+    private Connection connection;
+    private String connectionURL = "";
 
     @Override
     public CompletableFuture<Void> addSubject(Subject subject) {
@@ -23,7 +23,7 @@ public class SQLHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Subject> getSubject(String name) {
+    public CompletableFuture<CachedSubject> getSubject(String name) {
         return null;
     }
 
@@ -58,7 +58,7 @@ public class SQLHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<ArrayList<Inheritance>> getInheritances(String name) {
+    public CompletableFuture<ArrayList<CachedInheritance>> getInheritances(String name) {
         return null;
     }
 
@@ -96,4 +96,48 @@ public class SQLHandler extends DataManager {
     public CompletableFuture<Void> addInheritances(ArrayList<Inheritance> inheritances) {
         return null;
     }
+
+    @Override
+    public CompletableFuture<ArrayList<CachedSubject>> getAllSubjectsOfType(String type) {
+        return null;
+    }
+
+    /**
+     * Gets the connection from this sql handler
+     * @return the connection object
+     */
+    public Connection getConnection(){
+        try {
+            if (this.connection == null || this.connection.isClosed()){
+                this.startConnection(connectionURL);
+            }
+        } catch(SQLException ignored){ }
+        return this.connection;
+    }
+
+    /**
+     * Starts a connection between this SQL handler and the URL
+     * @param connectionURL The url to use
+     * @return Whether the connection was successful or not
+     * @throws SQLException If this device does not support SQL
+     */
+    public boolean startConnection(String connectionURL) throws SQLException {
+        this.connectionURL = connectionURL;
+        try{
+            Class.forName("com.mysql.jdbc.Driver");
+            this.connection = DriverManager.getConnection(connectionURL);
+        } catch(ClassNotFoundException e) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Starts the setup procedure
+     * @return a future result
+     */
+    public CompletableFuture<Boolean> setup(){
+
+    }
+
 }
