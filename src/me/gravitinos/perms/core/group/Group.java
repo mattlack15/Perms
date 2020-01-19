@@ -4,6 +4,6 @@ import me.gravitinos.perms.core.subject.Subject;
 
 public class Group extends Subject {
     public Group(GroupBuilder builder) {
-        super(builder, Subject.GROUP);
+        super(builder.getName(), Subject.GROUP, builder.getData());
     }
 }

@@ -17,14 +17,19 @@ public abstract class Subject {
 
     private String type;
 
-    private final String name;
+    private final String identifier;
 
     private ArrayList<PPermission> ownPermissions = new ArrayList<>();
     private ArrayList<Inheritance> inherited = new ArrayList<>();
+    private SubjectData data;
 
-    public Subject(String name, String type){
+    public Subject(String identifier, String type, SubjectData data){
         this.type = type;
-        this.name = name;
+        this.identifier = identifier;
+    }
+
+    protected SubjectData getData(){
+        return this.data;
     }
 
     /**
@@ -93,6 +98,18 @@ public abstract class Subject {
             }
         }
         return false;
+    }
+
+    /**
+     * Gets the type of subject this is
+     * @return Type
+     */
+    public String getType() {
+        return type;
+    }
+
+    public String getIdentifier(){
+        return identifier;
     }
 
     /**

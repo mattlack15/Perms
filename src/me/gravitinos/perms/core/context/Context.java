@@ -2,44 +2,78 @@ package me.gravitinos.perms.core.context;
 
 
 /**
+ * Immutable
  * This class is used as a pair for permissions and inheritance to add a context to them (conditions in which they apply)
  */
-public class Context {
+public final class Context {
 
-    private String serverName = "";
-    private String worldName = "";
+    private String serverName;
+    private String worldName;
+
+    private static final String SERVER_IDENTIFIER = "server";
+    private static final String WORLD_IDENTIFIER = "world";
 
     public static final Context CONTEXT_NONE = new Context("|-|", "|-|");
+    public static final Context CONTEXT_ALL = new Context("", "");
+
+    public static final String VAL_ALL = "";
+    public static final String VAL_NONE = "|-|";
 
     public Context(String serverName, String worldName) {
         this.serverName = serverName;
         this.worldName = worldName;
     }
 
-    public Context(){}
-
-    public static Context fromString(){
-
+    public Context(){
+        this.serverName = VAL_ALL;
+        this.worldName = VAL_ALL;
     }
+
+    public static Context fromString(String str){
+        Context context = new Context(VAL_ALL, VAL_ALL);
+        int index;
+
+        index = str.indexOf(SERVER_IDENTIFIER);
+        if(index != -1){
+            index += SERVER_IDENTIFIER.length() + 1; //Add the length of the identifier and "=" to it
+            String afterIdentifier = str.substring(index);
+            String[] quoteSplit = afterIdentifier.split("'");
+            String[] spaceSplit = afterIdentifier.split(" ");
+            if(quoteSplit.length < 2){
+                context.serverName = spaceSplit.length != 0 ? spaceSplit[0] : VAL_ALL;
+            } else {
+                context.serverName = quoteSplit[1];
+            }
+        }
+
+        index = str.indexOf(WORLD_IDENTIFIER);
+        if(index != -1){
+            index += WORLD_IDENTIFIER.length() + 1; //Add the length of the identifier and "=" to it
+            String afterIdentifier = str.substring(index);
+            String[] quoteSplit = afterIdentifier.split("'");
+            String[] spaceSplit = afterIdentifier.split(" ");
+            if(quoteSplit.length < 2){
+                context.worldName = spaceSplit.length != 0 ? spaceSplit[0] : VAL_ALL;
+            } else {
+                context.worldName = quoteSplit[1];
+            }
+        }
+        return context;
+    }
+
     public String toString(){
         String str = "";
-        str += "world="
+        str += WORLD_IDENTIFIER + "='" + worldName + "', ";
+        str += SERVER_IDENTIFIER + "='" + serverName + "'";
+        return str;
     }
 
-    /**
-     * Set the serverName
-     * @param serverName What to set it to
-     */
-    public void setServerName(String serverName){
-        this.serverName = serverName;
+    public String getServerName() {
+        return serverName;
     }
 
-    /**
-     * set the worldName
-     * @param worldName What to set it to
-     */
-    public void setWorldName(String worldName){
-        this.worldName = worldName;
+    public String getWorldName() {
+        return worldName;
     }
 
     /**
@@ -61,11 +95,11 @@ public class Context {
         if(this.equals(CONTEXT_NONE)){
             return false;
         }
-        if(!this.serverName.equals("") && !context.serverName.equals(this.serverName)){
+        if((!this.serverName.equals(VAL_ALL) && !context.serverName.equals(this.serverName)) || this.serverName.equals(VAL_NONE)){
             return false;
         }
 
-        if(!this.worldName.equals("") && !context.worldName.equals(this.worldName)){
+        if((!this.worldName.equals(VAL_ALL) && !context.worldName.equals(this.worldName)) || this.worldName.equals(VAL_NONE)){
             return false;
         }
 

@@ -11,6 +11,19 @@ import java.util.function.Supplier;
 
 public abstract class DataManager {
 
+    private ThreadLocal<Boolean> keepSync = ThreadLocal.withInitial(() -> false);
+
+    /**
+     * Keeps all async operations that are started on the thread this is called from sync
+     */
+    protected void setKeepSync(boolean bool){
+        keepSync.set(bool);
+    }
+
+    protected boolean isKeepSync(){
+        return keepSync.get();
+    }
+
     public abstract CompletableFuture<Void> addSubject(Subject subject);
 
     public abstract CompletableFuture<CachedSubject> getSubject(String name);
@@ -53,9 +66,13 @@ public abstract class DataManager {
 
         CompletableFuture<T> future = new CompletableFuture<>();
 
-        PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
+        if(keepSync.get()){
             future.complete(supplier.get());
-        });
+        } else {
+            PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
+                future.complete(supplier.get());
+            });
+        }
 
         return future;
     }

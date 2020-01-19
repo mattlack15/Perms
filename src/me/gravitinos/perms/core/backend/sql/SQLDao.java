@@ -5,7 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.function.Supplier;
 
-public abstract class SQLDao {
+public class SQLDao {
 
     int transactionCounter = 0;
 
@@ -15,8 +15,10 @@ public abstract class SQLDao {
     private static final String TABLE_SUBJECTDATA = "perms_subjectdata";
     private static final String TABLE_INHERITANCE = "perms_inheritance";
 
-    public SQLDao(SQLHandler handler) {
+    protected int holdOpen = 0;
 
+    public SQLDao(SQLHandler handler) {
+        this.connection = handler.getConnection();
     }
 
     /**
@@ -59,7 +61,7 @@ public abstract class SQLDao {
      * @return String containing the statement
      */
     protected String getSubjectDataTableCreationUpdate() {
-        return "CREATE TABLE IF NOT EXISTS " + TABLE_SUBJECTDATA + " (Name varchar(512), Type varchar(64), Data varchar(1536))";
+        return "CREATE TABLE IF NOT EXISTS " + TABLE_SUBJECTDATA + " (Name varchar(512), Type varchar(64), Data varchar(2048))";
     }
 
     /**
