@@ -1,11 +1,11 @@
 package me.gravitinos.perms.core.group;
 
+import com.google.common.cache.Cache;
 import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.subject.Subject;
-import sun.misc.Cache;
 
 import java.util.ArrayList;
 
@@ -48,6 +48,12 @@ public class GroupBuilder {
         return new CachedSubject(this.name, Subject.GROUP, this.data, this.permissions, inherited);
     }
 
+    public ArrayList<PPermission> getPermissions(){
+        return this.permissions;
+    }
 
+    public ArrayList<CachedInheritance> getInherited(){
+        return this.inherited;
+    }
 
 }

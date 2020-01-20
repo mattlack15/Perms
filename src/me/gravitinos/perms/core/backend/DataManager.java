@@ -46,15 +46,21 @@ public abstract class DataManager {
 
     public abstract CompletableFuture<Void> addInheritance(Subject subject, Inheritance inheritance);
 
-    public abstract CompletableFuture<Void> removeInheritance(Subject subject, String parent);
+    public abstract CompletableFuture<Void> removeInheritance(String subjectIdentifier, String parent);
 
-    public abstract CompletableFuture<Void> updateSubjectOption(Subject subject);
+    public abstract CompletableFuture<Void> updateSubjectData(Subject subject);
 
     //Large Operations
 
-    public abstract CompletableFuture<Void> addPermissionList(ImmutablePermissionList list);
+    public abstract CompletableFuture<Void> addPermissions(Subject subject, ImmutablePermissionList list);
+
+    public abstract CompletableFuture<Void> removePermissions(Subject subject, ImmutablePermissionList list);
 
     public abstract CompletableFuture<Void> addSubjects(ArrayList<Subject> subjects);
+
+    public abstract CompletableFuture<Void> removeSubjects(ArrayList<String> subjects);
+
+    public abstract CompletableFuture<Void> removeInheritances(String subjectIdentifier, String parent);
 
     public abstract CompletableFuture<Void> addInheritances(ArrayList<Inheritance> inheritances);
 

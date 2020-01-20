@@ -1,5 +1,9 @@
 package me.gravitinos.perms.core.subject;
 
+import me.gravitinos.perms.core.backend.DataManager;
+import me.gravitinos.perms.core.util.SubjectDataUpdateListener;
+
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -7,6 +11,7 @@ import java.util.Map;
  * Base class for GroupData and UserData
  */
 public class SubjectData {
+    private ArrayList<SubjectDataUpdateListener> listeners = new ArrayList<>();
     private Map<String, String> data = new HashMap<>();
     public SubjectData(SubjectData copy){
         data = copy.data;
@@ -25,4 +30,7 @@ public class SubjectData {
         return out != null ? out : defaultValue;
     }
 
+    public void addUpdateListener(SubjectDataUpdateListener listener){
+        this.listeners.add(listener);
+    }
 }

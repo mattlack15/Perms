@@ -3,13 +3,14 @@ package me.gravitinos.perms.core.subject;
 import com.google.common.collect.Lists;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.util.WeakList;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 
 /**
  * A class that represents an object that can have permissions
  */
-public abstract class Subject {
+public abstract class Subject<T extends SubjectData> {
 
     //Types
     public static final String GROUP = "GROUP";
@@ -21,14 +22,15 @@ public abstract class Subject {
 
     private ArrayList<PPermission> ownPermissions = new ArrayList<>();
     private ArrayList<Inheritance> inherited = new ArrayList<>();
-    private SubjectData data;
+    private T data;
 
-    public Subject(String identifier, String type, SubjectData data){
+    public Subject(String identifier, String type, T data){
         this.type = type;
         this.identifier = identifier;
+        this.data = data;
     }
 
-    protected SubjectData getData(){
+    public T getData(){
         return this.data;
     }
 
@@ -58,7 +60,28 @@ public abstract class Subject {
         return Lists.newArrayList(this.inherited);
     }
 
-    protected void removeInheritance(Subject subject){
+    /**
+     * Removes all inheritances where parent.equals(inheritance.getParent())
+     * @param parent The specified parent to remove inheritances to
+     */
+    protected void removeInheritance(@NotNull Subject parent){
+        this.inherited.removeIf(i -> !i.isValid() || parent.equals(i.getParent()));
+    }
+
+    /**
+     * Removes all permissions where permission.equals(ownPermission)
+     * @param permission The permission to remove
+     */
+    protected void removeOwnPermission(@NotNull PPermission permission){
+        this.ownPermissions.removeIf(p -> permission.equals(p));
+    }
+
+    /**
+     * Removes all permissions where p.getPermission().equalsIgnoreCase(permission)
+     * @param permission the permission to remove
+     */
+    protected void removeOwnPermission(@NotNull String permission){
+        this.ownPermissions.removeIf(p -> p.getPermission().equalsIgnoreCase(permission));
     }
 
     /**

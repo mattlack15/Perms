@@ -84,22 +84,37 @@ public class SQLHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> removeInheritance(Subject subject, String parent) {
+    public CompletableFuture<Void> removeInheritance(String subjectIdentifier, String parent) {
         return null;
     }
 
     @Override
-    public CompletableFuture<Void> updateSubjectOption(Subject subject) {
+    public CompletableFuture<Void> updateSubjectData(Subject subject) {
         return null;
     }
 
     @Override
-    public CompletableFuture<Void> addPermissionList(ImmutablePermissionList list) {
+    public CompletableFuture<Void> addPermissions(Subject subject, ImmutablePermissionList list) {
+        return null;
+    }
+
+    @Override
+    public CompletableFuture<Void> removePermissions(Subject subject, ImmutablePermissionList list) {
         return null;
     }
 
     @Override
     public CompletableFuture<Void> addSubjects(ArrayList<Subject> subjects) {
+        return null;
+    }
+
+    @Override
+    public CompletableFuture<Void> removeSubjects(ArrayList<String> subjects) {
+        return null;
+    }
+
+    @Override
+    public CompletableFuture<Void> removeInheritances(String subjectIdentifier, String parent) {
         return null;
     }
 
