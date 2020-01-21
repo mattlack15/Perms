@@ -18,13 +18,13 @@ public abstract class Subject<T extends SubjectData> {
 
     private String type;
 
-    private final String identifier;
+    private String identifier;
 
     private ArrayList<PPermission> ownPermissions = new ArrayList<>();
     private ArrayList<Inheritance> inherited = new ArrayList<>();
     private T data;
 
-    public Subject(String identifier, String type, T data){
+    public Subject(@NotNull String identifier, @NotNull String type, @NotNull T data){
         this.type = type;
         this.identifier = identifier;
         this.data = data;
@@ -38,7 +38,7 @@ public abstract class Subject<T extends SubjectData> {
      * Sets this subject's own permissions
      * @param ownPermissions
      */
-    protected void setOwnPermissions(ArrayList<PPermission> ownPermissions){
+    protected void setOwnPermissions(@NotNull ArrayList<PPermission> ownPermissions){
         this.ownPermissions = ownPermissions;
     }
 
@@ -49,6 +49,22 @@ public abstract class Subject<T extends SubjectData> {
      */
     protected ImmutablePermissionList getPermissions(){
         return new ImmutablePermissionList(ownPermissions);
+    }
+
+    /**
+     * Sets the internal data object for this subject
+     * @param data
+     */
+    protected void setData(T data){
+        this.data = data;
+    }
+
+    /**
+     * Sets the identifier for this subject
+     * @param identifier
+     */
+    protected void setIdentifier(@NotNull String identifier){
+        this.identifier = identifier;
     }
 
     /**

@@ -15,7 +15,7 @@ public class SQLDao {
     private static final String TABLE_SUBJECTDATA = "perms_subjectdata";
     private static final String TABLE_INHERITANCE = "perms_inheritance";
 
-    protected int holdOpen = 0;
+    protected volatile int holdOpen = 0;
 
     public SQLDao(SQLHandler handler) {
         this.connection = handler.getConnection();
@@ -61,7 +61,7 @@ public class SQLDao {
      * @return String containing the statement
      */
     protected String getSubjectDataTableCreationUpdate() {
-        return "CREATE TABLE IF NOT EXISTS " + TABLE_SUBJECTDATA + " (Name varchar(512), Type varchar(64), Data varchar(2048))";
+        return "CREATE TABLE IF NOT EXISTS " + TABLE_SUBJECTDATA + " (Name varchar(512), Type varchar(64), Data varchar(10240))";
     }
 
     /**

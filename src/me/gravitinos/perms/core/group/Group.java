@@ -2,6 +2,7 @@ package me.gravitinos.perms.core.group;
 
 import com.google.common.base.Preconditions;
 import me.gravitinos.perms.core.backend.DataManager;
+import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.subject.ImmutablePermissionList;
 import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.subject.Subject;
@@ -17,29 +18,60 @@ public class Group extends Subject<GroupData> {
         this(builder, inheritanceSupplier, null);
     }
 
-    public Group(GroupBuilder builder, SubjectSupplier inheritanceSupplier, GroupManager manager) {
-        super(builder.getName(), Subject.GROUP, builder.getData());
-        this.updateFromBuilder(builder, inheritanceSupplier);
+    public Group(@NotNull CachedSubject cachedSubject, @NotNull SubjectSupplier inheritanceSupplier, GroupManager manager){
+        super(cachedSubject.getIdentifier(), Subject.GROUP, new GroupData(cachedSubject.getData()));
+        this.updateFromCachedSubject(cachedSubject, inheritanceSupplier, false);
 
         this.dataManager = manager != null ? manager.getDataManager() : null;
 
         if (dataManager != null) {
-            this.getData().addUpdateListener((k, v) -> dataManager.updateSubjectData(this));
+            this.getData().addUpdateListener("MAIN_LISTENER", (k, v) -> dataManager.updateSubjectData(this));
         }
+    }
+
+    public Group(@NotNull GroupBuilder builder, @NotNull SubjectSupplier inheritanceSupplier, GroupManager manager) {
+        this(builder.toCachedSubject(), inheritanceSupplier, manager);
+    }
+
+    /**
+     * Updates this group with a cachedSubject's values with what is compatible (everything, if this cachedSubject's type is Subject.GROUP)
+     *
+     * @param subject The cachedSubject to copy from
+     * @param inheritanceSupplier Inheritance supplier to handle getting inherited subject objects usually just groupManager::getGroup
+     */
+    public void updateFromCachedSubject(@NotNull CachedSubject subject, @NotNull SubjectSupplier inheritanceSupplier){
+        this.updateFromCachedSubject(subject, inheritanceSupplier, false);
+    }
+
+    /**
+     * Updates this group with a cachedSubject's values with what is compatible (everything, if this cachedSubject's type is Subject.GROUP)
+     *
+     * @param subject The cachedSubject to copy from
+     * @param inheritanceSupplier Inheritance supplier to handle getting inherited subject objects usually just groupManager::getGroup
+     * @param save Whether or not to save this change to the backend (files or sql)
+     */
+    public void updateFromCachedSubject(@NotNull CachedSubject subject, @NotNull SubjectSupplier inheritanceSupplier, boolean save){
+
+        this.setIdentifier(subject.getIdentifier());
+
+        this.setData(new GroupData(subject.getData()));
+        if (dataManager != null) {
+            this.getData().addUpdateListener("MAIN_LISTENER", (k, v) -> dataManager.updateSubjectData(this));
+        }
+
+        this.setOwnPermissions(subject.getPermissions());
+        subject.getInheritances().forEach(i -> this.addInheritance(inheritanceSupplier.getSubject(i.getParent()), i.getContext()));
 
     }
 
     /**
      * Updates this group with a builder's values
      *
-     * @param builder             the builder to update from
+     * @param builder the builder to update from
      * @param inheritanceSupplier Inheritance supplier to handle getting inherited subject objects usually just groupManager::getGroup
      */
-    public void updateFromBuilder(GroupBuilder builder, SubjectSupplier inheritanceSupplier) {
-
-        this.setOwnPermissions(builder.getPermissions());
-
-        builder.getInherited().forEach(i -> this.addInheritance(inheritanceSupplier.getSubject(i.getParent()), i.getContext()));
+    public void updateFromBuilder(@NotNull GroupBuilder builder, @NotNull SubjectSupplier inheritanceSupplier, boolean save) {
+        this.updateFromCachedSubject(builder.toCachedSubject(), inheritanceSupplier, save);
     }
 
     /**
@@ -181,7 +213,7 @@ public class Group extends Subject<GroupData> {
      * @param colour
      */
     public void setChatColour(@NotNull String colour) {
-        this.getData().setChatColour(colour);
+        this.getData().setChatColour(colour); //Automatically saved to data-manager
     }
 
     /**
@@ -190,7 +222,7 @@ public class Group extends Subject<GroupData> {
      * @param description
      */
     public void setDescription(@NotNull String description) {
-        this.getData().setDescription(description);
+        this.getData().setDescription(description); //Automatically saved to data-manager
     }
 
     /**
@@ -199,7 +231,7 @@ public class Group extends Subject<GroupData> {
      * @param prefix
      */
     public void setPrefix(@NotNull String prefix) {
-        this.getData().setPrefix(prefix);
+        this.getData().setPrefix(prefix); //Automatically saved to data-manager
     }
 
     /**
@@ -208,7 +240,7 @@ public class Group extends Subject<GroupData> {
      * @param suffix
      */
     public void setSuffix(@NotNull String suffix) {
-        this.getData().setSuffix(suffix);
+        this.getData().setSuffix(suffix); //Automatically saved to data-manager
     }
 
 }

@@ -10,18 +10,21 @@ import java.util.Map;
 /**
  * Base class for GroupData and UserData
  */
-public class SubjectData {
-    private ArrayList<SubjectDataUpdateListener> listeners = new ArrayList<>();
+public abstract class SubjectData {
+    private Map<String, SubjectDataUpdateListener> listeners = new HashMap<>();
     private Map<String, String> data = new HashMap<>();
     public SubjectData(SubjectData copy){
         data = copy.data;
+        this.listeners = copy.listeners;
     }
     public SubjectData(){
     }
 
     protected void setData(String key, String val){
         this.data.put(key, val);
+        this.listeners.values().forEach(v -> v.update(key, val));
     }
+
     protected String getData(String key){
         return this.data.get(key);
     }
@@ -30,7 +33,7 @@ public class SubjectData {
         return out != null ? out : defaultValue;
     }
 
-    public void addUpdateListener(SubjectDataUpdateListener listener){
-        this.listeners.add(listener);
+    public void addUpdateListener(String name, SubjectDataUpdateListener listener){
+        this.listeners.put(name, listener);
     }
 }

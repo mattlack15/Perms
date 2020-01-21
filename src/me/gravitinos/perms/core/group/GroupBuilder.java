@@ -35,6 +35,16 @@ public class GroupBuilder {
         return this;
     }
 
+    public GroupBuilder setDescription(String description){
+        this.data.setDescription(description);
+        return this;
+    }
+
+    public GroupBuilder setChatColour(String colour){
+        this.data.setChatColour(colour);
+        return this;
+    }
+
     public GroupBuilder addInheritance(Subject inheritance){
         return this.addInheritance(inheritance, Context.CONTEXT_ALL);
     }

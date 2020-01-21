@@ -10,13 +10,13 @@ import java.util.ArrayList;
  */
 public final class CachedSubject {
     private String type;
-    private String name;
+    private String identifier;
     private SubjectData data;
     private ArrayList<PPermission> permissions;
     private ArrayList<CachedInheritance> inheritances;
 
-    public CachedSubject(String name, String type, SubjectData data, ArrayList<PPermission> permissions, ArrayList<CachedInheritance> inheritances) {
-        this.name = name;
+    public CachedSubject(String identifier, String type, SubjectData data, ArrayList<PPermission> permissions, ArrayList<CachedInheritance> inheritances) {
+        this.identifier = identifier;
         this.type = type;
         this.data = data;
         this.permissions = permissions;
@@ -31,8 +31,8 @@ public final class CachedSubject {
         return permissions;
     }
 
-    public String getName() {
-        return name;
+    public String getIdentifier() {
+        return identifier;
     }
 
     public String getType() {
@@ -47,8 +47,8 @@ public final class CachedSubject {
         this.permissions = permissions;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setIdentifier(String identifier) {
+        this.identifier = identifier;
     }
 
     public void setInheritances(ArrayList<CachedInheritance> inheritances) {
