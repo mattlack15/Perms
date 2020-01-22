@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.subject.ImmutablePermissionList;
+import me.gravitinos.perms.core.subject.Inheritance;
 import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.subject.Subject;
 import me.gravitinos.perms.core.util.SubjectSupplier;
@@ -134,6 +135,10 @@ public class Group extends Subject<GroupData> {
         if (dataManager != null) {
             dataManager.removePermission(this, permission);
         }
+    }
+
+    public ArrayList<Inheritance> getInheritances(){
+        return super.getInheritances();
     }
 
     //Bulk Ops

@@ -6,13 +6,13 @@ import me.gravitinos.perms.core.subject.Subject;
 import java.lang.ref.WeakReference;
 
 public class Inheritance {
-    private WeakReference<Subject> parent;
-    private WeakReference<Subject> child;
+    private SubjectRef parent;
+    private SubjectRef child;
     private Context context;
 
-    public Inheritance(Subject parent, Subject child, Context context){
-        this.parent = new WeakReference<>(parent);
-        this.child = new WeakReference<>(child);
+    public Inheritance(SubjectRef parent, SubjectRef child, Context context){
+        this.parent = parent;
+        this.child = child;
         this.context = context;
     }
 
@@ -20,7 +20,7 @@ public class Inheritance {
      * Gets Parent of inheritance
      * @return the parent
      */
-    public Subject getParent(){
+    public Subject<? extends SubjectData> getParent(){
         return this.parent.get();
     }
 
@@ -28,7 +28,7 @@ public class Inheritance {
      * Gets Child of inheritance
      * @return the child
      */
-    public Subject getChild(){
+    public Subject<? extends SubjectData> getChild(){
         return this.child.get();
     }
 

@@ -5,6 +5,8 @@ import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.subject.Subject;
+import me.gravitinos.perms.core.subject.SubjectData;
+import me.gravitinos.perms.core.subject.SubjectRef;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -29,23 +31,37 @@ public class GroupManager {
         PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
             try {
                 ArrayList<CachedSubject> groups = dataManager.getAllSubjectsOfType(Subject.GROUP).get();
-                Map<String, Group> tempGroups = new HashMap<>();
+                Map<String, SubjectRef> references = new HashMap<>();
 
-                //Make half-built objects
-                for(CachedSubject group : groups){
-                    tempGroups.put(group.getIdentifier(), new Group(new GroupBuilder(group.getIdentifier()), (s) -> null, this));
-                }
+                //Create references
+                groups.forEach(cs -> references.put(cs.getIdentifier(), new SubjectRef(null)));
 
-                //Configure inheritances
-                for(CachedSubject group : groups){
-                    tempGroups.get(group.getIdentifier()).updateFromCachedSubject(group, tempGroups::get);
-                }
-                //TODO ----------
+                //Load and set references
+                groups.forEach(cs -> {
+                    Group g = new Group(cs, references::get, this);
+                    this.addGroup(g);
+                    references.get(cs.getIdentifier()).setReference(g);
+                });
+
+                //Check for inheritance mistakes
+                ArrayList<Subject<? extends SubjectData>> grps = new ArrayList<>(this.loadedGroups);
+                Subject.checkForAndRemoveInheritanceMistakes(grps);
+
             } catch (Exception e) {
                 e.printStackTrace();
             }
         });
         return out;
+    }
+
+    public boolean addGroup(Group group){
+        if(this.isGroupLoaded(group.getName())){
+            return false;
+        }
+
+        this.loadedGroups.add(group);
+
+        return true;
     }
 
     public boolean isGroupLoaded(String name){

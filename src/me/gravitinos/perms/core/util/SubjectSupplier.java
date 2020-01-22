@@ -1,7 +1,8 @@
 package me.gravitinos.perms.core.util;
 
 import me.gravitinos.perms.core.subject.Subject;
+import me.gravitinos.perms.core.subject.SubjectRef;
 
 public interface SubjectSupplier {
-    Subject getSubject(String name);
+    SubjectRef getSubject(String name);
 }

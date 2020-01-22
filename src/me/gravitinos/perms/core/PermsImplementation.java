@@ -18,5 +18,7 @@ public interface PermsImplementation {
     boolean getBooleanSetting(String path);
     ArrayList<String> getStringListSetting(String path);
     int getIntSetting(String path);
+    String getLog(int line);
+    String addToLog(String message);
 
 }

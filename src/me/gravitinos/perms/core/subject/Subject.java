@@ -1,8 +1,9 @@
 package me.gravitinos.perms.core.subject;
 
 import com.google.common.collect.Lists;
+import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.context.Context;
-import me.gravitinos.perms.core.util.WeakList;
+import net.md_5.bungee.api.ChatColor;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -80,7 +81,7 @@ public abstract class Subject<T extends SubjectData> {
      * Removes all inheritances where parent.equals(inheritance.getParent())
      * @param parent The specified parent to remove inheritances to
      */
-    protected void removeInheritance(@NotNull Subject parent){
+    protected void removeInheritance(Subject<? extends SubjectData> parent){
         this.inherited.removeIf(i -> !i.isValid() || parent.equals(i.getParent()));
     }
 
@@ -104,9 +105,18 @@ public abstract class Subject<T extends SubjectData> {
      * Adds an inheritance to this subject
      * @param subject The inheritance to add
      */
-    protected void addInheritance(Subject subject, Context context){
-        this.inherited.add(new Inheritance(subject, this, context));
+    protected void addInheritance(Subject<? extends SubjectData> subject, Context context){
+        this.inherited.add(new Inheritance(new SubjectRef(subject), new SubjectRef(this), context));
     }
+
+    /**
+     * Adds an inheritance to this subject
+     * @param subject The inheritance to add
+     */
+    protected void addInheritance(SubjectRef subject, Context context){
+        this.inherited.add(new Inheritance(subject, new SubjectRef(this), context));
+    }
+
 
     /**
      * Adds a permission to this subject's own permission set
@@ -166,10 +176,36 @@ public abstract class Subject<T extends SubjectData> {
             }
 
             //Add all the permissions to the perms array list
+            inheritances.getParent().getAllPermissions(context);
             perms.addAll(inheritances.getParent().getAllPermissions(context)); //TODO Possibly edit this if permissions are duplicated
         }
 
         return perms;
+    }
+
+    /**
+     * Checks for, removes, and logs inheritance mistakes in a group of subjects
+     * @param subjects the group of subjects to check
+     */
+    public static void checkForAndRemoveInheritanceMistakes(ArrayList<Subject<? extends SubjectData>> subjects){
+        ArrayList<Subject<? extends SubjectData>> visited = new ArrayList<>();
+        for(Subject<? extends SubjectData> subject : subjects){
+            visited.clear();
+            visited.add(subject);
+
+            for(int i1 = 0; i1 < visited.size(); i1++){
+                int finalI = i1;
+                visited.get(i1).getInheritances().forEach(i -> {
+                    if (visited.contains(i.getParent())) {
+                        visited.get(finalI).removeInheritance(i.getParent());
+                        PermsManager.instance.getImplementation().addToLog(ChatColor.RED + "Mistake in inheritances, removed inheritance \"" +
+                                i.getParent().getIdentifier() + "\" from subject \"" + i.getChild().getIdentifier());
+                        return;
+                    }
+                    visited.add(i.getParent());
+                });
+            }
+        }
     }
 
 
