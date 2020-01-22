@@ -21,6 +21,11 @@ public class GroupBuilder {
     public String getName(){
         return this.name;
     }
+
+    public GroupBuilder(String name){
+        this.name = name;
+    }
+
     public GroupBuilder setName(String name){
         this.name = name;
         inherited.forEach(i -> i.setChild(this.name)); // Update the cached Inheritances

@@ -53,7 +53,7 @@ public class SQLDao {
      * @return String containing the statement
      */
     protected String getPermissionTableCreationUpdate() {
-        return "CREATE TABLE IF NOT EXISTS " + TABLE_PERMISSIONS + " (Name varchar(512), Permission varchar(512), Expiration varchar(256), Context varchar(1536))";
+        return "CREATE TABLE IF NOT EXISTS " + TABLE_PERMISSIONS + " (OwnerIdentifier varchar(512), Permission varchar(512), Expiration varchar(256), Context varchar(1536))";
     }
 
     /**
@@ -61,7 +61,7 @@ public class SQLDao {
      * @return String containing the statement
      */
     protected String getSubjectDataTableCreationUpdate() {
-        return "CREATE TABLE IF NOT EXISTS " + TABLE_SUBJECTDATA + " (Name varchar(512), Type varchar(64), Data varchar(10240))";
+        return "CREATE TABLE IF NOT EXISTS " + TABLE_SUBJECTDATA + " (Identifier varchar(512), Type varchar(64), Data varchar(10240))";
     }
 
     /**
@@ -70,6 +70,62 @@ public class SQLDao {
      */
     protected String getInheritanceTableCreationUpdate() {
         return "CREATE TABLE IF NOT EXISTS " + TABLE_INHERITANCE + " (Child varchar(512), Parent varchar(512), ChildType varchar(64), ParentType varchar(64), Context varchar(1536))";
+    }
+
+    protected String getSubjectDataFromIdentifierQuery(){
+        return "SELECT * FROM " + TABLE_SUBJECTDATA + " WHERE Identifier=?";
+    }
+
+    protected String getSubjectDataFromTypeQuery(){
+        return "SELECT * FROM " + TABLE_SUBJECTDATA + " WHERE Type=?";
+    }
+
+    protected String getDeleteSubjectDataByIdentifierUpdate(){
+        return "DELETE FROM " + TABLE_SUBJECTDATA + " WHERE Identifier=?";
+    }
+
+    protected String getDeleteSubjectDataByTypeUpdate(){
+        return "DELETE FROM " + TABLE_SUBJECTDATA + " WHERE Type=?";
+    }
+
+    protected String getInsertSubjectDataUpdate(){
+        return "INSERT INTO " + TABLE_SUBJECTDATA + " (Identifier, Type, Data) VALUES (?, ?, ?)";
+    }
+
+    protected String getInheritancesFromChildQuery(){
+        return "SELECT * FROM " + TABLE_INHERITANCE + " WHERE Child=?";
+    }
+
+    protected String getRemoveInheritanceByChildAndParentUpdate(){
+        return "DELETE FROM " + TABLE_INHERITANCE + " WHERE Child=? AND PARENT=?";
+    }
+
+    protected String getRemoveInheritanceByChildUpdate(){
+        return "DELETE FROM " + TABLE_INHERITANCE + " WHERE Child=?";
+    }
+
+    protected String getRemoveInheritanceByParentUpdate(){
+        return "DELETE FROM " + TABLE_INHERITANCE + " WHERE Parent=?";
+    }
+
+    protected String getRemoveInheritanceByChildOrParentUpdate(){
+        return "DELETE FROM " + TABLE_INHERITANCE + " WHERE Child=? OR Parent=?";
+    }
+
+    protected String getInsertInheritanceUpdate(){
+        return "INSERT INTO " + TABLE_INHERITANCE + " (Child, Parent, ChildType, ParentType, Context) VALUES (?, ?, ?, ?, ?)";
+    }
+
+    protected String getPermissionsFromOwnerIdentifierQuery(){
+        return "SELECT * FROM " + TABLE_PERMISSIONS + " WHERE OwnerIdentifier=?";
+    }
+
+    protected String getRemovePermissionByOwnerIdentifierAndPermission(){
+        return "DELETE FROM " + TABLE_PERMISSIONS + " WHERE OwnerIdentifier=? AND Permission=?";
+    }
+
+    protected String getRemovePermissionByOwnerIdentifier(){
+
     }
 
     //

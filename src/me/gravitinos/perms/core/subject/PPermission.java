@@ -13,19 +13,15 @@ public final class PPermission {
     public PPermission(String permission, Context context, long expiry){
         this.expiry = expiry;
         this.context = context;
-        this.permission = permission;
+        this.permission = permission.toLowerCase();
     }
 
     public PPermission(String permission, Context context){
-        this.expiry = 0;
-        this.context = context;
-        this.permission = permission;
+        this(permission, context, 0);
     }
 
     public PPermission(String permission, long expiry){
-        this.expiry = expiry;
-        this.permission = permission;
-        this.context = new Context();
+        this(permission, Context.CONTEXT_ALL, expiry);
     }
 
     /**
@@ -42,6 +38,10 @@ public final class PPermission {
         return false;
     }
 
+    /**
+     * Gets the actual permission represented by this permission object
+     * @return Permission in string form
+     */
     public String getPermission(){
         return this.permission;
     }
@@ -53,6 +53,14 @@ public final class PPermission {
      */
     public boolean isExpired(long currentTimeMs){
         return !(currentTimeMs < expiry);
+    }
+
+    /**
+     * Gets the expiration of this permission
+     * @return The expiration in ms
+     */
+    public long getExpiry(){
+        return this.expiry;
     }
 
     /**
