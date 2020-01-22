@@ -1,8 +1,11 @@
 package me.gravitinos.perms.core.subject;
 
-import java.util.ArrayList;
+import org.jetbrains.annotations.NotNull;
 
-public final class ImmutablePermissionList {
+import java.util.ArrayList;
+import java.util.Iterator;
+
+public final class ImmutablePermissionList implements Iterable<PPermission>{
     private final ArrayList<PPermission> perms;
 
     public ImmutablePermissionList(ArrayList<PPermission> perms){
@@ -11,5 +14,11 @@ public final class ImmutablePermissionList {
 
     public ArrayList<PPermission> getPermissions() {
         return (ArrayList<PPermission>) perms.clone();
+    }
+
+    @NotNull
+    @Override
+    public Iterator<PPermission> iterator() {
+        return perms.iterator();
     }
 }
