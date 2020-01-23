@@ -3,6 +3,7 @@ package me.gravitinos.perms.core.backend;
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
+import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.subject.*;
 
 import java.util.ArrayList;
@@ -44,7 +45,7 @@ public abstract class DataManager {
 
     public abstract CompletableFuture<Void> updateInheritances(Subject subject);
 
-    public abstract CompletableFuture<Void> addInheritance(Subject subject, Inheritance inheritance);
+    public abstract CompletableFuture<Void> addInheritance(Subject subject, Subject inheritance, Context context);
 
     public abstract CompletableFuture<Void> removeInheritance(String subjectIdentifier, String parent);
 
@@ -60,7 +61,7 @@ public abstract class DataManager {
 
     public abstract CompletableFuture<Void> removeSubjects(ArrayList<String> subjects);
 
-    public abstract CompletableFuture<Void> removeInheritances(String subjectIdentifier, String parent);
+    public abstract CompletableFuture<Void> removeInheritances(String subjectIdentifier, ArrayList<String> parents);
 
     public abstract CompletableFuture<Void> addInheritances(ArrayList<Inheritance> inheritances);
 

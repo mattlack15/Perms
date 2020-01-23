@@ -3,10 +3,8 @@ package me.gravitinos.perms.core.group;
 import com.google.common.base.Preconditions;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.cache.CachedSubject;
-import me.gravitinos.perms.core.subject.ImmutablePermissionList;
-import me.gravitinos.perms.core.subject.Inheritance;
-import me.gravitinos.perms.core.subject.PPermission;
-import me.gravitinos.perms.core.subject.Subject;
+import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.subject.*;
 import me.gravitinos.perms.core.util.SubjectSupplier;
 import org.jetbrains.annotations.NotNull;
 
@@ -101,6 +99,10 @@ public class Group extends Subject<GroupData> {
      * @param permission the permission to add
      */
     public void addOwnPermission(@NotNull PPermission permission) {
+        if(this.hasOwnPermission(permission)){
+            return;
+        }
+
         super.addOwnPermission(permission);
 
         //Update backend
@@ -147,11 +149,18 @@ public class Group extends Subject<GroupData> {
      * Adds a lot of permissions in bulk, please use this for large amounts of permissions as Transfers to SQL can be a lot quicker
      */
     public void addOwnPermissions(@NotNull ArrayList<PPermission> permissions) {
-        permissions.forEach(p -> super.addOwnPermission(p));
+        ArrayList<PPermission> ps = (ArrayList<PPermission>)permissions.clone();
+        permissions.forEach(p -> {
+            if(!this.hasOwnPermission(p)){
+                super.addOwnPermission(p);
+            } else {
+                ps.remove(p);
+            }
+        });
 
         //Update backend
         if (dataManager != null) {
-            dataManager.addPermissions(this, new ImmutablePermissionList(permissions));
+            dataManager.addPermissions(this, new ImmutablePermissionList(ps));
         }
     }
 
@@ -164,6 +173,65 @@ public class Group extends Subject<GroupData> {
         //Update backend
         if(dataManager != null) {
             dataManager.removePermissions(this, new ImmutablePermissionList(permissions));
+        }
+    }
+
+    /**
+     * Checks whether this has the parent/inheritance specified
+     * @param subject The parent/inheritance to check for
+     * @return true if this user has the specified inheritance
+     */
+    public boolean hasInheritance(@NotNull Subject subject){
+        for(Inheritance inheritance : super.getInheritances()){
+            if(subject.equals(inheritance.getParent())){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Adds a parent/inheritance to this user
+     * @param subject The inheritance to add
+     * @param context The context that this will apply in
+     */
+    public void addInheritance(Subject subject, Context context){
+        if(this.hasInheritance(subject)){
+            return;
+        }
+
+        super.addInheritance(new SubjectRef(subject), context);
+
+        if(dataManager != null){
+            dataManager.addInheritance(this, subject, context);
+        }
+    }
+
+    /**
+     * Removes a parent/inheritance from this group
+     * @param subject the parent to remove
+     */
+    public void removeInheritance(Subject subject){
+        super.removeInheritance(subject);
+
+        if(dataManager != null){
+            dataManager.removeInheritance(this.getIdentifier(), subject.getIdentifier());
+        }
+    }
+
+    /**
+     * Clears all inheritances from this group
+     */
+    public void clearInheritances(){
+        ArrayList<String> parents = new ArrayList<>();
+
+        for(Inheritance i : super.getInheritances()){
+            super.removeInheritance(i.getParent());
+            parents.add(i.getParent().getIdentifier());
+        }
+
+        if(dataManager != null){
+            dataManager.removeInheritances(this.getIdentifier(), parents);
         }
     }
 

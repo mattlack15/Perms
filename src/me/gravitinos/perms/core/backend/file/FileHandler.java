@@ -3,11 +3,13 @@ package me.gravitinos.perms.core.backend.file;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
+import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.subject.ImmutablePermissionList;
 import me.gravitinos.perms.core.subject.Inheritance;
 import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.subject.Subject;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 
@@ -63,7 +65,7 @@ public class FileHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> addInheritance(Subject subject, Inheritance inheritance) {
+    public CompletableFuture<Void> addInheritance(Subject subject, Subject parent, Context context) {
         return null;
     }
 
@@ -98,7 +100,7 @@ public class FileHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> removeInheritances(String subjectIdentifier, String parent) {
+    public CompletableFuture<Void> removeInheritances(String subjectIdentifier, ArrayList<String> parents) {
         return null;
     }
 

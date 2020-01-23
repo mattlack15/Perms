@@ -1,9 +1,21 @@
 package me.gravitinos.perms.core.subject;
 
+import org.jetbrains.annotations.NotNull;
+
 public class GenericSubjectData extends SubjectData {
+
+    public String type = "GENERIC";
 
     public GenericSubjectData(SubjectData data) {
         super(data);
+    }
+
+    public void setType(@NotNull String type){
+        this.type = type;
+    }
+
+    public String getType(){
+        return this.type;
     }
 
     public GenericSubjectData() {

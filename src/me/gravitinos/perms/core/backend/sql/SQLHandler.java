@@ -1,13 +1,16 @@
 package me.gravitinos.perms.core.backend.sql;
 
+import com.google.common.cache.Cache;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
+import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.subject.ImmutablePermissionList;
 import me.gravitinos.perms.core.subject.Inheritance;
 import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.subject.Subject;
 
+import javax.annotation.concurrent.Immutable;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -30,67 +33,176 @@ public class SQLHandler extends DataManager {
 
     @Override
     public CompletableFuture<Void> addSubject(Subject subject) {
-        return null;
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try {
+                SQLDao dao = getDao();
+                dao.addSubject(subject);
+            }catch(SQLException ignore){ }
+            future.complete(null);
+            return null;
+        });
+        return future;
     }
 
     @Override
     public CompletableFuture<CachedSubject> getSubject(String name) {
-        return null;
+        CompletableFuture<CachedSubject> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try {
+                future.complete(getDao().getSubject(name));
+            }catch (SQLException ignored) {
+            }
+            return null;
+        });
+        return future;
     }
 
     @Override
     public CompletableFuture<Void> updateSubject(Subject subject) {
-        return null;
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+           try{
+               SQLDao dao = getDao();
+               dao.removeSubject(subject.getIdentifier());
+               dao.addSubject(subject);
+           }catch(SQLException ignored){}
+           return null;
+        });
+        return future;
     }
 
     @Override
     public CompletableFuture<Void> removeSubject(String name) {
-        return null;
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try{
+                getDao().removeSubject(name);
+            }catch(SQLException ignored){}
+            return null;
+        });
+        return future;
     }
 
     @Override
     public CompletableFuture<ImmutablePermissionList> getPermissions(String name) {
-        return null;
+        CompletableFuture<ImmutablePermissionList> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try{
+                future.complete(new ImmutablePermissionList(getDao().getPermissions(name)));
+            }catch(SQLException ignored){}
+            return null;
+        });
+        return future;
     }
 
     @Override
     public CompletableFuture<Void> updatePermissions(Subject subject) {
-        return null;
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try{
+                SQLDao dao = getDao();
+                dao.removeAllPermissions(subject.getIdentifier());
+                dao.addPermissions(subject.getIdentifier(), Subject.getPermissions(subject));
+                future.complete(null);
+            }catch(SQLException ignored){}
+            return null;
+        });
+        return future;
     }
 
     @Override
     public CompletableFuture<Void> addPermission(Subject subject, PPermission permission) {
-        return null;
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try{
+                getDao().addPermission(subject.getIdentifier(), permission);
+                future.complete(null);
+            }catch(SQLException ignored){}
+            return null;
+        });
+        return future;
     }
 
     @Override
     public CompletableFuture<Void> removePermission(Subject subject, String permission) {
-        return null;
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try{
+                getDao().removePermission(subject.getIdentifier(), permission);
+                future.complete(null);
+            }catch(SQLException ignored){}
+            return null;
+        });
+        return future;
     }
 
     @Override
     public CompletableFuture<ArrayList<CachedInheritance>> getInheritances(String name) {
-        return null;
+        CompletableFuture<ArrayList<CachedInheritance>> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try{
+                future.complete(getDao().getInheritances(name));
+            }catch(SQLException ignored){}
+            return null;
+        });
+        return future;
     }
 
     @Override
     public CompletableFuture<Void> updateInheritances(Subject subject) {
-        return null;
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try{
+                SQLDao dao = getDao();
+                dao.removeAllInheritances(subject.getIdentifier());
+                ArrayList<CachedInheritance> inheritances = new ArrayList<>();
+                Subject.getInheritances(subject).forEach((i -> inheritances.add(new CachedInheritance(i.getChild().getIdentifier(), i.getParent().getIdentifier(), i.getChild().getType(), i.getParent().getType(), i.getContext()))));
+                dao.addInheritances(inheritances);
+                future.complete(null);
+            }catch(SQLException ignored){}
+            return null;
+        });
+        return future;
     }
 
     @Override
-    public CompletableFuture<Void> addInheritance(Subject subject, Inheritance inheritance) {
-        return null;
+    public CompletableFuture<Void> addInheritance(Subject subject, Subject parent, Context context) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try{
+                getDao().addInheritance(subject.getIdentifier(), parent.getIdentifier(), subject.getType(), parent.getType(), context);
+                future.complete(null);
+            }catch(SQLException ignored){}
+            return null;
+        });
+        return future;
     }
 
     @Override
     public CompletableFuture<Void> removeInheritance(String subjectIdentifier, String parent) {
-        return null;
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try{
+                getDao().removeInheritance(subjectIdentifier, parent);
+                future.complete(null);
+            }catch(SQLException ignored){}
+            return null;
+        });
+        return future;
     }
 
     @Override
     public CompletableFuture<Void> updateSubjectData(Subject subject) {
-        return null;
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try{
+                getDao().setSubjectData(subject.getIdentifier(), subject.getData(), subject.getType());
+                future.complete(null);
+            }catch(SQLException ignored){}
+            return null;
+        });
+        return future;
     }
 
     @Override
@@ -114,7 +226,7 @@ public class SQLHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> removeInheritances(String subjectIdentifier, String parent) {
+    public CompletableFuture<Void> removeInheritances(String subjectIdentifier, ArrayList<String> parents) {
         return null;
     }
 
@@ -125,7 +237,16 @@ public class SQLHandler extends DataManager {
 
     @Override
     public CompletableFuture<ArrayList<CachedSubject>> getAllSubjectsOfType(String type) {
-        return null;
+        CompletableFuture<ArrayList<CachedSubject>> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try{
+                SQLDao dao = getDao();
+                dao.subject
+                future.complete(null);
+            }catch(SQLException ignored){}
+            return null;
+        });
+        return future;
     }
 
     /**

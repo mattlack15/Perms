@@ -1,9 +1,14 @@
 package me.gravitinos.perms.core.backend.sql;
 
+import me.gravitinos.perms.core.cache.CachedInheritance;
+import me.gravitinos.perms.core.cache.CachedSubject;
+import me.gravitinos.perms.core.cache.OwnerPermissionPair;
 import me.gravitinos.perms.core.context.Context;
-import me.gravitinos.perms.core.subject.ImmutablePermissionList;
-import me.gravitinos.perms.core.subject.PPermission;
+import me.gravitinos.perms.core.subject.*;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import sun.net.www.content.text.Generic;
 
+import java.security.acl.Owner;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -141,7 +146,7 @@ public class SQLDao {
      * @return
      */
     protected String getDeleteInheritanceByChildAndParentUpdate() {
-        return "DELETE FROM " + TABLE_INHERITANCE + " WHERE Child=? AND PARENT=?";
+        return "DELETE FROM " + TABLE_INHERITANCE + " WHERE Child=? AND Parent=?";
     }
 
     /**
@@ -178,6 +183,30 @@ public class SQLDao {
      */
     protected String getInsertInheritanceUpdate() {
         return "INSERT INTO " + TABLE_INHERITANCE + " (Child, Parent, ChildType, ParentType, Context) VALUES (?, ?, ?, ?, ?)";
+    }
+
+    /**
+     * Gets the statement to clear subject data table
+     * @return
+     */
+    protected String getClearSubjectDataTableUpdate(){
+        return "DELETE FROM " + TABLE_SUBJECTDATA;
+    }
+
+    /**
+     * Gets the statement to clear inheritance table
+     * @return
+     */
+    protected String getClearInheritanceTableUpdate(){
+        return "DELETE FROM " + TABLE_INHERITANCE;
+    }
+
+    /**
+     * Gets the statement to clear permissions table
+     * @return
+     */
+    protected String getClearPermissionsTableUpdate(){
+        return "DELETE FROM " + TABLE_PERMISSIONS;
     }
 
     /**
@@ -225,7 +254,303 @@ public class SQLDao {
 
     //
 
+        //Bulk Ops
 
+    public void clearTables() throws SQLException{
+
+        SQLException e = executeInTransaction(() -> {
+            try {
+                prepareStatement(this.getClearInheritanceTableUpdate()).executeUpdate();
+                prepareStatement(this.getClearPermissionsTableUpdate()).executeUpdate();
+                prepareStatement(this.getClearInheritanceTableUpdate()).executeUpdate();
+                return null;
+            }catch(SQLException ex){
+                return ex;
+            }
+        });
+        if(e == null){
+            return;
+        } else {
+            throw e;
+        }
+
+    }
+
+    public CachedSubject getSubject(String identifier) throws SQLException {
+        GenericSubjectData data = this.getSubjectData(identifier);
+        String type = data.getType();
+        return new CachedSubject(identifier, type, data, this.getPermissions(identifier), this.getInheritances(identifier));
+    }
+
+    public void addSubject(Subject subject) throws SQLException {
+        if(subjectExists(subject.getIdentifier())){
+            this.removeSubject(subject.getIdentifier());
+        }
+
+        this.setSubjectData(subject.getIdentifier(), subject.getData(), subject.getType());
+        this.addPermissions(subject.getIdentifier(), Subject.getPermissions(subject));
+        ArrayList<CachedInheritance> inheritances = new ArrayList<>();
+        Subject.getInheritances(subject).forEach(i -> inheritances.add(new CachedInheritance(i.getChild().getIdentifier(), i.getParent().getIdentifier(), i.getChild().getType(), i.getParent().getType(), i.getContext())));
+        this.addInheritances(inheritances);
+    }
+
+    public boolean subjectExists(String identifier) throws SQLException {
+        PreparedStatement s = prepareStatement(getSubjectDataFromIdentifierQuery());
+        s.setString(1, identifier);
+        ResultSet r = s.executeQuery();
+        return r.next();
+    }
+
+    public void removeSubject(String identifier) throws SQLException {
+        this.removeAllInheritances(identifier);
+
+        PreparedStatement s = prepareStatement(this.getDeletePermissionByOwnerIdentifierUpdate());
+        s.setString(1, identifier);
+        s.executeUpdate();
+
+        s = prepareStatement(this.getDeleteSubjectDataByIdentifierUpdate());
+        s.setString(1, identifier);
+        s.executeUpdate();
+    }
+
+    public ArrayList<CachedSubject> getAllSubjectsOfType(String type){
+        //TODO Possible use some kind of LEFTJOIN or RIGHTJOIN in SQL to get permissions and/or inheritances (obvs create a func to get the statement)
+    }
+
+    public void addSubjects(ArrayList<Subject> subjects) throws SQLException {
+        SQLException e = executeInTransaction(() -> {
+            try{
+                PreparedStatement sData = prepareStatement(this.getInsertSubjectDataUpdate());
+                PreparedStatement sInheritances = prepareStatement(this.getInsertInheritanceUpdate());
+                PreparedStatement sPermissions = prepareStatement(this.getInsertPermissionUpdate());
+
+                for(Subject subject : subjects){
+                    sData.setString(1, subject.getIdentifier());
+                    sData.setString(2, subject.getType());
+                    sData.setString(3, subject.getData().toString());
+                    sData.addBatch();
+
+                    for(Inheritance inheritances : Subject.getInheritances(subject)){
+                        sInheritances.setString(1, subject.getIdentifier());
+                        sInheritances.setString(2, inheritances.getParent().getIdentifier());
+                        sInheritances.setString(3, inheritances.getChild().getType());
+                        sInheritances.setString(4, inheritances.getParent().getType());
+                        sInheritances.setString(5, inheritances.getContext().toString());
+                        sInheritances.addBatch();
+                    }
+
+                    for(PPermission permissions : Subject.getPermissions(subject)){
+                        sPermissions.setString(1, subject.getIdentifier());
+                        sPermissions.setString(2, permissions.getPermission());
+                        sPermissions.setString(3, Long.toString(permissions.getExpiry()));
+                        sPermissions.setString(4, permissions.getContext().toString());
+                        sPermissions.addBatch();
+                    }
+                }
+
+                sData.executeUpdate();
+                sInheritances.executeUpdate();
+                sPermissions.executeUpdate();
+
+            } catch(SQLException ex){
+                return ex;
+            }
+            return null;
+        });
+        if(e == null){
+            return;
+        } else {
+            throw e;
+        }
+    }
+
+    public void removeSubjects(ArrayList<String> subjects) throws SQLException {
+        SQLException e = executeInTransaction(() -> {
+            try {
+                PreparedStatement sData = prepareStatement(this.getDeleteSubjectDataByIdentifierUpdate());
+                PreparedStatement sInheritances = prepareStatement(this.getDeleteInheritanceByChildOrParentUpdate());
+                PreparedStatement sPermissions = prepareStatement(this.getDeletePermissionByOwnerIdentifierUpdate());
+
+                for (String subject : subjects) {
+                    sData.setString(1, subject);
+                    sData.addBatch();
+
+                    sInheritances.setString(1, subject);
+                    sInheritances.addBatch();
+
+                    sPermissions.setString(1, subject);
+                    sPermissions.addBatch();
+                }
+                sData.executeUpdate();
+                sInheritances.executeUpdate();
+                sPermissions.executeUpdate();
+
+                return null;
+
+            }catch(SQLException ex){
+                return ex;
+            }
+        });
+        if(e == null){
+            return;
+        } else {
+            throw e;
+        }
+    }
+
+    public void removeInheritances(ArrayList<CachedInheritance> inheritances) throws SQLException {
+        PreparedStatement s = prepareStatement(this.getDeleteInheritanceByChildAndParentUpdate());
+
+        for(CachedInheritance inheritance : inheritances){
+            s.setString(1, inheritance.getChild());
+            s.setString(2, inheritance.getParent());
+
+            s.addBatch();
+        }
+
+        s.executeUpdate();
+    }
+
+    public void addInheritances(ArrayList<CachedInheritance> inheritances) throws SQLException {
+        PreparedStatement s = prepareStatement(this.getInsertInheritanceUpdate());
+
+        for(CachedInheritance inheritance : inheritances){
+            s.setString(1, inheritance.getChild());
+            s.setString(2, inheritance.getParent());
+            s.setString(3, inheritance.getChildType());
+            s.setString(4, inheritance.getParentType());
+            s.setString(5, inheritance.getContext().toString());
+
+            s.addBatch();
+        }
+
+        s.executeUpdate();
+    }
+
+    public void addPermissions(ArrayList<OwnerPermissionPair> permissions) throws SQLException {
+        PreparedStatement s = prepareStatement(this.getInsertPermissionUpdate());
+
+        for(OwnerPermissionPair pair : permissions){
+            s.setString(1, pair.getOwnerIdentifier());
+            s.setString(2, pair.getPermission().getPermission());
+            s.setString(3, Long.toString(pair.getPermission().getExpiry()));
+            s.setString(4, pair.getPermission().getContext().toString());
+
+            s.addBatch();
+        }
+
+        s.executeUpdate();
+    }
+
+    public void removeAllPermissions(String identifier) throws SQLException {
+        PreparedStatement s = prepareStatement(this.getDeletePermissionByOwnerIdentifierUpdate());
+        s.setString(1, identifier);
+        s.executeUpdate();
+    }
+
+    public void removePermissions(ArrayList<OwnerPermissionPair> permissions) throws SQLException {
+        PreparedStatement s = prepareStatement(this.getDeletePermissionByOwnerIdentifierAndPermissionUpdate());
+
+        for(OwnerPermissionPair pair : permissions){
+            s.setString(1, pair.getOwnerIdentifier());
+            s.setString(2, pair.getPermissionString());
+
+            s.addBatch();
+        }
+
+        s.executeUpdate();
+    }
+
+        //Subject data
+
+    public void setSubjectData(String identifier, SubjectData data, String type) throws SQLException {
+        this.removeSubjectData(identifier);
+
+        PreparedStatement s = prepareStatement(this.getInsertSubjectDataUpdate());
+
+        s.setString(1, identifier);
+        s.setString(2, type);
+        s.setString(3, data.toString());
+
+        s.executeUpdate();
+    }
+
+    public void removeSubjectData(String identifier) throws SQLException {
+        PreparedStatement s = prepareStatement(this.getDeleteSubjectDataByIdentifierUpdate());
+
+        s.setString(1, identifier);
+
+        s.executeUpdate();
+    }
+
+    public GenericSubjectData getSubjectData(String identifier) throws SQLException {
+        PreparedStatement s = prepareStatement(this.getSubjectDataFromIdentifierQuery());
+
+        s.setString(1, identifier);
+
+        ResultSet results = s.executeQuery();
+
+        if(!results.next()){
+            return null;
+        }
+
+        GenericSubjectData data = SubjectData.fromString(results.getString("Data"));
+        if(data == null){
+            return null;
+        }
+
+        data.setType(results.getString("Type"));
+
+        return data;
+    }
+
+        //Inheritances
+
+    public void removeAllInheritances (String childOrParent) throws SQLException {
+        PreparedStatement s = prepareStatement(this.getDeleteInheritanceByChildOrParentUpdate());
+
+        s.setString(1, childOrParent);
+        s.setString(2, childOrParent);
+
+        s.executeUpdate();
+    }
+
+    public void removeInheritance(String child, String parent) throws SQLException {
+        PreparedStatement s = prepareStatement(this.getDeleteInheritanceByChildAndParentUpdate());
+
+        s.setString(1, child);
+        s.setString(2, parent);
+
+        s.executeUpdate();
+    }
+
+    public void addInheritance(String child, String parent, String childType, String parentType, Context context) throws SQLException {
+        PreparedStatement s = prepareStatement(this.getInsertInheritanceUpdate());
+
+        s.setString(1, child);
+        s.setString(2, parent);
+        s.setString(3, childType);
+        s.setString(4, parentType);
+        s.setString(5, context.toString());
+
+        s.executeUpdate();
+    }
+
+    public ArrayList<CachedInheritance> getInheritances(String child) throws SQLException {
+        ArrayList<CachedInheritance> out = new ArrayList<>();
+
+        PreparedStatement s = prepareStatement(this.getInheritancesFromChildQuery());
+
+        s.setString(1, child);
+
+        ResultSet results = s.executeQuery();
+
+        while(results.next()){
+            out.add(new CachedInheritance(child, results.getString("Parent"), results.getString("ChildType"), results.getString("ParentType"), Context.fromString(results.getString("Context"))));
+        }
+
+        return out;
+    }
 
 
         //Permissions

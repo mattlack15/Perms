@@ -4,12 +4,14 @@ import com.google.common.collect.Lists;
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.context.Context;
 import net.md_5.bungee.api.ChatColor;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.Map;
 
 /**
- * A class that represents an object that can have permissions
+ * A class that represents an object that can have permissions, inheritances, and customizable data objects (SubjectData)
  */
 public abstract class Subject<T extends SubjectData> {
 
@@ -41,6 +43,14 @@ public abstract class Subject<T extends SubjectData> {
      */
     protected void setOwnPermissions(@NotNull ArrayList<PPermission> ownPermissions){
         this.ownPermissions = ownPermissions;
+    }
+
+    public static ArrayList<Inheritance> getInheritances(Subject<?> subject){
+        return subject.getInheritances();
+    }
+
+    public static ImmutablePermissionList getPermissions(Subject<?> subject){
+        return subject.getPermissions();
     }
 
 
