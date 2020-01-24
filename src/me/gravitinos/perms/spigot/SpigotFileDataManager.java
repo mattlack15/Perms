@@ -8,20 +8,74 @@ import me.gravitinos.perms.core.subject.ImmutablePermissionList;
 import me.gravitinos.perms.core.subject.Inheritance;
 import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.subject.Subject;
+import me.gravitinos.perms.core.user.UserData;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 public class SpigotFileDataManager extends DataManager {
-    FileConfiguration groupsConfig = YamlConfiguration.loadConfiguration(file);
+    private FileConfiguration groupsConfig = YamlConfiguration.loadConfiguration(Files.GROUPS_FILE);
+    private FileConfiguration usersConfig = YamlConfiguration.loadConfiguration(Files.USERS_FILE);
+
+    private static final String GROUP_SECTION = "groups";
+    private static final String USER_SECTION = "users";
+
+    private static final String USER_DATA_PREFIX = "prefix";
+    private static final String USER_DATA_SUFFIX = "suffix";
+    private static final String USER_DATA_DISPLAYGROUP = "display_group";
+    private static final String USER_DATA_NOTES = "notes";
+    private static final String USER_DATA_USERNAME = "username";
+    private static final String USER_PERMISSIONS = "permissions";
+    private static final String USER_INHERITANCE = "inheritances";
+
+    private boolean saveGroupsConfig(){
+        try {
+            groupsConfig.save(Files.GROUPS_FILE);
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 
     @Override
     public CompletableFuture<Void> addSubject(Subject subject) {
-        return null;
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            if(this.subjectExists(subject.getIdentifier())){
+                try {
+                    this.removeSubject(subject.getIdentifier()).get();
+                } catch (InterruptedException | ExecutionException e) {
+                    e.printStackTrace();
+                }
+            }
+            if(subject.getType().equals(Subject.USER)){
+                //User Data
+                UserData data = new UserData(subject.getData());
+                ConfigurationSection section = usersConfig.createSection(USER_SECTION + "." + subject.getIdentifier());
+                section.set(USER_DATA_USERNAME, data.getName());
+                section.set(USER_DATA_DISPLAYGROUP, data.getDisplayGroup());
+                //TODO
+            } else if(subject.getType().equals(Subject.GROUP)){
+
+            } else {
+                SpigotPerms.instance.getManager().getImplementation().addToLog("Tried to add subject of unknown type " + subject.getType());
+            }
+            return null;
+        });
+        return future;
+    }
+
+    private boolean subjectExists(String identifier){
+        return this.groupsConfig.isConfigurationSection(GROUP_SECTION + "." + identifier) ||
+                this.usersConfig.isConfigurationSection(USER_SECTION + "." + identifier);
     }
 
     @Override

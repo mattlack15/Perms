@@ -22,4 +22,8 @@ public class SpigotPerms extends JavaPlugin {
         manager = new PermsManager(impl, dataManager);
     }
 
+    public PermsManager getManager(){
+        return this.manager;
+    }
+
 }
