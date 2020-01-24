@@ -20,6 +20,10 @@ public interface PermsConfiguration {
     //Setters
     void setHelpMsgs(int page, ArrayList<String> msgs);
     void setPrefix(String pref);
+    void setSQLDatabase(String sqlDatabase);
+    void setSQLUsername(String sqlUsername);
+    void setSQLHost(String sqlHost);
+    void setUsingSQL(boolean usingSQL);
 
 
 

@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 
 public class SpigotFileDataManager extends DataManager {
-    File fil
     FileConfiguration groupsConfig = YamlConfiguration.loadConfiguration(file);
 
     @Override

@@ -1,72 +1,119 @@
 package me.gravitinos.perms.spigot;
 
+import com.google.common.collect.Lists;
 import me.gravitinos.perms.core.config.PermsConfiguration;
+import org.bukkit.configuration.file.FileConfiguration;
 
 import java.util.ArrayList;
 
 public class SpigotConf implements PermsConfiguration {
+    private static final String PLUGIN_PREFIX = "plugin_prefix";
+    private static final String HELP_MSGS = "help_messages";
+    private static final String GOD_USERS = "god_users";
+    private static final String CASE_SENSITIVE_GROUPS = "case_sensitive_groups";
+    private static final String SQL_ENABLED = "sql";
+    private static final String SQL_HOST = "sql_host";
+    private static final String SQL_DATABASE = "sql_database";
+    private static final String SQL_USERNAME = "sql_username";
+    private static final String SQL_PASSWORD = "sql_password";
+    private static final String SERVER_NAME = "server_name";
+
     @Override
     public ArrayList<String> getHelpMsgs(int page) {
-        return null;
+        return Lists.newArrayList(getConfig().getStringList(HELP_MSGS + "." + page));
     }
 
     @Override
     public boolean helpMsgPageExists(int page) {
-        return false;
+        return getConfig().isList(HELP_MSGS + "." + page);
     }
 
     @Override
     public String getPrefix() {
-        return null;
+        return getConfig().getString(PLUGIN_PREFIX);
     }
 
     @Override
     public ArrayList<String> getGodUsers() {
-        return null;
+        return Lists.newArrayList(getConfig().getStringList(GOD_USERS));
     }
 
     @Override
     public boolean isCaseSensitiveGroups() {
-        return false;
+        return getConfig().getBoolean(CASE_SENSITIVE_GROUPS);
     }
 
     @Override
     public boolean isUsingSQL() {
-        return false;
+        return getConfig().getBoolean(SQL_ENABLED);
     }
 
     @Override
     public String getSQLDatabase() {
-        return null;
+        return getConfig().getString(SQL_DATABASE);
     }
 
     @Override
     public String getSQLUsername() {
-        return null;
+        return getConfig().getString(SQL_USERNAME);
     }
 
     @Override
     public String getSQLPassword() {
-        return null;
+        return getConfig().getString(SQL_PASSWORD);
     }
 
     @Override
     public String getSQLHost() {
-        return null;
+        return getConfig().getString(SQL_HOST);
     }
 
     @Override
     public String getServerName() {
-        return null;
+        return getConfig().getString(SERVER_NAME);
     }
 
     @Override
     public void setHelpMsgs(int page, ArrayList<String> msgs) {
+        getConfig().set(HELP_MSGS + "." + page, msgs);
+        saveConfig();
+    }
 
+    private FileConfiguration getConfig(){
+        return SpigotPerms.instance.getConfig();
+    }
+
+    private void saveConfig(){
+        SpigotPerms.instance.saveConfig();
     }
 
     @Override
     public void setPrefix(String pref) {
+        getConfig().set(PLUGIN_PREFIX, pref);
+        saveConfig();
+    }
 
+    @Override
+    public void setSQLDatabase(String sqlDatabase) {
+        getConfig().set(SQL_DATABASE, sqlDatabase);
+        saveConfig();
+    }
+
+    @Override
+    public void setSQLUsername(String sqlUsername) {
+        getConfig().set(SQL_USERNAME, sqlUsername);
+        saveConfig();
+    }
+
+    @Override
+    public void setSQLHost(String sqlHost) {
+        getConfig().set(SQL_HOST, sqlHost);
+        saveConfig();
+    }
+
+    @Override
+    public void setUsingSQL(boolean usingSQL) {
+        getConfig().set(SQL_ENABLED, usingSQL);
+        saveConfig();
     }
 }

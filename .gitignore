@@ -1,2 +1,4 @@
 # Project exclude paths
+Perms.iml
+.idea
 /out/
