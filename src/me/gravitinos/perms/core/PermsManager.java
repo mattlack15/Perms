@@ -1,11 +1,8 @@
 package me.gravitinos.perms.core;
 
 import me.gravitinos.perms.core.backend.DataManager;
-import me.gravitinos.perms.core.backend.file.FileHandler;
 import me.gravitinos.perms.core.backend.sql.SQLHandler;
-import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupManager;
-import me.gravitinos.perms.core.user.User;
 import me.gravitinos.perms.core.user.UserManager;
 
 public class PermsManager {
@@ -17,15 +14,11 @@ public class PermsManager {
 
     private PermsImplementation implementation;
 
-    public PermsManager(PermsImplementation implementation){
+    public PermsManager(PermsImplementation implementation, DataManager dataManager){
         instance = this;
         this.implementation = implementation;
 
-        if(implementation.getConfigSettings().isUsingSQL()){
-            this.dataManager = new SQLHandler();
-        } else {
-            this.dataManager = new FileHandler();
-        }
+        this.dataManager = dataManager;
 
         this.groupManager = new GroupManager(dataManager);
         this.userManager = new UserManager(dataManager);

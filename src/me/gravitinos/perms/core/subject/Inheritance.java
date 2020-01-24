@@ -1,5 +1,6 @@
 package me.gravitinos.perms.core.subject;
 
+import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.subject.Subject;
 
@@ -30,6 +31,13 @@ public class Inheritance {
      */
     public Subject<? extends SubjectData> getChild(){
         return this.child.get();
+    }
+
+    public CachedInheritance toCachedInheritance(){
+        if(!this.isValid()) {
+            return null;
+        }
+        return new CachedInheritance(this.getChild().getIdentifier(), this.getParent().getIdentifier(), this.getChild().getType(), this.getParent().getType(), this.getContext());
     }
 
     /**

@@ -55,7 +55,7 @@ public abstract class DataManager {
 
     public abstract CompletableFuture<Void> addPermissions(Subject subject, ImmutablePermissionList list);
 
-    public abstract CompletableFuture<Void> removePermissions(Subject subject, ImmutablePermissionList list);
+    public abstract CompletableFuture<Void> removePermissions(Subject subject, ArrayList<String> list);
 
     public abstract CompletableFuture<Void> addSubjects(ArrayList<Subject> subjects);
 

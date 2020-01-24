@@ -47,7 +47,7 @@ public class UserManager {
             try {
                 CachedSubject cachedSubject = dataManager.getSubject(id.toString()).get();
                 User user = new User(cachedSubject, (s) -> new SubjectRef(GroupManager.instance.getGroup(s)), this);
-
+                this.addUser(user);
 
             } catch (Exception e) {
                 result.complete(false);
@@ -89,5 +89,9 @@ public class UserManager {
             }
         }
         return null;
+    }
+
+    public void addUser(User user){
+        this.loadedUsers.add(user);
     }
 }

@@ -6,10 +6,7 @@ import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.cache.OwnerPermissionPair;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.subject.*;
-import org.bukkit.event.player.PlayerCommandPreprocessEvent;
-import sun.net.www.content.text.Generic;
 
-import java.security.acl.Owner;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;

@@ -10,7 +10,6 @@ import me.gravitinos.perms.core.subject.Inheritance;
 import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.subject.Subject;
 
-import javax.annotation.concurrent.Immutable;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -207,32 +206,84 @@ public class SQLHandler extends DataManager {
 
     @Override
     public CompletableFuture<Void> addPermissions(Subject subject, ImmutablePermissionList list) {
-        return null;
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try{
+                getDao().addPermissions(subject.getIdentifier(), list);
+                future.complete(null);
+            }catch(SQLException ignored){}
+            return null;
+        });
+        return future;
     }
 
     @Override
-    public CompletableFuture<Void> removePermissions(Subject subject, ImmutablePermissionList list) {
-        return null;
+    public CompletableFuture<Void> removePermissions(Subject subject, ArrayList<String> list) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try{
+                getDao().removePermissions(subject.getIdentifier(), list);
+                future.complete(null);
+            }catch(SQLException ignored){}
+            return null;
+        });
+        return future;
     }
 
     @Override
     public CompletableFuture<Void> addSubjects(ArrayList<Subject> subjects) {
-        return null;
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try{
+                getDao().addSubjects(subjects);
+                future.complete(null);
+            }catch(SQLException ignored){}
+            return null;
+        });
+        return future;
     }
 
     @Override
     public CompletableFuture<Void> removeSubjects(ArrayList<String> subjects) {
-        return null;
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try{
+                getDao().removeSubjects(subjects);
+                future.complete(null);
+            }catch(SQLException ignored){}
+            return null;
+        });
+        return future;
     }
 
     @Override
     public CompletableFuture<Void> removeInheritances(String subjectIdentifier, ArrayList<String> parents) {
-        return null;
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try{
+                ArrayList<CachedInheritance> inheritances = new ArrayList<>();
+                parents.forEach(p -> inheritances.add(new CachedInheritance(subjectIdentifier, p, "GENERIC", "GENERIC", Context.CONTEXT_ALL)));
+                getDao().removeInheritances(inheritances);
+                future.complete(null);
+            }catch(SQLException ignored){}
+            return null;
+        });
+        return future;
     }
 
     @Override
     public CompletableFuture<Void> addInheritances(ArrayList<Inheritance> inheritances) {
-        return null;
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try{
+                ArrayList<CachedInheritance> cachedInheritances = new ArrayList<>();
+                inheritances.forEach(i -> cachedInheritances.add(i.toCachedInheritance()));
+                getDao().addInheritances(cachedInheritances);
+                future.complete(null);
+            }catch(SQLException ignored){}
+            return null;
+        });
+        return future;
     }
 
     @Override

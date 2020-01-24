@@ -1,4 +1,4 @@
-package me.gravitinos.perms.core.backend.file;
+package me.gravitinos.perms.spigot;
 
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.cache.CachedInheritance;
@@ -8,12 +8,18 @@ import me.gravitinos.perms.core.subject.ImmutablePermissionList;
 import me.gravitinos.perms.core.subject.Inheritance;
 import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.subject.Subject;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.yaml.snakeyaml.Yaml;
 
-import java.lang.reflect.Array;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 
-public class FileHandler extends DataManager {
+public class SpigotFileDataManager extends DataManager {
+    File fil
+    FileConfiguration groupsConfig = YamlConfiguration.loadConfiguration(file);
+
     @Override
     public CompletableFuture<Void> addSubject(Subject subject) {
         return null;
@@ -65,7 +71,7 @@ public class FileHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> addInheritance(Subject subject, Subject parent, Context context) {
+    public CompletableFuture<Void> addInheritance(Subject subject, Subject inheritance, Context context) {
         return null;
     }
 
@@ -85,7 +91,7 @@ public class FileHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> removePermissions(Subject subject, ImmutablePermissionList list) {
+    public CompletableFuture<Void> removePermissions(Subject subject, ArrayList<String> list) {
         return null;
     }
 

@@ -172,7 +172,9 @@ public class Group extends Subject<GroupData> {
 
         //Update backend
         if(dataManager != null) {
-            dataManager.removePermissions(this, new ImmutablePermissionList(permissions));
+            ArrayList<String> perms = new ArrayList<>();
+            permissions.forEach(p -> perms.add(p.getPermission()));
+            dataManager.removePermissions(this, perms);
         }
     }
 
