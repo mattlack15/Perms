@@ -1,5 +1,6 @@
 package me.gravitinos.perms.core.backend.sql;
 
+import com.google.common.collect.Lists;
 import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.cache.OwnerPermissionPair;
@@ -14,6 +15,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Supplier;
 
 public class SQLDao {
@@ -240,6 +243,14 @@ public class SQLDao {
         return "INSERT INTO " + TABLE_PERMISSIONS + " (OwnerIdentifier, Permission, Expiration, Context) VALUES (?, ?, ?, ?)";
     }
 
+    protected String getPermissionsFromTypeJoinSubjectData(){
+        return "SELECT * FROM " + TABLE_SUBJECTDATA + " LEFT JOIN " + TABLE_PERMISSIONS + " ON Identifier=OwnerIdentifier WHERE Type=?";
+    }
+
+    protected String getInheritancesFromTypeJoinSubjectData(){
+        return "SELECT * FROM " + TABLE_SUBJECTDATA + " LEFT JOIN " + TABLE_INHERITANCE + " ON Identifier=OwnerIdentifier WHERE Type=?";
+    }
+
     //
 
     /**
@@ -313,8 +324,38 @@ public class SQLDao {
         s.executeUpdate();
     }
 
-    public ArrayList<CachedSubject> getAllSubjectsOfType(String type){
-        //TODO Possible use some kind of LEFTJOIN or RIGHTJOIN in SQL to get permissions and/or inheritances (obvs create a func to get the statement)
+    public ArrayList<CachedSubject> getAllSubjectsOfType(String type) throws SQLException{
+        PreparedStatement s = prepareStatement(this.getPermissionsFromTypeJoinSubjectData());
+        s.setString(1, type);
+        ResultSet results = s.executeQuery();
+
+        Map<String, CachedSubject> subjectMap = new HashMap<>();
+
+        while(results.next()){
+            String identifier = results.getString("Identifier");
+            CachedSubject sub = subjectMap.get(identifier);
+            if(sub == null){
+                sub = new CachedSubject(identifier, type, SubjectData.fromString(results.getString("Data")), new ArrayList<>(), new ArrayList<>());
+                subjectMap.put(identifier, sub);
+            }
+            sub.getPermissions().add(new PPermission(results.getString("Permission"), Context.fromString(results.getString("Context")), Long.parseLong(results.getString("Expiration"))));
+        }
+
+        s = prepareStatement(this.getInheritancesFromTypeJoinSubjectData());
+        s.setString(1, type);
+        results = s.executeQuery();
+        
+        while(results.next()){
+            String identifier = results.getString("Identifier");
+            CachedSubject sub = subjectMap.get(identifier);
+            if(sub == null){
+                sub = new CachedSubject(identifier, type, SubjectData.fromString(results.getString("Data")), new ArrayList<>(), new ArrayList<>());
+                subjectMap.put(identifier, sub);
+            }
+            sub.getInheritances().add(new CachedInheritance(results.getString("Child"), results.getString("Parent"), results.getString("ChildType"), results.getString("ParentType"), Context.fromString(results.getString("Context"))));
+        }
+
+        return Lists.newArrayList(subjectMap.values());
     }
 
     public void addSubjects(ArrayList<Subject> subjects) throws SQLException {

@@ -241,8 +241,7 @@ public class SQLHandler extends DataManager {
         runAsync(() -> {
             try{
                 SQLDao dao = getDao();
-                dao.subject
-                future.complete(null);
+                future.complete(dao.getAllSubjectsOfType(type));
             }catch(SQLException ignored){}
             return null;
         });
