@@ -197,9 +197,9 @@ public abstract class Subject<T extends SubjectData> {
      * Checks for, removes, and logs inheritance mistakes in a group of subjects
      * @param subjects the group of subjects to check
      */
-    public static void checkForAndRemoveInheritanceMistakes(ArrayList<Subject<? extends SubjectData>> subjects){
-        ArrayList<Subject<? extends SubjectData>> visited = new ArrayList<>();
-        for(Subject<? extends SubjectData> subject : subjects){
+    public static void checkForAndRemoveInheritanceMistakes(ArrayList<Subject> subjects){
+        ArrayList<Subject<?>> visited = new ArrayList<>();
+        for(Subject<?> subject : subjects){
             visited.clear();
             visited.add(subject);
 

@@ -326,4 +326,12 @@ public class Group extends Subject<GroupData> {
         this.getData().setSuffix(suffix); //Automatically saved to data-manager
     }
 
+    /**
+     * Gets the inheritances of this group
+     * @return
+     */
+    public ArrayList<Inheritance> getOwnInheritances(){
+        return super.getInheritances();
+    }
+
 }

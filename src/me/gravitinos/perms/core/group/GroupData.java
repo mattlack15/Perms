@@ -1,17 +1,23 @@
 package me.gravitinos.perms.core.group;
 
+import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.subject.SubjectData;
+import org.jetbrains.annotations.NotNull;
 
 public class GroupData extends SubjectData {
     private static final String PREFIX = "prefix";
     private static final String SUFFIX = "suffix";
     private static final String CHAT_COLOUR = "suffix";
     private static final String DESCRIPTION = "suffix";
+    private static final String SERVER_CONTEXT = "server_context";
 
-    public GroupData(){}
+    public GroupData(){
+        this.checkForServerContext();
+    }
 
     public GroupData(SubjectData data){
         super(data);
+        this.checkForServerContext();
     }
 
     public void setDescription(String description){
@@ -41,5 +47,20 @@ public class GroupData extends SubjectData {
     }
     public String getChatColour(){
         return this.getData(CHAT_COLOUR, "");
+    }
+
+    public String getServerContext(){
+        return this.getData(SERVER_CONTEXT);
+    }
+
+    public void setServerContext(@NotNull String context){
+        this.setData(SERVER_CONTEXT, context);
+        this.checkForServerContext();
+    }
+
+    private void checkForServerContext(){
+        if(this.getServerContext() == null){
+            this.setServerContext(Context.VAL_ALL);
+        }
     }
 }

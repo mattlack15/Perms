@@ -1,5 +1,6 @@
 package me.gravitinos.perms.spigot.listeners;
 
+import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.user.User;
 import me.gravitinos.perms.core.user.UserBuilder;
@@ -32,7 +33,8 @@ public class LoginListener implements Listener {
         if(!loadResult){
             //Create user
             UserBuilder builder = new UserBuilder(event.getUniqueId(), event.getName());
-            builder.addInheritance(GroupManager.instance.getDefaultGroup());
+            builder.addInheritance(GroupManager.instance.getDefaultGroup(), Context.CONTEXT_ALL)
+            .setDisplayGroup(GroupManager.instance.getDefaultGroup());
             UserManager.instance.addUser(builder.build());
         }
 

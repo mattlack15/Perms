@@ -60,6 +60,11 @@ public class GroupBuilder {
         return this;
     }
 
+    public GroupBuilder addPermission(PPermission permission){
+        this.permissions.add(permission);
+        return this;
+    }
+
     public CachedSubject toCachedSubject(){
         return new CachedSubject(this.name, Subject.GROUP, this.data, this.permissions, inherited);
     }

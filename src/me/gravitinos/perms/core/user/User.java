@@ -5,6 +5,7 @@ import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.group.Group;
+import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.subject.*;
 import me.gravitinos.perms.core.util.SubjectSupplier;
 import org.jetbrains.annotations.NotNull;
@@ -281,6 +282,13 @@ public class User extends Subject<UserData> {
 
         if(dataManager != null){
             dataManager.removeInheritance(this, subject.getIdentifier());
+        }
+    }
+
+    public ArrayList<Inheritance> getOwnInheritances(){
+        ArrayList<Inheritance> inheritances = super.getInheritances();
+        if(inheritances.size() == 0){
+            this.addInheritance(GroupManager.instance.getDefaultGroup(), Context.CONTEXT_ALL); //TODO
         }
     }
 

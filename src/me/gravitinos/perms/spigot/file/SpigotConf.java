@@ -18,6 +18,7 @@ public class SpigotConf implements PermsConfiguration {
     private static final String SQL_USERNAME = "sql_username";
     private static final String SQL_PASSWORD = "sql_password";
     private static final String SERVER_NAME = "server_name";
+    private static final String DEFAULT_GROUP = "default_group";
 
     @Override
     public ArrayList<String> getHelpMsgs(int page) {
@@ -75,6 +76,11 @@ public class SpigotConf implements PermsConfiguration {
     }
 
     @Override
+    public String getDefaultGroup() {
+        return getConfig().getString(DEFAULT_GROUP);
+    }
+
+    @Override
     public void setHelpMsgs(int page, ArrayList<String> msgs) {
         getConfig().set(HELP_MSGS + "." + page, msgs);
         saveConfig();
@@ -115,6 +121,12 @@ public class SpigotConf implements PermsConfiguration {
     @Override
     public void setUsingSQL(boolean usingSQL) {
         getConfig().set(SQL_ENABLED, usingSQL);
+        saveConfig();
+    }
+
+    @Override
+    public void setDefaultGroup(String groupName) {
+        getConfig().set(DEFAULT_GROUP, groupName);
         saveConfig();
     }
 }
