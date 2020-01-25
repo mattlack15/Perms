@@ -51,6 +51,7 @@ public class SQLHandler extends DataManager {
             try {
                 future.complete(getDao().getSubject(name));
             }catch (SQLException ignored) {
+                future.complete(null);
             }
             return null;
         });
@@ -65,7 +66,7 @@ public class SQLHandler extends DataManager {
                SQLDao dao = getDao();
                dao.removeSubject(subject.getIdentifier());
                dao.addSubject(subject);
-           }catch(SQLException ignored){}
+           }catch(SQLException ignored){future.complete(null);}
            return null;
         });
         return future;
@@ -77,7 +78,7 @@ public class SQLHandler extends DataManager {
         runAsync(() -> {
             try{
                 getDao().removeSubject(name);
-            }catch(SQLException ignored){}
+            }catch(SQLException ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -89,7 +90,7 @@ public class SQLHandler extends DataManager {
         runAsync(() -> {
             try{
                 future.complete(new ImmutablePermissionList(getDao().getPermissions(name)));
-            }catch(SQLException ignored){}
+            }catch(SQLException ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -104,7 +105,7 @@ public class SQLHandler extends DataManager {
                 dao.removeAllPermissions(subject.getIdentifier());
                 dao.addPermissions(subject.getIdentifier(), Subject.getPermissions(subject));
                 future.complete(null);
-            }catch(SQLException ignored){}
+            }catch(SQLException ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -117,7 +118,7 @@ public class SQLHandler extends DataManager {
             try{
                 getDao().addPermission(subject.getIdentifier(), permission);
                 future.complete(null);
-            }catch(SQLException ignored){}
+            }catch(SQLException ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -130,7 +131,7 @@ public class SQLHandler extends DataManager {
             try{
                 getDao().removePermission(subject.getIdentifier(), permission);
                 future.complete(null);
-            }catch(SQLException ignored){}
+            }catch(SQLException ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -142,7 +143,7 @@ public class SQLHandler extends DataManager {
         runAsync(() -> {
             try{
                 future.complete(getDao().getInheritances(name));
-            }catch(SQLException ignored){}
+            }catch(SQLException ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -159,7 +160,7 @@ public class SQLHandler extends DataManager {
                 Subject.getInheritances(subject).forEach((i -> inheritances.add(new CachedInheritance(i.getChild().getIdentifier(), i.getParent().getIdentifier(), i.getChild().getType(), i.getParent().getType(), i.getContext()))));
                 dao.addInheritances(inheritances);
                 future.complete(null);
-            }catch(SQLException ignored){}
+            }catch(SQLException ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -172,7 +173,7 @@ public class SQLHandler extends DataManager {
             try{
                 getDao().addInheritance(subject.getIdentifier(), parent.getIdentifier(), subject.getType(), parent.getType(), context);
                 future.complete(null);
-            }catch(SQLException ignored){}
+            }catch(SQLException ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -185,7 +186,7 @@ public class SQLHandler extends DataManager {
             try{
                 getDao().removeInheritance(subjectIdentifier, parent);
                 future.complete(null);
-            }catch(SQLException ignored){}
+            }catch(SQLException ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -198,7 +199,7 @@ public class SQLHandler extends DataManager {
             try{
                 getDao().setSubjectData(subject.getIdentifier(), subject.getData(), subject.getType());
                 future.complete(null);
-            }catch(SQLException ignored){}
+            }catch(SQLException ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -211,7 +212,7 @@ public class SQLHandler extends DataManager {
             try{
                 getDao().addPermissions(subject.getIdentifier(), list);
                 future.complete(null);
-            }catch(SQLException ignored){}
+            }catch(SQLException ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -224,7 +225,7 @@ public class SQLHandler extends DataManager {
             try{
                 getDao().removePermissions(subject.getIdentifier(), list);
                 future.complete(null);
-            }catch(SQLException ignored){}
+            }catch(SQLException ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -237,7 +238,7 @@ public class SQLHandler extends DataManager {
             try{
                 getDao().addSubjects(subjects);
                 future.complete(null);
-            }catch(SQLException ignored){}
+            }catch(SQLException ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -250,7 +251,7 @@ public class SQLHandler extends DataManager {
             try{
                 getDao().removeSubjects(subjects);
                 future.complete(null);
-            }catch(SQLException ignored){}
+            }catch(SQLException ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -264,8 +265,8 @@ public class SQLHandler extends DataManager {
                 ArrayList<CachedInheritance> inheritances = new ArrayList<>();
                 parents.forEach(p -> inheritances.add(new CachedInheritance(subjectIdentifier, p, "GENERIC", "GENERIC", Context.CONTEXT_ALL)));
                 getDao().removeInheritances(inheritances);
-                future.complete(null);
             }catch(SQLException ignored){}
+            future.complete(null);
             return null;
         });
         return future;
@@ -280,7 +281,7 @@ public class SQLHandler extends DataManager {
                 inheritances.forEach(i -> cachedInheritances.add(i.toCachedInheritance()));
                 getDao().addInheritances(cachedInheritances);
                 future.complete(null);
-            }catch(SQLException ignored){}
+            }catch(SQLException ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -293,7 +294,7 @@ public class SQLHandler extends DataManager {
             try{
                 SQLDao dao = getDao();
                 future.complete(dao.getAllSubjectsOfType(type));
-            }catch(SQLException ignored){}
+            }catch(SQLException ignored){future.complete(null);}
             return null;
         });
         return future;

@@ -16,6 +16,10 @@ public final class PPermission {
         this.permission = permission.toLowerCase();
     }
 
+    public PPermission(String permission){
+        this(permission, 0);
+    }
+
     public PPermission(String permission, Context context){
         this(permission, context, 0);
     }
@@ -32,7 +36,7 @@ public final class PPermission {
      * @return Whether this permission can apply to the situation
      */
     public boolean applies(String worldName, String serverName, long currentTimeMs){
-        if(currentTimeMs < expiry && this.context.applies(worldName, serverName)){
+        if(!this.isExpired(currentTimeMs) && this.context.applies(worldName, serverName)){
             return true;
         }
         return false;
@@ -52,7 +56,7 @@ public final class PPermission {
      * @return Whether this permission is expired
      */
     public boolean isExpired(long currentTimeMs){
-        return !(currentTimeMs < expiry);
+        return !(currentTimeMs < expiry || expiry == 0);
     }
 
     /**
