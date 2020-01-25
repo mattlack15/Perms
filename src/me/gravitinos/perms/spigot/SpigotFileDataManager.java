@@ -55,6 +55,16 @@ public class SpigotFileDataManager extends DataManager {
         }
     }
 
+    private boolean saveUsersConfig(){
+        try {
+            usersConfig.save(Files.USERS_FILE);
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     @Override
     public CompletableFuture<Void> addSubject(Subject subject) {
         CompletableFuture<Void> future = new CompletableFuture<>();
@@ -76,7 +86,7 @@ public class SpigotFileDataManager extends DataManager {
                 section.set(USER_DATA_PREFIX, data.getPrefix());
                 section.set(USER_DATA_SUFFIX, data.getSuffix());
 
-                //Other Data
+                //Other Data -> saves to files through these functions
                 this.addPermissions(subject, Subject.getPermissions(subject));
                 this.addInheritances(Subject.getInheritances(subject));
 
@@ -89,7 +99,7 @@ public class SpigotFileDataManager extends DataManager {
                 section.set(GROUP_DATA_CHATCOLOUR, data.getChatColour());
                 section.set(GROUP_DATA_DESCRIPTION, data.getDescription());
 
-                //Other Data
+                //Other Data -> saves to files through these functions
                 this.addPermissions(subject, Subject.getPermissions(subject));
                 this.addInheritances(Subject.getInheritances(subject));
             } else {
@@ -177,8 +187,10 @@ public class SpigotFileDataManager extends DataManager {
         runAsync(() -> {
             if(this.getSubjectType(name).equals(Subject.USER)){
                 usersConfig.set(USER_SECTION + "." + name, null);
+                saveUsersConfig();
             } else {
                 groupsConfig.set(GROUP_SECTION + "." + name, null);
+                saveGroupsConfig();
             }
             future.complete(null);
             return null;
@@ -280,6 +292,10 @@ public class SpigotFileDataManager extends DataManager {
             ArrayList<String> current = Lists.newArrayList(section.getStringList(SUBJECT_PERMISSIONS));
             current.add(permString);
             section.set(SUBJECT_PERMISSIONS, current);
+
+            saveUsersConfig();
+            saveGroupsConfig();
+
             future.complete(null);
             return null;
         });
@@ -314,6 +330,10 @@ public class SpigotFileDataManager extends DataManager {
                 }
             });
             section.set(SUBJECT_PERMISSIONS, current);
+
+            saveUsersConfig();
+            saveGroupsConfig();
+
             future.complete(null);
             return null;
         });
@@ -420,6 +440,8 @@ public class SpigotFileDataManager extends DataManager {
             current.add(inheritanceString);
 
             section.set(SUBJECT_INHERITANCES, current);
+            saveUsersConfig();
+            saveUsersConfig();
 
             future.complete(null);
             return null;
@@ -455,6 +477,8 @@ public class SpigotFileDataManager extends DataManager {
                 }
             });
             section.set(SUBJECT_INHERITANCES, current);
+            saveUsersConfig();
+            saveGroupsConfig();
             future.complete(null);
             return null;
         });
@@ -478,7 +502,7 @@ public class SpigotFileDataManager extends DataManager {
                 section.set(USER_DATA_NOTES, data.getNotes());
                 section.set(USER_DATA_PREFIX, data.getPrefix());
                 section.set(USER_DATA_SUFFIX, data.getSuffix());
-
+                saveUsersConfig();
             } else if(subject.getType().equals(Subject.GROUP)){
                 //Group Data
                 GroupData data = new GroupData(subject.getData());
@@ -491,7 +515,7 @@ public class SpigotFileDataManager extends DataManager {
                 section.set(GROUP_DATA_SUFFIX, data.getSuffix());
                 section.set(GROUP_DATA_CHATCOLOUR, data.getChatColour());
                 section.set(GROUP_DATA_DESCRIPTION, data.getDescription());
-
+                saveGroupsConfig();
             } else {
                 SpigotPerms.instance.getManager().getImplementation().addToLog("Tried to update subject data of unknown type " + subject.getType());
             }
