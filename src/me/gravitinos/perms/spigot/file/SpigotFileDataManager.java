@@ -1,4 +1,4 @@
-package me.gravitinos.perms.spigot;
+package me.gravitinos.perms.spigot.file;
 
 import com.google.common.collect.Lists;
 import me.gravitinos.perms.core.backend.DataManager;
@@ -9,16 +9,13 @@ import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.subject.*;
 import me.gravitinos.perms.core.user.UserData;
 import me.gravitinos.perms.core.util.MapUtil;
+import me.gravitinos.perms.spigot.SpigotPerms;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.yaml.snakeyaml.Yaml;
-import sun.net.www.content.text.Generic;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;

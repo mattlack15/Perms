@@ -1,7 +1,8 @@
-package me.gravitinos.perms.spigot;
+package me.gravitinos.perms.spigot.file;
 
 import com.google.common.collect.Lists;
 import me.gravitinos.perms.core.config.PermsConfiguration;
+import me.gravitinos.perms.spigot.SpigotPerms;
 import org.bukkit.configuration.file.FileConfiguration;
 
 import java.util.ArrayList;

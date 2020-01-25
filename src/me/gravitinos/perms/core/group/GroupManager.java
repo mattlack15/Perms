@@ -109,4 +109,7 @@ public class GroupManager {
         return false;
     }
 
+    public Group getDefaultGroup() {
+        String groupName = PermsManager.instance.getImplementation().getConfigSettings().
+    }
 }

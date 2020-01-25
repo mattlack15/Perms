@@ -1,5 +1,6 @@
 package me.gravitinos.perms.core.user;
 
+import com.google.common.collect.ImmutableList;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
@@ -230,6 +231,14 @@ public class User extends Subject<UserData> {
             permissions.forEach(p -> perms.add(p.getPermission()));
             dataManager.removePermissions(this, perms);
         }
+    }
+
+    /**
+     * Gets a list of all the permissions that are possessed by this user
+     * @return
+     */
+    public ImmutablePermissionList getOwnPermissions(){
+        return super.getPermissions();
     }
 
     /**

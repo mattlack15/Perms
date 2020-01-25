@@ -2,8 +2,8 @@ package me.gravitinos.perms.spigot;
 
 import me.gravitinos.perms.core.PermsImplementation;
 import me.gravitinos.perms.core.config.PermsConfiguration;
+import me.gravitinos.perms.spigot.file.SpigotConf;
 import org.bukkit.Bukkit;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.util.ArrayList;

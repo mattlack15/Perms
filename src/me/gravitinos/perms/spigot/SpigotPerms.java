@@ -3,6 +3,7 @@ package me.gravitinos.perms.spigot;
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.backend.sql.SQLHandler;
+import me.gravitinos.perms.spigot.file.SpigotFileDataManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class SpigotPerms extends JavaPlugin {

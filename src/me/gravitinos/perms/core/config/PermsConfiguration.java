@@ -16,6 +16,7 @@ public interface PermsConfiguration {
     String getSQLPassword();
     String getSQLHost();
     String getServerName();
+    String getDefaultGroup();
 
     //Setters
     void setHelpMsgs(int page, ArrayList<String> msgs);
@@ -24,6 +25,7 @@ public interface PermsConfiguration {
     void setSQLUsername(String sqlUsername);
     void setSQLHost(String sqlHost);
     void setUsingSQL(boolean usingSQL);
+    void setDefaultGroup(String groupName);
 
 
 

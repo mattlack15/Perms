@@ -6,6 +6,7 @@ import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.subject.Subject;
+import me.gravitinos.perms.core.subject.SubjectRef;
 
 import java.util.ArrayList;
 
@@ -69,6 +70,10 @@ public class GroupBuilder {
 
     public ArrayList<CachedInheritance> getInherited(){
         return this.inherited;
+    }
+
+    public Group build(){
+        return new Group(this.toCachedSubject(), (s) -> new SubjectRef(GroupManager.instance.getGroup(s)), GroupManager.instance);
     }
 
 }

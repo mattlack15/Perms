@@ -165,6 +165,14 @@ public class Group extends Subject<GroupData> {
     }
 
     /**
+     * Gets a list of all the permissions that are possessed by this group
+     * @return
+     */
+    public ImmutablePermissionList getOwnPermissions(){
+        return super.getPermissions();
+    }
+
+    /**
      * removes a lot of permissions in bulk, please use this for large amounts of permissions as Transfers to SQL can be a lot quicker
      */
     public void removeOwnPermissions(@NotNull ArrayList<PPermission> permissions) {

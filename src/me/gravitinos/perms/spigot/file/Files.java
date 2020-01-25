@@ -1,4 +1,6 @@
-package me.gravitinos.perms.spigot;
+package me.gravitinos.perms.spigot.file;
+
+import me.gravitinos.perms.spigot.SpigotPerms;
 
 import java.io.File;
 import java.io.IOException;
