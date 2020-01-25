@@ -217,7 +217,7 @@ public class Group extends Subject<GroupData> {
         super.removeInheritance(subject);
 
         if(dataManager != null){
-            dataManager.removeInheritance(this.getIdentifier(), subject.getIdentifier());
+            dataManager.removeInheritance(this, subject.getIdentifier());
         }
     }
 
@@ -233,7 +233,7 @@ public class Group extends Subject<GroupData> {
         }
 
         if(dataManager != null){
-            dataManager.removeInheritances(this.getIdentifier(), parents);
+            dataManager.removeInheritances(this, parents);
         }
     }
 

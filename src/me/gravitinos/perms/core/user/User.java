@@ -271,7 +271,7 @@ public class User extends Subject<UserData> {
         super.removeInheritance(subject);
 
         if(dataManager != null){
-            dataManager.removeInheritance(this.getIdentifier(), subject.getIdentifier());
+            dataManager.removeInheritance(this, subject.getIdentifier());
         }
     }
 
@@ -287,7 +287,7 @@ public class User extends Subject<UserData> {
         }
 
         if(dataManager != null){
-            dataManager.removeInheritances(this.getIdentifier(), parents);
+            dataManager.removeInheritances(this, parents);
         }
     }
 

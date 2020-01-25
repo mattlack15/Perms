@@ -5,10 +5,7 @@ import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
-import me.gravitinos.perms.core.subject.ImmutablePermissionList;
-import me.gravitinos.perms.core.subject.Inheritance;
-import me.gravitinos.perms.core.subject.PPermission;
-import me.gravitinos.perms.core.subject.Subject;
+import me.gravitinos.perms.core.subject.*;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -180,11 +177,11 @@ public class SQLHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> removeInheritance(String subjectIdentifier, String parent) {
+    public CompletableFuture<Void> removeInheritance(Subject subjectIdentifier, String parent) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
             try{
-                getDao().removeInheritance(subjectIdentifier, parent);
+                getDao().removeInheritance(subjectIdentifier.getIdentifier(), parent);
                 future.complete(null);
             }catch(SQLException ignored){future.complete(null);}
             return null;
@@ -199,6 +196,18 @@ public class SQLHandler extends DataManager {
             try{
                 getDao().setSubjectData(subject.getIdentifier(), subject.getData(), subject.getType());
                 future.complete(null);
+            }catch(SQLException ignored){future.complete(null);}
+            return null;
+        });
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<GenericSubjectData> getSubjectData(String subjectIdentifier) {
+        CompletableFuture<GenericSubjectData> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try{
+                future.complete(getDao().getSubjectData(subjectIdentifier));
             }catch(SQLException ignored){future.complete(null);}
             return null;
         });
@@ -258,12 +267,12 @@ public class SQLHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> removeInheritances(String subjectIdentifier, ArrayList<String> parents) {
+    public CompletableFuture<Void> removeInheritances(Subject subjectIdentifier, ArrayList<String> parents) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
             try{
                 ArrayList<CachedInheritance> inheritances = new ArrayList<>();
-                parents.forEach(p -> inheritances.add(new CachedInheritance(subjectIdentifier, p, "GENERIC", "GENERIC", Context.CONTEXT_ALL)));
+                parents.forEach(p -> inheritances.add(new CachedInheritance(subjectIdentifier.getIdentifier(), p, "GENERIC", "GENERIC", Context.CONTEXT_ALL)));
                 getDao().removeInheritances(inheritances);
             }catch(SQLException ignored){}
             future.complete(null);

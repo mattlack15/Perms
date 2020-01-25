@@ -5,6 +5,7 @@ import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.subject.*;
+import sun.net.www.content.text.Generic;
 
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
@@ -47,9 +48,11 @@ public abstract class DataManager {
 
     public abstract CompletableFuture<Void> addInheritance(Subject subject, Subject inheritance, Context context);
 
-    public abstract CompletableFuture<Void> removeInheritance(String subjectIdentifier, String parent);
+    public abstract CompletableFuture<Void> removeInheritance(Subject subject, String parent);
 
     public abstract CompletableFuture<Void> updateSubjectData(Subject subject);
+
+    public abstract CompletableFuture<GenericSubjectData> getSubjectData(String subjectIdentifier);
 
     //Large Operations
 
@@ -61,7 +64,7 @@ public abstract class DataManager {
 
     public abstract CompletableFuture<Void> removeSubjects(ArrayList<String> subjects);
 
-    public abstract CompletableFuture<Void> removeInheritances(String subjectIdentifier, ArrayList<String> parents);
+    public abstract CompletableFuture<Void> removeInheritances(Subject subject, ArrayList<String> parents);
 
     public abstract CompletableFuture<Void> addInheritances(ArrayList<Inheritance> inheritances);
 
