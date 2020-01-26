@@ -1,11 +1,16 @@
 package me.gravitinos.perms.core.user;
 
+import me.gravitinos.perms.core.PermsManager;
+import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.subject.SubjectData;
 
 public class UserData extends SubjectData {
     public UserData(SubjectData data) {
         super(data);
     }
+
+    public static final String SERVER_LOCAL = PermsManager.instance.getImplementation().getConfigSettings().getServerName();
+    public static final String SERVER_GLOBAL = Context.VAL_ALL;
 
     public UserData() {
     }
@@ -14,8 +19,8 @@ public class UserData extends SubjectData {
         this.setData("username", name);
     }
 
-    public void setDisplayGroup(String displayGroup) {
-        this.setData("displaygroup", displayGroup);
+    public void setDisplayGroup(String server, String displayGroup) {
+        this.setData("displaygroup_" + server, displayGroup);
     }
 
     public void setPrefix(String prefix) {
@@ -34,8 +39,12 @@ public class UserData extends SubjectData {
         return this.getData("notes", "");
     }
 
-    public String getDisplayGroup() {
-        return this.getData("displaygroup");
+    public String getDisplayGroup(String server) {
+        String out = this.getData("displaygroup_" + server);
+        if(out == null){
+            out = this.getData("displaygroup_");
+        }
+        return out;
     }
 
     public String getPrefix() {

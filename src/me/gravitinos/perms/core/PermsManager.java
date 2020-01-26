@@ -22,6 +22,11 @@ public class PermsManager {
 
         this.groupManager = new GroupManager(dataManager);
         this.userManager = new UserManager(dataManager);
+
+        //Config checks
+        if(implementation.getConfigSettings().getServerName().equals("")){
+            implementation.getConfigSettings().se
+        }
     }
 
     public PermsImplementation getImplementation() {

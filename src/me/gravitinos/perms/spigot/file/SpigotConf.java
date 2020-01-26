@@ -19,6 +19,17 @@ public class SpigotConf implements PermsConfiguration {
     private static final String SQL_PASSWORD = "sql_password";
     private static final String SERVER_NAME = "server_name";
     private static final String DEFAULT_GROUP = "default_group";
+    private static final String CHAT_FORMAT = "chat_format";
+
+    public static SpigotConf instance;
+
+    public SpigotConf(){
+        instance = this;
+    }
+
+    public ArrayList<String> getChatFormat(){
+        return Lists.newArrayList(getConfig().getStringList(CHAT_FORMAT));
+    }
 
     @Override
     public ArrayList<String> getHelpMsgs(int page) {
@@ -78,6 +89,12 @@ public class SpigotConf implements PermsConfiguration {
     @Override
     public String getDefaultGroup() {
         return getConfig().getString(DEFAULT_GROUP);
+    }
+
+    @Override
+    public void setServerName(String name) {
+        getConfig().set(SERVER_NAME, name);
+        saveConfig();
     }
 
     @Override

@@ -19,6 +19,7 @@ public interface PermsConfiguration {
     String getDefaultGroup();
 
     //Setters
+    void setServerName(String name);
     void setHelpMsgs(int page, ArrayList<String> msgs);
     void setPrefix(String pref);
     void setSQLDatabase(String sqlDatabase);

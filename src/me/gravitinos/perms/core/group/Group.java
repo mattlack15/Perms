@@ -291,6 +291,22 @@ public class Group extends Subject<GroupData> {
     }
 
     /**
+     * Get the server in which this group applies (Custom or GroupData.SERVER_LOCAL or GroupData.SERVER_GLOBAL)
+     * @return
+     */
+    public String getServerContext(){
+        return this.getData().getServerContext();
+    }
+
+    /**
+     * Set the server in which this group applies (Custom or GroupData.SERVER_LOCAL or GroupData.SERVER_GLOBAL)
+     * @param context
+     */
+    public void setServerContext(String context){
+        this.getData().setServerContext(context);
+    }
+
+    /**
      * Sets the chat colour of this group
      *
      * @param colour

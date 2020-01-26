@@ -62,6 +62,18 @@ public class UserManager {
     }
 
     /**
+     * Unload a user
+     * @param uuid The unique ID of the user to unload
+     */
+    public void unloadUser(UUID uuid){
+        loadedUsers.stream().forEach(users -> {
+            if(users.getUniqueID().equals(uuid)){
+                loadedUsers.remove(users);
+            }
+        });
+    }
+
+    /**
      * Checks if a user is loaded in this user manager
      *
      * @param uuid The user's uuid to check for

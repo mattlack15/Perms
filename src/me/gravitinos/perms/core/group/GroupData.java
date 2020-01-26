@@ -1,5 +1,6 @@
 package me.gravitinos.perms.core.group;
 
+import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.subject.SubjectData;
 import org.jetbrains.annotations.NotNull;
@@ -10,6 +11,9 @@ public class GroupData extends SubjectData {
     private static final String CHAT_COLOUR = "suffix";
     private static final String DESCRIPTION = "suffix";
     private static final String SERVER_CONTEXT = "server_context";
+
+    public static final String SERVER_LOCAL = PermsManager.instance.getImplementation().getConfigSettings().getServerName();
+    public static final String SERVER_GLOBAL = Context.VAL_ALL;
 
     public GroupData(){
         this.checkForServerContext();
@@ -60,7 +64,7 @@ public class GroupData extends SubjectData {
 
     private void checkForServerContext(){
         if(this.getServerContext() == null){
-            this.setServerContext(Context.VAL_ALL);
+            this.setServerContext(SERVER_LOCAL);
         }
     }
 }

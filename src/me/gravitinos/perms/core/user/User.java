@@ -88,19 +88,36 @@ public class User extends Subject<UserData> {
     }
 
     /**
-     * Gets the name of the display-group of this user
+     * Gets the name of the display-group of this user (Custom or UserData.SERVER_LOCAL or UserData.SERVER_GLOBAL)
+     * @param server The server context
+     * @return The name of the display-group of this user
+     */
+    public String getDisplayGroup(String server){
+        return this.getData().getDisplayGroup(server);
+    }
+
+    /**
+     * Gets the name of the display-group of this user, defaults to the local server's display group
      * @return The name of the display-group of this user
      */
     public String getDisplayGroup(){
-        return this.getData().getDisplayGroup();
+        return this.getData().getDisplayGroup(UserData.SERVER_LOCAL);
     }
 
     /**
      * Sets the display-group of this user
-     * @param displayGroup
+     * @param server The server in which this will apply on (Custom or UserData.SERVER_LOCAL or UserData.SERVER_GLOBAL)
+     * @param displayGroup The display group
+     */
+    public void setDisplayGroup(String server, Group displayGroup){
+        this.getData().setDisplayGroup(server, displayGroup.getName());
+    }
+    /**
+     * Sets the display-group of this user defaults to whatever server context the display group has
+     * @param displayGroup The display group
      */
     public void setDisplayGroup(Group displayGroup){
-        this.getData().setDisplayGroup(displayGroup.getName());
+        this.setDisplayGroup(displayGroup.getServerContext(), displayGroup);
     }
 
     /**
@@ -288,8 +305,9 @@ public class User extends Subject<UserData> {
     public ArrayList<Inheritance> getOwnInheritances(){
         ArrayList<Inheritance> inheritances = super.getInheritances();
         if(inheritances.size() == 0){
-            this.addInheritance(GroupManager.instance.getDefaultGroup(), Context.CONTEXT_ALL); //TODO
+            this.addInheritance(GroupManager.instance.getDefaultGroup(), Context.CONTEXT_SERVER_LOCAL);
         }
+        return super.getInheritances();
     }
 
     /**

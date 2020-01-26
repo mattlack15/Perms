@@ -1,6 +1,8 @@
 package me.gravitinos.perms.core.context;
 
 
+import me.gravitinos.perms.core.PermsManager;
+
 /**
  * Immutable
  * This class is used as a pair for permissions and inheritance to add a context to them (conditions in which they apply)
@@ -15,6 +17,8 @@ public final class Context {
 
     public static final Context CONTEXT_NONE = new Context("|-|", "|-|");
     public static final Context CONTEXT_ALL = new Context("", "");
+    public static final Context CONTEXT_SERVER_GLOBAL = new Context("", "");
+    public static final Context CONTEXT_SERVER_LOCAL = new Context(PermsManager.instance.getImplementation().getConfigSettings().getServerName(), "");
 
     public static final String VAL_ALL = "";
     public static final String VAL_NONE = "|-|";

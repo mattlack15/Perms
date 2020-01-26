@@ -68,8 +68,8 @@ public class UserBuilder {
         return this.data;
     }
 
-    public UserBuilder setDisplayGroup(Group group){
-        this.getData().setDisplayGroup(group.getIdentifier());
+    public UserBuilder setDisplayGroup(String serverContext, Group group){
+        this.getData().setDisplayGroup(serverContext, group.getIdentifier());
         return this;
     }
 
