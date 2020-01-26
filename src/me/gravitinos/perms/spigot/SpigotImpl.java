@@ -71,7 +71,12 @@ public class SpigotImpl implements PermsImplementation {
     }
 
     @Override
-    public String addToLog(String message) {
-        return null;
+    public void addToLog(String message) {
+
+    }
+
+    @Override
+    public void consoleLog(String message) {
+        Bukkit.getLogger().info("Perms: " + message);
     }
 }

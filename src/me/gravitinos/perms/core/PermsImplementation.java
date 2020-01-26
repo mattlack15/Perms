@@ -19,6 +19,7 @@ public interface PermsImplementation {
     ArrayList<String> getStringListSetting(String path);
     int getIntSetting(String path);
     String getLog(int line);
-    String addToLog(String message);
+    void addToLog(String message);
+    void consoleLog(String message);
 
 }

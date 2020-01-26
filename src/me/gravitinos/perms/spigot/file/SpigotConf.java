@@ -20,6 +20,7 @@ public class SpigotConf implements PermsConfiguration {
     private static final String SERVER_NAME = "server_name";
     private static final String DEFAULT_GROUP = "default_group";
     private static final String CHAT_FORMAT = "chat_format";
+    private static final String SQL_PORT = "sql_port";
 
     public static SpigotConf instance;
 
@@ -77,6 +78,11 @@ public class SpigotConf implements PermsConfiguration {
     }
 
     @Override
+    public int getSQLPort() {
+        return getConfig().getInt(SQL_PORT);
+    }
+
+    @Override
     public String getSQLHost() {
         return getConfig().getString(SQL_HOST);
     }
@@ -126,6 +132,12 @@ public class SpigotConf implements PermsConfiguration {
     @Override
     public void setSQLUsername(String sqlUsername) {
         getConfig().set(SQL_USERNAME, sqlUsername);
+        saveConfig();
+    }
+
+    @Override
+    public void setSQLPort(int port) {
+        getConfig().set(SQL_PORT, port);
         saveConfig();
     }
 

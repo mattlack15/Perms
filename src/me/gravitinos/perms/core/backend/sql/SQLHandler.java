@@ -331,11 +331,11 @@ public class SQLHandler extends DataManager {
      * @return Whether the connection was successful or not
      * @throws SQLException If this device does not support SQL
      */
-    public boolean startConnection(String connectionURL) throws SQLException {
+    public boolean startConnection(String connectionURL, String username, String password) throws SQLException {
         this.connectionURL = connectionURL;
         try {
             Class.forName("com.mysql.jdbc.Driver");
-            this.connection = DriverManager.getConnection(connectionURL);
+            this.connection = DriverManager.getConnection(connectionURL, username, password);
         } catch (ClassNotFoundException e) {
             return false;
         }

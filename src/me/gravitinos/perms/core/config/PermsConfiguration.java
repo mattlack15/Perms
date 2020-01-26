@@ -5,8 +5,9 @@ import java.util.ArrayList;
 public interface PermsConfiguration {
 
     //Getters
-    ArrayList<String> getHelpMsgs(int page);
-    boolean helpMsgPageExists(int page);
+    String getHelpFormat();
+    String getHelpHeader();
+    String getHelpFooter();
     String getPrefix();
     ArrayList<String> getGodUsers();
     boolean isCaseSensitiveGroups();
@@ -14,16 +15,17 @@ public interface PermsConfiguration {
     String getSQLDatabase();
     String getSQLUsername();
     String getSQLPassword();
+    int getSQLPort();
     String getSQLHost();
     String getServerName();
     String getDefaultGroup();
 
     //Setters
     void setServerName(String name);
-    void setHelpMsgs(int page, ArrayList<String> msgs);
     void setPrefix(String pref);
     void setSQLDatabase(String sqlDatabase);
     void setSQLUsername(String sqlUsername);
+    void setSQLPort(int port);
     void setSQLHost(String sqlHost);
     void setUsingSQL(boolean usingSQL);
     void setDefaultGroup(String groupName);
