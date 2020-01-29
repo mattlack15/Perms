@@ -107,12 +107,12 @@ public class User extends Subject<UserData> {
         Group highest = null;
         for (Subject<?> subject : subjects) {
             if(subject instanceof Group){
-                if(highest == null || ((Group) subject).getPriority() > highest.getPriority()){
+                if((highest == null || ((Group) subject).getPriority() > highest.getPriority()) && ((Group) subject).serverContextAppliesToThisServer()){
                     highest = (Group) subject;
                 }
             }
         }
-        if(highest == null){
+        if(highest == null) {
             this.addInheritance(GroupManager.instance.getDefaultGroup(), Context.CONTEXT_SERVER_LOCAL);
             highest = GroupManager.instance.getDefaultGroup();
         }
@@ -216,13 +216,14 @@ public class User extends Subject<UserData> {
      *
      * @param permission the permission to remove
      */
-    public void removeOwnPermission(@NotNull PPermission permission) {
-        super.removeOwnPermission(permission.getPermission());
+    public PPermission removeOwnPermission(@NotNull PPermission permission) {
+        PPermission p = super.removeOwnPermission(permission);
 
         //Update backend
         if (dataManager != null) {
-            dataManager.removePermission(this, permission.getPermission());
+            dataManager.removePermission(this, p.getPermission(), p.getPermissionIdentifier());
         }
+        return p;
     }
 
     /**
@@ -326,10 +327,31 @@ public class User extends Subject<UserData> {
         return super.getInheritances();
     }
 
+
     /**
-     * Clears all inheritances from this user
+     * Clears all local inheritances
      */
-    public void clearInheritances(){
+    public void clearInheritancesLocal(){
+        ArrayList<String> parents = new ArrayList<>();
+
+        for(Inheritance i : super.getInheritances()){
+            if(i.getContext().getServerName().equals(UserData.SERVER_LOCAL)){
+                continue;
+            }
+            super.removeInheritance(i.getParent());
+            parents.add(i.getParent().getIdentifier());
+        }
+
+        if(dataManager != null){
+            dataManager.removeInheritances(this, parents);
+        }
+    }
+
+
+    /**
+     * Clears ALL inheritances from this user
+     */
+    public void clearInheritancesGlobal(){
         ArrayList<String> parents = new ArrayList<>();
 
         for(Inheritance i : super.getInheritances()){

@@ -181,6 +181,14 @@ public class Group extends Subject<GroupData> {
     }
 
     /**
+     * Gets if this group is applicable to this server
+     * @return true or false
+     */
+    public boolean serverContextAppliesToThisServer(){
+        return this.getServerContext().equals(GroupData.SERVER_GLOBAL) || this.getServerContext().equals(GroupData.SERVER_LOCAL);
+    }
+
+    /**
      * Gets a list of all the permissions that are possessed by this group
      * @return
      */

@@ -2,6 +2,8 @@ package me.gravitinos.perms.core.subject;
 
 import me.gravitinos.perms.core.context.Context;
 
+import java.util.UUID;
+
 /**
  * Immutable representation of a permission node
  */
@@ -9,11 +11,17 @@ public final class PPermission {
     private final long expiry;
     private final String permission;
     private final Context context;
+    private UUID permissionIdentifier = UUID.randomUUID();
 
     public PPermission(String permission, Context context, long expiry){
         this.expiry = expiry;
         this.context = context;
         this.permission = permission.toLowerCase();
+    }
+
+    public PPermission(String permission, Context context, long expiry, UUID permissionIdentifier){
+        this(permission, context, expiry);
+        this.permissionIdentifier = permissionIdentifier;
     }
 
     public PPermission(String permission){
@@ -40,6 +48,10 @@ public final class PPermission {
             return true;
         }
         return false;
+    }
+
+    public UUID getPermissionIdentifier() {
+        return permissionIdentifier;
     }
 
     /**
@@ -81,6 +93,9 @@ public final class PPermission {
             return true;
         }
         if(o instanceof PPermission){
+            if(((PPermission) o).getPermissionIdentifier().equals(this.getPermissionIdentifier())){
+                return true;
+            }
             if(((PPermission) o).getContext().equals(this.getContext())){
                 if(((PPermission) o).expiry == this.expiry){
                     if(((PPermission) o).permission.equalsIgnoreCase(this.permission)){

@@ -8,6 +8,7 @@ import me.gravitinos.perms.core.subject.*;
 import sun.net.www.content.text.Generic;
 
 import java.util.ArrayList;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -41,6 +42,8 @@ public abstract class DataManager {
     public abstract CompletableFuture<Void> addPermission(Subject subject, PPermission permission);
 
     public abstract CompletableFuture<Void> removePermission(Subject subject, String permission);
+
+    public abstract CompletableFuture<Void> removePermission(Subject subject, String permission, UUID permIdentifier);
 
     public abstract CompletableFuture<ArrayList<CachedInheritance>> getInheritances(String name);
 

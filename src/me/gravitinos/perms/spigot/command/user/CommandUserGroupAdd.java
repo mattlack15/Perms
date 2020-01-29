@@ -44,20 +44,30 @@ public class CommandUserGroupAdd extends GravSubCommand {
             this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Group not found!");
             return true;
         }
+        if(!group.serverContextAppliesToThisServer()){
+            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Group exists, but is not enabled/applicable on this server! (It is local to a different server)");
+            return true;
+        }
 
         Context context = Context.CONTEXT_SERVER_LOCAL;
+
         if(args.length > 1){
             StringBuilder builder = new StringBuilder();
             for(int i = 1; i < args.length; i++){
                 builder.append(args[0] + " ");
             }
             builder.deleteCharAt(builder.length()-1);
-            context = Context.fromString(builder.toString());
+            String contextStr = builder.toString();
+            if(contextStr.equalsIgnoreCase("global")){ //If the argument says global
+                context = Context.CONTEXT_SERVER_GLOBAL;
+            } else if(!contextStr.equalsIgnoreCase("local")) { //If the argument doesn't say global (else) and doesn't say local (!)
+                context = Context.fromString(builder.toString());
+            }
         }
 
         Context finalContext = context;
         user.addInheritance(group, finalContext);
-        this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + group.getName() + " &7was added to &a" + user.getName() + "&7's inheritance");
+        this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + group.getName() + " &7was &aadded&7 to &b" + user.getName() + "&7's inheritance");
 
         return true;
     }

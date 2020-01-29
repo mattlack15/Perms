@@ -1,8 +1,7 @@
 package me.gravitinos.perms.spigot.command.user;
 
 import me.gravitinos.perms.core.context.Context;
-import me.gravitinos.perms.core.group.Group;
-import me.gravitinos.perms.core.group.GroupManager;
+import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.user.User;
 import me.gravitinos.perms.spigot.SpigotPerms;
 import me.gravitinos.perms.spigot.command.GravCommandPermissionable;
@@ -10,48 +9,61 @@ import me.gravitinos.perms.spigot.command.GravSubCommand;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 
-public class CommandUserGroupSet extends GravSubCommand {
-    public CommandUserGroupSet(GravCommandPermissionable parent, String cmdPath) {
-        super(parent, cmdPath);
+public class CommandUserAdd extends GravSubCommand {
+    public CommandUserAdd(GravCommandPermissionable parentCommand, String cmdPath) {
+        super(parentCommand, cmdPath);
     }
 
     @Override
     public String getPermission() {
-        return this.getParentCommand().getPermission();
+        return SpigotPerms.commandName + "user.managepermissions";
     }
 
     @Override
     public String getDescription() {
-        return null;
+        return "Add a permission to a user";
     }
 
     @Override
     public String getAlias() {
-        return null;
+        return "add";
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args, Object... passedArgs) {
-        if(args.length < 1){
-            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Needs more arguments, (a group)");
+        //Check for permission
+        if(!this.checkPermission(sender, SpigotPerms.pluginPrefix + "You do not have permission to use this command!")){
             return true;
         }
 
+        if(args.length < 1){
+            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "More arguments needed! Permission node needed!");
+            return true;
+        }
+
+        String perm = args[0];
+
         User user = (User) passedArgs[0];
-        String groupStr = args[0];
-        Group group = GroupManager.instance.getGroup(groupStr);
-        if(group == null){
-            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Group not found!");
-            return true;
-        }
-        if(!group.serverContextAppliesToThisServer()){
-            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Group exists, but is not enabled/applicable on this server! (It is local to a different server)");
-            return true;
-        }
 
         Context context = Context.CONTEXT_SERVER_LOCAL;
 
+        long expiration = 0;
+
         if(args.length > 1){
+            try{
+                expiration = Long.parseLong(args[1]);
+            }catch(Exception ignored){
+                if(args.length == 2){
+                    String[] args1 = new String[3];
+                    args1[0] = args[0];
+                    args1[1] = args[1];
+                    args1[2] = args[1];
+                    args = args1;
+                }
+            }
+        }
+
+        if(args.length > 2){
             StringBuilder builder = new StringBuilder();
             for(int i = 1; i < args.length; i++){
                 builder.append(args[0] + " ");
@@ -65,10 +77,8 @@ public class CommandUserGroupSet extends GravSubCommand {
             }
         }
 
-        user.clearInheritancesLocal();
-        user.addInheritance(group, context); //TODO Possibly change if clear inheritances sometimes executes after this line (addInheritance)
-        this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + group.getName() + " &7was set as &b" + user.getName() + "&7's &conly&7 inheritance");
-
+        user.addOwnPermission(new PPermission(perm, context, expiration));
+        this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + perm.toLowerCase() + " &7has been &aadded&7 to their permissions!");
         return true;
     }
 }

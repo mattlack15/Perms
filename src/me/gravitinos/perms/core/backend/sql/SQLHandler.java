@@ -11,6 +11,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -129,6 +130,19 @@ public class SQLHandler extends DataManager {
         runAsync(() -> {
             try{
                 getDao().removePermission(subject.getIdentifier(), permission);
+                future.complete(null);
+            }catch(SQLException ignored){future.complete(null);}
+            return null;
+        });
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Void> removePermission(Subject subject, String permission, UUID permIdentifier) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try{
+                getDao().removePermission(permIdentifier);
                 future.complete(null);
             }catch(SQLException ignored){future.complete(null);}
             return null;

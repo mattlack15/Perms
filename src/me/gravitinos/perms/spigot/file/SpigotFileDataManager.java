@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -341,6 +342,11 @@ public class SpigotFileDataManager extends DataManager {
             return null;
         });
         return future;
+    }
+
+    @Override
+    public CompletableFuture<Void> removePermission(Subject subject, String permission, UUID permIdentifier) {
+        return this.removePermission(subject, permission);
     }
 
     private ConfigurationSection getSection(String identifier){

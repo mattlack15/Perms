@@ -34,7 +34,7 @@ public final class Context {
     }
 
     public static Context fromString(String str){
-        Context context = new Context(VAL_ALL, VAL_ALL);
+        Context context = new Context(CONTEXT_SERVER_LOCAL.getServerName(), VAL_ALL);
         int index;
 
         index = str.indexOf(SERVER_IDENTIFIER);

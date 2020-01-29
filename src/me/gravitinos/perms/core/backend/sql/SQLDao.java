@@ -14,6 +14,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Supplier;
 
 public class SQLDao {
@@ -65,7 +66,7 @@ public class SQLDao {
      * @return String containing the statement
      */
     protected String getPermissionTableCreationUpdate() {
-        return "CREATE TABLE IF NOT EXISTS " + TABLE_PERMISSIONS + " (OwnerIdentifier varchar(512), Permission varchar(512), Expiration varchar(256), Context varchar(1536))";
+        return "CREATE TABLE IF NOT EXISTS " + TABLE_PERMISSIONS + " (OwnerIdentifier varchar(512), Permission varchar(512), PermissionIdentifier varchar(128), Expiration varchar(256), Context varchar(1536))";
     }
 
     /**
@@ -243,6 +244,10 @@ public class SQLDao {
         return "DELETE FROM " + TABLE_PERMISSIONS + " WHERE OwnerIdentifier=? AND Permission=?";
     }
 
+    protected String getDeletePermissionByPermissionIdentifierUpdate(){
+        return "DELETE FROM " + TABLE_PERMISSIONS + " WHERE PermissionIdentifier=?";
+    }
+
     /**
      * Gets the statement to delete permissions by an owner identifier
      *
@@ -253,7 +258,7 @@ public class SQLDao {
     }
 
     protected String getInsertPermissionUpdate() {
-        return "INSERT INTO " + TABLE_PERMISSIONS + " (OwnerIdentifier, Permission, Expiration, Context) VALUES (?, ?, ?, ?)";
+        return "INSERT INTO " + TABLE_PERMISSIONS + " (OwnerIdentifier, Permission, PermissionIdentifier, Expiration, Context) VALUES (?, ?, ?, ?, ?)";
     }
 
     protected String getPermissionsFromTypeJoinSubjectData(){
@@ -337,6 +342,14 @@ public class SQLDao {
 
         s = prepareStatement(this.getDeleteSubjectDataByIdentifierUpdate());
         s.setString(1, identifier);
+        s.executeUpdate();
+    }
+
+    public void removePermission(UUID permissionIdentifier) throws SQLException {
+        PreparedStatement s = prepareStatement(this.getDeletePermissionByPermissionIdentifierUpdate());
+
+        s.setString(1, permissionIdentifier.toString());
+
         s.executeUpdate();
     }
 
@@ -490,8 +503,9 @@ public class SQLDao {
         for(OwnerPermissionPair pair : permissions){
             s.setString(1, pair.getOwnerIdentifier());
             s.setString(2, pair.getPermission().getPermission());
-            s.setString(3, Long.toString(pair.getPermission().getExpiry()));
-            s.setString(4, pair.getPermission().getContext().toString());
+            s.setString(3, pair.getPermissionIdentifier().toString());
+            s.setString(4, Long.toString(pair.getPermission().getExpiry()));
+            s.setString(5, pair.getPermission().getContext().toString());
 
             s.addBatch();
         }
@@ -635,8 +649,9 @@ public class SQLDao {
         for (PPermission perm : permissions) {
             s.setString(1, ownerIdentifier);
             s.setString(2, perm.getPermission());
-            s.setString(3, Long.toString(perm.getExpiry()));
-            s.setString(4, perm.getContext().toString());
+            s.setString(3, perm.getPermissionIdentifier().toString());
+            s.setString(4, Long.toString(perm.getExpiry()));
+            s.setString(5, perm.getContext().toString());
 
             s.addBatch();
         }
@@ -649,8 +664,9 @@ public class SQLDao {
 
         s.setString(1, ownerIdentifier);
         s.setString(2, permission.getPermission());
-        s.setString(3, Long.toString(permission.getExpiry()));
-        s.setString(4, permission.getContext().toString());
+        s.setString(3, permission.getPermissionIdentifier().toString());
+        s.setString(4, Long.toString(permission.getExpiry()));
+        s.setString(5, permission.getContext().toString());
 
         s.executeUpdate();
     }

@@ -4,11 +4,10 @@ import com.google.common.collect.Lists;
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.context.Context;
 import net.md_5.bungee.api.ChatColor;
-import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
-import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * A class that represents an object that can have permissions, inheritances, and customizable data objects (SubjectData)
@@ -99,8 +98,15 @@ public abstract class Subject<T extends SubjectData> {
      * Removes all permissions where permission.equals(ownPermission)
      * @param permission The permission to remove
      */
-    protected void removeOwnPermission(@NotNull PPermission permission){
-        this.ownPermissions.removeIf(p -> permission.equals(p));
+    protected PPermission removeOwnPermission(@NotNull PPermission permission){
+        AtomicReference<PPermission> p = new AtomicReference<>();
+        this.ownPermissions.stream().forEach(perm -> {
+            if(perm.equals(permission)){
+                p.set(perm);
+                ownPermissions.remove(perm);
+            }
+        });
+        return p.get();
     }
 
     /**

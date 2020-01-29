@@ -3,7 +3,9 @@ package me.gravitinos.perms.spigot.command.user;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupManager;
+import me.gravitinos.perms.core.subject.Subject;
 import me.gravitinos.perms.core.user.User;
+import me.gravitinos.perms.spigot.SpigotPermissible;
 import me.gravitinos.perms.spigot.SpigotPerms;
 import me.gravitinos.perms.spigot.command.GravCommandPermissionable;
 import me.gravitinos.perms.spigot.command.GravSubCommand;
@@ -45,19 +47,13 @@ public class CommandUserGroupRemove extends GravSubCommand {
             return true;
         }
 
-        Context context = Context.CONTEXT_SERVER_LOCAL;
-        if(args.length > 1){
-            StringBuilder builder = new StringBuilder();
-            for(int i = 1; i < args.length; i++){
-                builder.append(args[0] + " ");
-            }
-            builder.deleteCharAt(builder.length()-1);
-            context = Context.fromString(builder.toString());
+        if(!user.hasInheritance(group)){
+            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "User does not contain the inheritance &e" + group.getName());
+            return true;
         }
 
-        Context finalContext = context;
         user.removeInheritance(group);
-        this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + group.getName() + " &7was remove from &a" + user.getName() + "&7's inheritance");
+        this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + group.getName() + " &7was &cremoved&7 from &b" + user.getName() + "&7's inheritance");
 
         return true;
     }
