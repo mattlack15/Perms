@@ -21,6 +21,10 @@ public class SpigotConf implements PermsConfiguration {
     private static final String DEFAULT_GROUP = "default_group";
     private static final String CHAT_FORMAT = "chat_format";
     private static final String SQL_PORT = "sql_port";
+    private static final String HELP_HEADER = "help_header";
+    private static final String HELP_FOOTER = "help_footer";
+    private static final String HELP_FORMAT = "help_format";
+
 
     public static SpigotConf instance;
 
@@ -33,13 +37,18 @@ public class SpigotConf implements PermsConfiguration {
     }
 
     @Override
-    public ArrayList<String> getHelpMsgs(int page) {
-        return Lists.newArrayList(getConfig().getStringList(HELP_MSGS + "." + page));
+    public String getHelpFormat() {
+        return getConfig().getString(HELP_FORMAT);
     }
 
     @Override
-    public boolean helpMsgPageExists(int page) {
-        return getConfig().isList(HELP_MSGS + "." + page);
+    public String getHelpHeader() {
+        return getConfig().getString(HELP_HEADER);
+    }
+
+    @Override
+    public String getHelpFooter() {
+        return getConfig().getString(HELP_FOOTER);
     }
 
     @Override
@@ -100,12 +109,6 @@ public class SpigotConf implements PermsConfiguration {
     @Override
     public void setServerName(String name) {
         getConfig().set(SERVER_NAME, name);
-        saveConfig();
-    }
-
-    @Override
-    public void setHelpMsgs(int page, ArrayList<String> msgs) {
-        getConfig().set(HELP_MSGS + "." + page, msgs);
         saveConfig();
     }
 

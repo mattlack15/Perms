@@ -11,6 +11,7 @@ public class GroupData extends SubjectData {
     private static final String CHAT_COLOUR = "suffix";
     private static final String DESCRIPTION = "suffix";
     private static final String SERVER_CONTEXT = "server_context";
+    private static final String PRIORITY = "priority";
 
     public static final String SERVER_LOCAL = PermsManager.instance.getImplementation().getConfigSettings().getServerName();
     public static final String SERVER_GLOBAL = Context.VAL_ALL;
@@ -55,6 +56,24 @@ public class GroupData extends SubjectData {
 
     public String getServerContext(){
         return this.getData(SERVER_CONTEXT);
+    }
+
+    public int getPriority() {
+        String priority = this.getData(PRIORITY);
+        if(priority == null){
+            this.setPriority(0);
+            return 0;
+        }
+        try{
+            return Integer.parseInt(priority);
+        } catch(Exception e){
+            this.setPriority(0);
+            return 0;
+        }
+    }
+
+    public void setPriority(int i) {
+        this.setData(PRIORITY, Integer.toString(i));
     }
 
     public void setServerContext(@NotNull String context){

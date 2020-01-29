@@ -1,5 +1,6 @@
 package me.gravitinos.perms.spigot;
 
+import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.user.User;
 import me.gravitinos.perms.core.user.UserManager;
 import me.gravitinos.perms.spigot.util.Injector;
@@ -12,7 +13,7 @@ import org.bukkit.permissions.ServerOperator;
 import java.util.ArrayList;
 
 public class SpigotPermissible extends PermissibleBase {
-    private Player player;
+    private final Player player;
     public SpigotPermissible(final Player p) {
         super(new ServerOperator() {
             @Override
@@ -46,14 +47,21 @@ public class SpigotPermissible extends PermissibleBase {
         if(user == null){
             return false;
         }
+
+        Context context = new Context(SpigotPerms.instance.getImpl().getConfigSettings().getServerName(), player.getWorld().getName());
+
         if(player.isOp()) {
-            if(user.hasOwnPermission("-op")) {
+            if(user.hasOwnPermission("-op", context)) {
                 return false;
             }
             return true;
         }
         ArrayList<String> perms = new ArrayList<>();
-        user.getOwnPermissions().forEach(p -> perms.add(p.getPermission()));
+        user.getOwnPermissions().forEach(p -> {
+            if(p.getContext().applies(context)) { //Check context
+                perms.add(p.getPermission());
+            }
+        });
         if(perms.contains("-" + requ)) {
             return false;
         }
@@ -81,14 +89,20 @@ public class SpigotPermissible extends PermissibleBase {
         if(user == null){
             return false;
         }
+        Context context = new Context(SpigotPerms.instance.getImpl().getConfigSettings().getServerName(), player.getWorld().getName());
+
         if(player.isOp()) {
-            if(user.hasOwnPermission("-op")) {
+            if(user.hasOwnPermission("-op", context)) {
                 return false;
             }
             return true;
         }
         ArrayList<String> perms = new ArrayList<>();
-        user.getOwnPermissions().forEach(p -> perms.add(p.getPermission()));
+        user.getOwnPermissions().forEach(p -> {
+            if (p.getContext().applies(context)) { //Check context
+                perms.add(p.getPermission());
+            }
+        });
         if(perms.contains("-" + requ.getName())) {
             return false;
         }

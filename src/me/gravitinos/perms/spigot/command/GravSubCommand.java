@@ -7,29 +7,35 @@ import org.bukkit.command.CommandSender;
 
 import java.util.ArrayList;
 
-public abstract class GravSubCommand {
+public abstract class GravSubCommand implements GravCommandPermissionable{
 	private ArrayList<GravSubCommand> subCommands = new ArrayList<>();
 	public abstract String getPermission();
 	public abstract String getDescription();
 	public abstract String getAlias();
+	private GravCommandPermissionable parent;
 
 	private String cmdPath;
 
-	public GravSubCommand(String cmdPath){
+	public GravSubCommand(GravCommandPermissionable parentCommand, String cmdPath){
 		this.cmdPath = cmdPath;
+		this.parent = parentCommand;
 	}
 
-	public abstract boolean onCommand(CommandSender sender, Command cmd, String label, String args[]);
-
-	public boolean callSubCommand(GravSubCommand cmd, CommandSender sender, Command cmd1, String label, String[] args){
-		return this.callSubCommand(cmd, 0, sender, cmd1, label, args);
+	public GravCommandPermissionable getParentCommand(){
+		return this.parent;
 	}
-	public boolean callSubCommand(GravSubCommand cmd, int usedArgs, CommandSender sender, Command cmd1, String label, String[] args) {
+
+	public abstract boolean onCommand(CommandSender sender, Command cmd, String label, String[] args, Object... passedArgs);
+
+	public boolean callSubCommand(GravSubCommand cmd, CommandSender sender, Command cmd1, String label, String[] args, Object... passedArgs){
+		return this.callSubCommand(cmd, 0, sender, cmd1, label, args, passedArgs);
+	}
+	public boolean callSubCommand(GravSubCommand cmd, int usedArgs, CommandSender sender, Command cmd1, String label, String[] args, Object... passedArgs) {
 		String args1[] = new String[args.length-1];
 		for(int i = usedArgs+1; i < args.length; i++) {
 			args1[i-1] = args[i];
 		}
-		return cmd.onCommand(sender, cmd1, label, args1);
+		return cmd.onCommand(sender, cmd1, label, args1, passedArgs);
 	}
 	public GravSubCommand getSubCommand(String alias) {
 		for(GravSubCommand cmds : this.subCommands) {
@@ -41,7 +47,7 @@ public abstract class GravSubCommand {
 	}
 
 	protected boolean sendErrorMessage(CommandSender sender, String msg){
-	    sender.sendMessage(msg);
+	    sender.sendMessage(ChatColor.translateAlternateColorCodes('&', msg));
 	    return true;
     }
 
@@ -49,12 +55,12 @@ public abstract class GravSubCommand {
 		this.cmdPath = path;
 	}
 
-	protected String getCmdPath(){
+	public String getCmdPath(){
 		return this.cmdPath;
 	}
 
 	protected String getSubCommandCmdPath(){
-		return this.cmdPath + this.getAlias() + " ";
+		return this.cmdPath + this.getAlias() + (this.getArgumentString() != null && this.getArgumentString().length() > 0 ? " " + this.getArgumentString() : "") + " ";
 	}
 
 	/**
@@ -67,7 +73,7 @@ public abstract class GravSubCommand {
 		String helpFormat = SpigotPerms.instance.getImpl().getConfigSettings().getHelpFormat();
 		ArrayList<String> helpMessages = new ArrayList<>();
 		for(GravSubCommand subCommand : this.getSubCommands()){
-			helpMessages.add(ChatColor.translateAlternateColorCodes('&', helpFormat.replace("<cmd_name>", this.getCmdPath() + subCommand.getAlias())
+			helpMessages.add(ChatColor.translateAlternateColorCodes('&', helpFormat.replace("<cmd_name>", subCommand.getCmdPath() + subCommand.getAlias() + subCommand.getArgumentString())
 					.replace("<cmd_description>", subCommand.getDescription()).replace("<cmd_permission>", subCommand.getPermission())));
 		}
 		return helpMessages;
@@ -78,10 +84,26 @@ public abstract class GravSubCommand {
     		return true;
 		}
 		if(!sender.hasPermission(this.getPermission())){
-			sender.sendMessage(noPermissionMessage);
+			sender.sendMessage(ChatColor.translateAlternateColorCodes('&', noPermissionMessage));
 			return false;
 		}
 		return true;
+	}
+
+	public String getArgumentString(){
+		return "";
+	}
+
+	public ArrayList<GravSubCommand> getEndingSubCommands(){
+		ArrayList<GravSubCommand> subCommands = new ArrayList<>();
+		for(GravSubCommand cmds : this.getSubCommands()){
+			if(cmds.getSubCommands().size() == 0){
+				subCommands.add(cmds);
+			} else {
+				subCommands.addAll(cmds.getEndingSubCommands());
+			}
+		}
+		return subCommands;
 	}
 	public void addSubCommand(GravSubCommand cmd) {
 		this.subCommands.add(cmd);

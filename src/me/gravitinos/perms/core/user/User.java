@@ -101,6 +101,22 @@ public class User extends Subject<UserData> {
      * @return The name of the display-group of this user
      */
     public String getDisplayGroup(){
+        ArrayList<Subject<?>> subjects = new ArrayList<>();
+        this.getInheritances().forEach(i -> subjects.add(i.getParent()));
+
+        Group highest = null;
+        for (Subject<?> subject : subjects) {
+            if(subject instanceof Group){
+                if(highest == null || ((Group) subject).getPriority() > highest.getPriority()){
+                    highest = (Group) subject;
+                }
+            }
+        }
+        if(highest == null){
+            this.addInheritance(GroupManager.instance.getDefaultGroup(), Context.CONTEXT_SERVER_LOCAL);
+            highest = GroupManager.instance.getDefaultGroup();
+        }
+
         return this.getData().getDisplayGroup(UserData.SERVER_LOCAL);
     }
 
@@ -109,14 +125,14 @@ public class User extends Subject<UserData> {
      * @param server The server in which this will apply on (Custom or UserData.SERVER_LOCAL or UserData.SERVER_GLOBAL)
      * @param displayGroup The display group
      */
-    public void setDisplayGroup(String server, Group displayGroup){
+    protected void setDisplayGroup(String server, Group displayGroup){
         this.getData().setDisplayGroup(server, displayGroup.getName());
     }
     /**
      * Sets the display-group of this user defaults to whatever server context the display group has
      * @param displayGroup The display group
      */
-    public void setDisplayGroup(Group displayGroup){
+    protected void setDisplayGroup(Group displayGroup){
         this.setDisplayGroup(displayGroup.getServerContext(), displayGroup);
     }
 
@@ -167,8 +183,8 @@ public class User extends Subject<UserData> {
      * @param permission The permission to check for
      * @return Whether this user has that permission
      */
-    public boolean hasOwnPermission(@NotNull String permission) {
-        return super.hasOwnPermission(permission);
+    public boolean hasOwnPermission(@NotNull String permission, @NotNull Context context) {
+        return super.hasOwnPermission(permission, context);
     }
 
     /**
@@ -302,7 +318,7 @@ public class User extends Subject<UserData> {
         }
     }
 
-    public ArrayList<Inheritance> getOwnInheritances(){
+    public ArrayList<Inheritance> getInheritances(){
         ArrayList<Inheritance> inheritances = super.getInheritances();
         if(inheritances.size() == 0){
             this.addInheritance(GroupManager.instance.getDefaultGroup(), Context.CONTEXT_SERVER_LOCAL);

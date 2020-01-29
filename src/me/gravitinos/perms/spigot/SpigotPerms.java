@@ -5,8 +5,12 @@ import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.backend.sql.SQLHandler;
 import me.gravitinos.perms.core.config.PermsConfiguration;
+import me.gravitinos.perms.core.user.UserManager;
+import me.gravitinos.perms.spigot.command.CommandPerms;
 import me.gravitinos.perms.spigot.file.SpigotFileDataManager;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.sql.SQLException;
@@ -37,6 +41,19 @@ public class SpigotPerms extends JavaPlugin {
         }
         pluginPrefix = impl.getConfigSettings().getPrefix();
         manager = new PermsManager(impl, dataManager);
+
+        //Commands
+        new CommandPerms();
+
+        //For all online players
+        for(Player p : Bukkit.getOnlinePlayers()){
+            //Load the user
+            UserManager.instance.loadUser(p.getUniqueId(), p.getName());
+
+            //Inject user with permissible
+            SpigotPermissible.inject(p);
+        }
+
     }
 
     private boolean connectSQL(SQLHandler dataManager, PermsConfiguration config){

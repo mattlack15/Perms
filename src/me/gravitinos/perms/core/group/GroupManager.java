@@ -75,6 +75,11 @@ public class GroupManager {
         grps.forEach(s -> this.loadedGroups.add((Group) s));
     }
 
+    public void saveTo(DataManager dataManager){
+        ArrayList<Subject> groups = Lists.newArrayList(loadedGroups);
+        dataManager.addSubjects(groups);
+    }
+
     /**
      * Gets a group that is loaded within this group manager
      * @param name The name of the group to look for

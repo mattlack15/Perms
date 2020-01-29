@@ -78,7 +78,7 @@ public class SpigotFileDataManager extends DataManager {
                 UserData data = new UserData(subject.getData());
                 ConfigurationSection section = usersConfig.createSection(USER_SECTION + "." + subject.getIdentifier());
                 section.set(USER_DATA_USERNAME, data.getName());
-                section.set(USER_DATA_DISPLAYGROUP, data.getDisplayGroup());
+                section.set(USER_DATA_DISPLAYGROUP, data.getDisplayGroup(SpigotPerms.instance.getImpl().getConfigSettings().getServerName()));
                 section.set(USER_DATA_NOTES, data.getNotes());
                 section.set(USER_DATA_PREFIX, data.getPrefix());
                 section.set(USER_DATA_SUFFIX, data.getSuffix());
@@ -120,7 +120,8 @@ public class SpigotFileDataManager extends DataManager {
                 GroupData data = new GroupData();
                 ConfigurationSection section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + identifier);
                 if (section == null) {
-                    return new GenericSubjectData();
+                    future.complete(null);
+                    return null;
                 }
                 data.setChatColour(section.getString(GROUP_DATA_CHATCOLOUR));
                 data.setDescription(section.getString(GROUP_DATA_DESCRIPTION));
@@ -132,9 +133,10 @@ public class SpigotFileDataManager extends DataManager {
                 UserData data = new UserData();
                 ConfigurationSection section = usersConfig.getConfigurationSection(USER_SECTION + "." + identifier);
                 if (section == null) {
-                    return new GenericSubjectData();
+                    future.complete(null);
+                    return null;
                 }
-                data.setDisplayGroup(section.getString(USER_DATA_DISPLAYGROUP));
+                data.setDisplayGroup(section.getString(USER_DATA_DISPLAYGROUP), SpigotPerms.instance.getImpl().getConfigSettings().getServerName());
                 data.setName(section.getString(USER_DATA_USERNAME));
                 data.setNotes(section.getString(USER_DATA_NOTES));
                 data.setPrefix(section.getString(USER_DATA_PREFIX));
@@ -163,6 +165,10 @@ public class SpigotFileDataManager extends DataManager {
         runAsync(() -> {
             try {
                 CachedSubject subject = new CachedSubject(name, this.getSubjectType(name), this.getSubjectData(name).get(), this.getPermissions(name).get().getPermissions(), this.getInheritances(name).get());
+                if(subject.getData() == null){
+                    future.complete(null);
+                    return null;
+                }
                 future.complete(subject);
                 return null;
             }catch (Exception e){
@@ -495,7 +501,7 @@ public class SpigotFileDataManager extends DataManager {
                     return null;
                 }
                 section.set(USER_DATA_USERNAME, data.getName());
-                section.set(USER_DATA_DISPLAYGROUP, data.getDisplayGroup());
+                section.set(USER_DATA_DISPLAYGROUP, data.getDisplayGroup(GroupData.SERVER_LOCAL));
                 section.set(USER_DATA_NOTES, data.getNotes());
                 section.set(USER_DATA_PREFIX, data.getPrefix());
                 section.set(USER_DATA_SUFFIX, data.getSuffix());
@@ -634,6 +640,47 @@ public class SpigotFileDataManager extends DataManager {
                 return null;
             }
             future.complete(subjects);
+            return null;
+        });
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Void> clearAllData() {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            groupsConfig.set(GROUP_SECTION, null);
+            groupsConfig.createSection(GROUP_SECTION);
+
+            usersConfig.set(USER_SECTION, null);
+            usersConfig.createSection(USER_SECTION);
+
+            saveGroupsConfig();
+            saveUsersConfig();
+
+            future.complete(null);
+            return null;
+        });
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Void> clearSubjectOfType(String type) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            if(Subject.USER.equals(type)){
+                usersConfig.set(USER_SECTION, null);
+                usersConfig.createSection(USER_SECTION);
+                saveUsersConfig();
+            } else if(Subject.GROUP.equals(type)){
+                groupsConfig.set(GROUP_SECTION, null);
+                groupsConfig.createSection(GROUP_SECTION);
+                saveGroupsConfig();
+            } else {
+                future.complete(null);
+                return null;
+            }
+            future.complete(null);
             return null;
         });
         return future;

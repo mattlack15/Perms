@@ -53,6 +53,6 @@ public class Inheritance {
      * @return Whether or not the parent, child or context is null and therefore whether or not this inheritance is valid
      */
     public boolean isValid(){
-        return this.child.get() != null && this.parent.get() != null && this.context != null;
+        return this.child != null && this.parent != null && this.child.get() != null && this.parent.get() != null && this.context != null;
     }
 }

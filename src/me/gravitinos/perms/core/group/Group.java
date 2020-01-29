@@ -64,6 +64,22 @@ public class Group extends Subject<GroupData> {
     }
 
     /**
+     * Gets the priority or weight of this group
+     * @return
+     */
+    public int getPriority(){
+        return this.getData().getPriority();
+    }
+
+    /**
+     * Sets the priority of weight of this group
+     * @param i
+     */
+    public void setPriority(int i){
+        this.getData().setPriority(i); //Automatically saved to data-manager
+    }
+
+    /**
      * Updates this group with a builder's values
      *
      * @param builder the builder to update from
@@ -79,8 +95,8 @@ public class Group extends Subject<GroupData> {
      * @param permission The permission to check for
      * @return Whether this group has that permission
      */
-    public boolean hasOwnPermission(@NotNull String permission) {
-        return super.hasOwnPermission(permission);
+    public boolean hasOwnPermission(@NotNull String permission, @NotNull Context context) {
+        return super.hasOwnPermission(permission, context);
     }
 
     /**
@@ -304,7 +320,7 @@ public class Group extends Subject<GroupData> {
      */
     public void setServerContext(String context){
         this.getData().setServerContext(context);
-    }
+    } //Automatically saved to data-manager
 
     /**
      * Sets the chat colour of this group
@@ -340,14 +356,6 @@ public class Group extends Subject<GroupData> {
      */
     public void setSuffix(@NotNull String suffix) {
         this.getData().setSuffix(suffix); //Automatically saved to data-manager
-    }
-
-    /**
-     * Gets the inheritances of this group
-     * @return
-     */
-    public ArrayList<Inheritance> getOwnInheritances(){
-        return super.getInheritances();
     }
 
 }

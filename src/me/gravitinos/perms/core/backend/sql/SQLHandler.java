@@ -18,6 +18,8 @@ public class SQLHandler extends DataManager {
     private Connection connection;
     private String connectionURL = "";
     private ThreadLocal<SQLDao> heldDao = new ThreadLocal<>();
+    private String password;
+    private String username;
 
     public SQLDao getDao() {
         if (heldDao.get() != null) {
@@ -309,6 +311,32 @@ public class SQLHandler extends DataManager {
         return future;
     }
 
+    @Override
+    public CompletableFuture<Void> clearAllData() {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try{
+                getDao().clearTables();
+                future.complete(null);
+            }catch(SQLException ignored){future.complete(null);}
+            return null;
+        });
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Void> clearSubjectOfType(String type) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try{
+                getDao().removeSubjectsOftype(type);
+                future.complete(null);
+            }catch(SQLException ignored){future.complete(null);}
+            return null;
+        });
+        return future;
+    }
+
     /**
      * Gets the connection from this sql handler
      *
@@ -317,7 +345,7 @@ public class SQLHandler extends DataManager {
     public Connection getConnection() {
         try {
             if (this.connection == null || this.connection.isClosed()) {
-                this.startConnection(connectionURL);
+                this.startConnection(connectionURL, username, password);
             }
         } catch (SQLException ignored) {
         }
@@ -333,6 +361,8 @@ public class SQLHandler extends DataManager {
      */
     public boolean startConnection(String connectionURL, String username, String password) throws SQLException {
         this.connectionURL = connectionURL;
+        this.username = username;
+        this.password = password;
         try {
             Class.forName("com.mysql.jdbc.Driver");
             this.connection = DriverManager.getConnection(connectionURL, username, password);

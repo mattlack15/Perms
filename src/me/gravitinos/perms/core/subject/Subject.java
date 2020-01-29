@@ -150,9 +150,9 @@ public abstract class Subject<T extends SubjectData> {
      * @param permission
      * @return
      */
-    protected boolean hasOwnPermission(String permission){
+    protected boolean hasOwnPermission(String permission, Context context){
         for(PPermission perms : ownPermissions){
-            if(perms.getPermission().equalsIgnoreCase(permission)){
+            if(perms.getPermission().equalsIgnoreCase(permission) && perms.getContext().applies(context)){
                 return true;
             }
         }
@@ -171,23 +171,42 @@ public abstract class Subject<T extends SubjectData> {
         return identifier;
     }
 
-    /**
-     * Gets all permissions from this subject, including inherited permissions
-     * @return
-     */
-    protected ArrayList<PPermission> getAllPermissions(Context context){
-        ArrayList<PPermission> perms = new ArrayList<>(ownPermissions);
-
-        for(Inheritance inheritances : inherited){
+    protected boolean hasOwnOrInheritedPermission(String permission, Context context){
+        if(this.hasOwnPermission(permission, context)){
+            return true;
+        }
+        for(Inheritance inheritances : getInheritances()){
 
             //Check if the inheritance's context applies to the specified context
             if(!inheritances.getContext().applies(context)){
                 continue;
             }
 
+            if(inheritances.getParent().hasOwnOrInheritedPermission(permission, context)){
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Gets all permissions from this subject, including inherited permissions
+     * @return
+     */
+    protected ArrayList<PPermission> getAllPermissions(Context inheritanceContext){
+        ArrayList<PPermission> perms = new ArrayList<>(ownPermissions);
+
+        for(Inheritance inheritances : getInheritances()){
+
+            //Check if the inheritance's context applies to the specified context
+            if(!inheritances.getContext().applies(inheritanceContext)){
+                continue;
+            }
+
             //Add all the permissions to the perms array list
-            inheritances.getParent().getAllPermissions(context);
-            perms.addAll(inheritances.getParent().getAllPermissions(context)); //TODO Possibly edit this if permissions are duplicated
+            inheritances.getParent().getAllPermissions(inheritanceContext);
+            perms.addAll(inheritances.getParent().getAllPermissions(inheritanceContext)); //TODO Possibly edit this if permissions are duplicated
         }
 
         return perms;

@@ -10,7 +10,8 @@ import java.util.ArrayList;
 public class CommandPerms extends GravCommand {
 
     public CommandPerms(){
-        this.addSubCommand(new CommandGroup(this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandGroup(this, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandUser(this, this.getSubCommandCmdPath()));
     }
 
     @Override

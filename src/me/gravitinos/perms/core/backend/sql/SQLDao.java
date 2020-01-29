@@ -177,6 +177,22 @@ public class SQLDao {
     }
 
     /**
+     * Self explanatory
+     * @return
+     */
+    protected String getDeleteInheritanceByChildTypeUpdate() {
+        return "DELETE FROM " + TABLE_INHERITANCE + " WHERE ChildType=?";
+    }
+
+    /**
+     * Self explanatory
+     * @return
+     */
+    protected String getDeleteInheritanceByParentTypeUpdate() {
+        return "DELETE FROM " + TABLE_INHERITANCE + " WHERE ParentType=?";
+    }
+
+    /**
      * Gets the statement to insert inheritance
      *
      * @return
@@ -286,6 +302,9 @@ public class SQLDao {
 
     public CachedSubject getSubject(String identifier) throws SQLException {
         GenericSubjectData data = this.getSubjectData(identifier);
+        if(data == null){
+            return null;
+        }
         String type = data.getType();
         return new CachedSubject(identifier, type, data, this.getPermissions(identifier), this.getInheritances(identifier));
     }
@@ -386,9 +405,9 @@ public class SQLDao {
                     }
                 }
 
-                sData.executeUpdate();
-                sInheritances.executeUpdate();
-                sPermissions.executeUpdate();
+                sData.executeBatch();
+                sInheritances.executeBatch();
+                sPermissions.executeBatch();
 
             } catch(SQLException ex){
                 return ex;
@@ -419,9 +438,9 @@ public class SQLDao {
                     sPermissions.setString(1, subject);
                     sPermissions.addBatch();
                 }
-                sData.executeUpdate();
-                sInheritances.executeUpdate();
-                sPermissions.executeUpdate();
+                sData.executeBatch();
+                sInheritances.executeBatch();
+                sPermissions.executeBatch();
 
                 return null;
 
@@ -446,7 +465,7 @@ public class SQLDao {
             s.addBatch();
         }
 
-        s.executeUpdate();
+        s.executeBatch();
     }
 
     public void addInheritances(ArrayList<CachedInheritance> inheritances) throws SQLException {
@@ -462,7 +481,7 @@ public class SQLDao {
             s.addBatch();
         }
 
-        s.executeUpdate();
+        s.executeBatch();
     }
 
     public void addPermissions(ArrayList<OwnerPermissionPair> permissions) throws SQLException {
@@ -477,7 +496,7 @@ public class SQLDao {
             s.addBatch();
         }
 
-        s.executeUpdate();
+        s.executeBatch();
     }
 
     public void removeAllPermissions(String identifier) throws SQLException {
@@ -496,7 +515,7 @@ public class SQLDao {
             s.addBatch();
         }
 
-        s.executeUpdate();
+        s.executeBatch();
     }
 
         //Subject data
@@ -622,7 +641,7 @@ public class SQLDao {
             s.addBatch();
         }
 
-        s.executeUpdate();
+        s.executeBatch();
     }
 
     public void addPermission(String ownerIdentifier, PPermission permission) throws SQLException {
@@ -646,7 +665,7 @@ public class SQLDao {
             s.addBatch();
         }
 
-        s.executeUpdate();
+        s.executeBatch();
     }
 
     public void removePermission(String ownerIdentifier, String permission) throws SQLException {
@@ -657,6 +676,32 @@ public class SQLDao {
 
         s.executeUpdate();
     }
+
+    public void removeSubjectsOftype(String type) throws SQLException{
+        PreparedStatement s = prepareStatement(this.getSubjectDataFromTypeQuery());
+        s.setString(1, type);
+        ResultSet set = s.executeQuery();
+
+        s = prepareStatement(this.getDeleteSubjectDataByTypeUpdate());
+        s.setString(1, type);
+        s.executeUpdate();
+
+        s = prepareStatement(this.getDeletePermissionByOwnerIdentifierUpdate());
+        while(set.next()){
+            s.setString(1, set.getString("Identifier"));
+            s.addBatch();
+        }
+        s.executeBatch();
+
+        s = prepareStatement(this.getDeleteInheritanceByChildTypeUpdate());
+        s.setString(1, type);
+        s.executeUpdate();
+
+        s = prepareStatement(this.getDeleteInheritanceByParentTypeUpdate());
+        s.setString(1, type);
+        s.executeUpdate();
+    }
+
 
     public void initializeTables() throws SQLException {
         this.executeInTransaction(() -> {

@@ -1,5 +1,9 @@
 package me.gravitinos.perms.spigot.command;
 
+import me.gravitinos.perms.core.group.Group;
+import me.gravitinos.perms.core.group.GroupData;
+import me.gravitinos.perms.core.group.GroupManager;
+import me.gravitinos.perms.core.subject.Inheritance;
 import me.gravitinos.perms.spigot.SpigotPerms;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -8,8 +12,8 @@ import org.bukkit.command.CommandSender;
 import java.util.ArrayList;
 
 public class CommandGroup extends GravSubCommand {
-    public CommandGroup(String cmdPath) {
-        super(cmdPath);
+    public CommandGroup(GravCommandPermissionable parent, String cmdPath) {
+        super(parent, cmdPath);
     }
 
     @Override
@@ -28,36 +32,47 @@ public class CommandGroup extends GravSubCommand {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args, Object...passedArgs) {
         //Don't need to check permissions because the permission is the same as the parent command (CommandPerms)
 
-        if (args.length > 0 && !args[0].equalsIgnoreCase("help")) {
-            GravSubCommand subCommand = this.getSubCommand(args[0]);
-            if (subCommand == null) {
-                this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Unrecognized sub-command! Try &6/" + SpigotPerms.commandName + " help");
-                return true;
-            }
-            this.callSubCommand(subCommand, sender, cmd, label, args);
-        }
-
         //Literally the exact same functionality as CommandPerms
-        if (args.length > 1 && !args[0].equalsIgnoreCase("help")) { //TODO add object args to callSubCommand for passing group object through or user object use Object... passedArgs
+        if (args.length > 1) {
             GravSubCommand subCommand = this.getSubCommand(args[1]);
             if (subCommand == null) {
                 this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Unrecognized sub-command! Try &6/" + SpigotPerms.commandName + " help");
                 return true;
             }
-            this.callSubCommand(subCommand, sender, cmd, label, args);
-        } else {
-            int page = 1;
-            try {
-                page = Integer.parseInt(args[1]);
-            } catch (Exception ignored) { }
-            ArrayList<String> helpMsgs = this.getHelpMessages(SpigotPerms.instance.getImpl().getConfigSettings().getHelpFormat(), page);
-            helpMsgs.add(0, ChatColor.translateAlternateColorCodes('&', SpigotPerms.instance.getImpl().getConfigSettings().getHelpHeader().replace("<page>", page + "")));
-            helpMsgs.add(ChatColor.translateAlternateColorCodes('&', SpigotPerms.instance.getImpl().getConfigSettings().getHelpFooter().replace("<page>", page + "")));
 
-            helpMsgs.forEach(sender::sendMessage); //Send the messages
+            Group group = GroupManager.instance.getGroup(args[0]);
+            if(group == null){
+                this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Group not found!");
+                return true;
+            }
+
+            this.callSubCommand(subCommand, 1, sender, cmd, label, args, group);
+        } else {
+            //Display group info
+
+            Group group = GroupManager.instance.getGroup(args[0]);
+            if(group == null){
+                this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Group not found!");
+                return true;
+            }
+
+            //Not being used for error though
+            sendErrorMessage(sender, "&3&lName &6> &7" + group.getName());
+            sendErrorMessage(sender, "&3&lPrefix &6> " + group.getPrefix());
+            sendErrorMessage(sender, "&3&lSuffix &6> " + group.getSuffix());
+            sendErrorMessage(sender, "&3&lServer &6> &7" + group.getServerContext() + " (&e" + (GroupData.SERVER_GLOBAL.equals(group.getServerContext()) ? "Global&7)" : (GroupData.SERVER_LOCAL.equals(group.getServerContext()) ? "Local&7)" : "Foreign&7)")));
+            sendErrorMessage(sender, "&3&lChat Colour &6> " + group.getChatColour() + "People in this group have this chat colour");
+            sendErrorMessage(sender, "&3&lDescription &6> &r" + group.getDescription());
+            sendErrorMessage(sender, "&3&lDefault Group &6> " + (group.equals(GroupManager.instance.getDefaultGroup()) ? "&aTrue" : "&cFalse"));
+            sendErrorMessage(sender, "&3&lInheritances &6>");
+            for(Inheritance inheritance : group.getInheritances()){
+                boolean applies = inheritance.getContext().getServerName().equals(GroupData.SERVER_GLOBAL) || inheritance.getContext().getServerName().equals(GroupData.SERVER_LOCAL);
+                sendErrorMessage(sender, "&7- &e" + inheritance.getParent() + (applies ? "" : "&cDoes not apply here"));
+            }
+
         }
         return true;
 

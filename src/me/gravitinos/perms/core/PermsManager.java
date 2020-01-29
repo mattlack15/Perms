@@ -30,6 +30,12 @@ public class PermsManager {
         }
     }
 
+    public void copyTo(DataManager manager){
+        manager.clearAllData();
+        userManager.saveTo(manager);
+        groupManager.saveTo(manager);
+    }
+
     public PermsImplementation getImplementation() {
         return implementation;
     }

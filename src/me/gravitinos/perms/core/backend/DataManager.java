@@ -70,6 +70,9 @@ public abstract class DataManager {
 
     public abstract CompletableFuture<ArrayList<CachedSubject>> getAllSubjectsOfType(String type);
 
+    public abstract CompletableFuture<Void> clearAllData();
+    public abstract CompletableFuture<Void> clearSubjectOfType(String type);
+
     //Async execution
 
     protected <T> CompletableFuture<T> runAsync(Supplier<T> supplier){
