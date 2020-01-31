@@ -13,6 +13,8 @@ public class CommandUserGroup extends GravSubCommand {
     public CommandUserGroup(GravCommandPermissionable parent, String cmdPath) {
         super(parent, cmdPath);
         this.addSubCommand(new CommandUserGroupAdd(this, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandUserGroupRemove(this, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandUserGroupSet(this, this.getSubCommandCmdPath()));
     }
 
     @Override
@@ -39,13 +41,13 @@ public class CommandUserGroup extends GravSubCommand {
         }
 
         if(args.length < 1){
-            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "More arguments needed! Try &eadd, remove, set, or setdisplay");
+            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "More arguments needed! Try &eadd, remove, or set");
             return true;
         }
 
         GravSubCommand subCommand = this.getSubCommand(args[0]);
         if(subCommand == null){
-            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Unrecognized sub-command, Try &eadd, remove, set, or setdisplay");
+            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Unrecognized sub-command, Try &eadd, remove, or set");
             return true;
         }
         this.callSubCommand(subCommand, sender, cmd, label, args, passedArgs); //Call next sub-command

@@ -6,6 +6,8 @@ import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.user.UserManager;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.concurrent.ExecutionException;
+
 public class PermsManager {
     public static PermsManager instance = null;
 
@@ -27,6 +29,12 @@ public class PermsManager {
         //Config checks
         if(implementation.getConfigSettings().getServerName().equals("")){
             implementation.getConfigSettings().setServerName("server_" + Math.round(Math.random() * 1000));
+        }
+
+        try {
+            this.groupManager.loadGroups().get(); //Load groups
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
         }
     }
 

@@ -4,6 +4,8 @@ import me.gravitinos.perms.core.PermsImplementation;
 import me.gravitinos.perms.core.config.PermsConfiguration;
 import me.gravitinos.perms.spigot.file.SpigotConf;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -72,7 +74,11 @@ public class SpigotImpl implements PermsImplementation {
 
     @Override
     public void addToLog(String message) {
-
+        for(Player p : Bukkit.getOnlinePlayers()){
+            if(p.hasPermission(SpigotPerms.commandName + ".viewlog")){
+                p.sendMessage(ChatColor.translateAlternateColorCodes('&', SpigotPerms.pluginPrefix + " &c&lLOG: &f" + message));
+            }
+        }
     }
 
     @Override

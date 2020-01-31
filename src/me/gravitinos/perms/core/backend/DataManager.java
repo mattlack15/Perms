@@ -43,7 +43,7 @@ public abstract class DataManager {
 
     public abstract CompletableFuture<Void> removePermission(Subject subject, String permission);
 
-    public abstract CompletableFuture<Void> removePermission(Subject subject, String permission, UUID permIdentifier);
+    public abstract CompletableFuture<Void> removePermissionExact(Subject subject, String permission, UUID permIdentifier);
 
     public abstract CompletableFuture<ArrayList<CachedInheritance>> getInheritances(String name);
 
@@ -62,6 +62,8 @@ public abstract class DataManager {
     public abstract CompletableFuture<Void> addPermissions(Subject subject, ImmutablePermissionList list);
 
     public abstract CompletableFuture<Void> removePermissions(Subject subject, ArrayList<String> list);
+
+    public abstract CompletableFuture<Void> removePermissionsExact(Subject subject, ArrayList<PPermission> list);
 
     public abstract CompletableFuture<Void> addSubjects(ArrayList<Subject> subjects);
 

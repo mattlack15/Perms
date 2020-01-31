@@ -12,6 +12,7 @@ public class CommandPerms extends GravCommand {
     public CommandPerms(){
         this.addSubCommand(new CommandGroup(this, this.getSubCommandCmdPath()));
         this.addSubCommand(new CommandUser(this, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandGroups(this, this.getSubCommandCmdPath()));
     }
 
     @Override
@@ -49,7 +50,7 @@ public class CommandPerms extends GravCommand {
             try {
                 page = Integer.parseInt(args[1]);
             } catch (Exception ignored) { }
-            ArrayList<String> helpMsgs = this.getHelpMessages(SpigotPerms.instance.getImpl().getConfigSettings().getHelpFormat(), page);
+            ArrayList<String> helpMsgs = this.getEndingHelpMessages(SpigotPerms.instance.getImpl().getConfigSettings().getHelpFormat(), page);
             helpMsgs.add(0, ChatColor.translateAlternateColorCodes('&', SpigotPerms.instance.getImpl().getConfigSettings().getHelpHeader().replace("<page>", page + "")));
             helpMsgs.add(ChatColor.translateAlternateColorCodes('&', SpigotPerms.instance.getImpl().getConfigSettings().getHelpFooter().replace("<page>", page + "")));
 

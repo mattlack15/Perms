@@ -23,8 +23,7 @@ public class UserBuilder {
     private ArrayList<PPermission> permissions = new ArrayList<>();
 
     public UserBuilder(UUID id, String name){
-        this.uuid = id;
-        this.name = name;
+        this.setUUIDAndName(id, name);
     }
 
     public UserBuilder setPermissions(@NotNull ImmutablePermissionList permissions){
@@ -34,7 +33,7 @@ public class UserBuilder {
 
     public UserBuilder setUUIDAndName(@NotNull UUID id, @NotNull String name){
         this.uuid = id;
-        this.name = name;
+        this.data.setName(name);
         return this;
     }
 
@@ -53,7 +52,7 @@ public class UserBuilder {
     }
 
     public String getName(){
-        return this.name;
+        return this.data.getName();
     }
 
     public ArrayList<PPermission> getPermissions(){

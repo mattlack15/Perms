@@ -22,12 +22,12 @@ public class CommandUserGroupSet extends GravSubCommand {
 
     @Override
     public String getDescription() {
-        return null;
+        return "Sets a user's group";
     }
 
     @Override
     public String getAlias() {
-        return null;
+        return "set";
     }
 
     @Override

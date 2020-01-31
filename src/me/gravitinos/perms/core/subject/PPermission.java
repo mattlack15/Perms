@@ -1,6 +1,7 @@
 package me.gravitinos.perms.core.subject;
 
 import me.gravitinos.perms.core.context.Context;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
 
@@ -13,26 +14,26 @@ public final class PPermission {
     private final Context context;
     private UUID permissionIdentifier = UUID.randomUUID();
 
-    public PPermission(String permission, Context context, long expiry){
+    public PPermission(@NotNull String permission, @NotNull Context context, long expiry){
         this.expiry = expiry;
         this.context = context;
         this.permission = permission.toLowerCase();
     }
 
-    public PPermission(String permission, Context context, long expiry, UUID permissionIdentifier){
+    public PPermission(@NotNull String permission, @NotNull Context context, long expiry, @NotNull UUID permissionIdentifier){
         this(permission, context, expiry);
         this.permissionIdentifier = permissionIdentifier;
     }
 
-    public PPermission(String permission){
+    public PPermission(@NotNull String permission){
         this(permission, 0);
     }
 
-    public PPermission(String permission, Context context){
+    public PPermission(@NotNull String permission, @NotNull Context context){
         this(permission, context, 0);
     }
 
-    public PPermission(String permission, long expiry){
+    public PPermission(@NotNull String permission, long expiry){
         this(permission, Context.CONTEXT_ALL, expiry);
     }
 

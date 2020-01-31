@@ -22,9 +22,9 @@ public abstract class GravCommand implements CommandExecutor, GravCommandPermiss
 		return this.callSubCommand(cmd, 0, sender, cmd1, label, args, passedArgs);
 	}
 	public boolean callSubCommand(GravSubCommand cmd, int usedArgs, CommandSender sender, Command cmd1, String label, String[] args, Object... passedArgs) {
-		String args1[] = new String[args.length-1];
+		String[] args1 = new String[args.length - usedArgs - 1];
 		for(int i = usedArgs+1; i < args.length; i++) {
-			args1[i-1] = args[i];
+			args1[i-usedArgs-1] = args[i];
 		}
 		return cmd.onCommand(sender, cmd1, label, args1, passedArgs);
 	}

@@ -5,6 +5,7 @@ import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.subject.Inheritance;
 import me.gravitinos.perms.spigot.SpigotPerms;
+import me.gravitinos.perms.spigot.command.group.*;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -14,11 +15,21 @@ import java.util.ArrayList;
 public class CommandGroup extends GravSubCommand {
     public CommandGroup(GravCommandPermissionable parent, String cmdPath) {
         super(parent, cmdPath);
+
+        this.addSubCommand(new CommandGroupAdd(this, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandGroupParents(this, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandGroupRemove(this, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandGroupSetDesc(this, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandGroupSetPrefix(this, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandGroupSetSuffix(this, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandGroupSetPriority(this, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandGroupCreate(this, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandGroupDelete(this, this.getSubCommandCmdPath()));
     }
 
     @Override
     public String getPermission() {
-        return SpigotPerms.commandName + ".use";
+        return this.getParentCommand().getPermission();
     }
 
     @Override
@@ -45,12 +56,21 @@ public class CommandGroup extends GravSubCommand {
 
             Group group = GroupManager.instance.getGroup(args[0]);
             if(group == null){
-                this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Group not found!");
+                if(subCommand.getAlias().equalsIgnoreCase("create")){
+                    this.callSubCommand(subCommand, 1, sender, cmd, label, args, args[0]);
+                } else {
+                    this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Group not found!");
+                }
+                return true;
+            }
+            this.callSubCommand(subCommand, 1, sender, cmd, label, args, group);
+        } else {
+
+            if(args.length < 1){
+                this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "More arguments needed!");
                 return true;
             }
 
-            this.callSubCommand(subCommand, 1, sender, cmd, label, args, group);
-        } else {
             //Display group info
 
             Group group = GroupManager.instance.getGroup(args[0]);
@@ -61,10 +81,10 @@ public class CommandGroup extends GravSubCommand {
 
             //Not being used for error though
             sendErrorMessage(sender, "&3&lName &6> &7" + group.getName());
-            sendErrorMessage(sender, "&3&lPrefix &6> " + group.getPrefix());
-            sendErrorMessage(sender, "&3&lSuffix &6> " + group.getSuffix());
+            sendErrorMessage(sender, "&3&lPrefix &6> &r" + group.getPrefix());
+            sendErrorMessage(sender, "&3&lSuffix &6> &r" + group.getSuffix());
             sendErrorMessage(sender, "&3&lServer &6> &7" + group.getServerContext() + " (&e" + (GroupData.SERVER_GLOBAL.equals(group.getServerContext()) ? "Global&7)" : (GroupData.SERVER_LOCAL.equals(group.getServerContext()) ? "Local&7)" : "Foreign&7)")));
-            sendErrorMessage(sender, "&3&lChat Colour &6> " + group.getChatColour() + "People in this group have this chat colour");
+            sendErrorMessage(sender, "&3&lChat Colour &6> &r" + group.getChatColour() + "People in this group have this chat colour");
             sendErrorMessage(sender, "&3&lDescription &6> &r" + group.getDescription());
             sendErrorMessage(sender, "&3&lDefault Group &6> " + (group.equals(GroupManager.instance.getDefaultGroup()) ? "&aTrue" : "&cFalse"));
             sendErrorMessage(sender, "&3&lInheritances &6>");

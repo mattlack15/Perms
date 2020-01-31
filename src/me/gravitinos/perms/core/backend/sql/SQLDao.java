@@ -353,6 +353,17 @@ public class SQLDao {
         s.executeUpdate();
     }
 
+    public void removePermissionsExact(ArrayList<UUID> permissionIdentifiers) throws SQLException {
+        PreparedStatement s = prepareStatement(this.getDeletePermissionByPermissionIdentifierUpdate());
+
+        for(UUID id : permissionIdentifiers) {
+            s.setString(1, id.toString());
+            s.addBatch();
+        }
+
+        s.executeBatch();
+    }
+
     public ArrayList<CachedSubject> getAllSubjectsOfType(String type) throws SQLException{
         PreparedStatement s = prepareStatement(this.getPermissionsFromTypeJoinSubjectData());
         s.setString(1, type);
@@ -367,7 +378,7 @@ public class SQLDao {
                 sub = new CachedSubject(identifier, type, SubjectData.fromString(results.getString("Data")), new ArrayList<>(), new ArrayList<>());
                 subjectMap.put(identifier, sub);
             }
-            sub.getPermissions().add(new PPermission(results.getString("Permission"), Context.fromString(results.getString("Context")), Long.parseLong(results.getString("Expiration"))));
+            sub.getPermissions().add(new PPermission(results.getString("Permission"), Context.fromString(results.getString("Context")), Long.parseLong(results.getString("Expiration")), UUID.fromString(results.getString("PermissionIdentifier"))));
         }
 
         s = prepareStatement(this.getInheritancesFromTypeJoinSubjectData());
@@ -412,8 +423,9 @@ public class SQLDao {
                     for(PPermission permissions : Subject.getPermissions(subject)){
                         sPermissions.setString(1, subject.getIdentifier());
                         sPermissions.setString(2, permissions.getPermission());
-                        sPermissions.setString(3, Long.toString(permissions.getExpiry()));
-                        sPermissions.setString(4, permissions.getContext().toString());
+                        sPermissions.setString(3, permissions.getPermissionIdentifier().toString());
+                        sPermissions.setString(4, Long.toString(permissions.getExpiry()));
+                        sPermissions.setString(5, permissions.getContext().toString());
                         sPermissions.addBatch();
                     }
                 }
@@ -636,7 +648,7 @@ public class SQLDao {
         ResultSet r = s.executeQuery();
 
         while(r.next()){
-            PPermission perm = new PPermission(r.getString("Permission"), Context.fromString(r.getString("Context")), Long.parseLong(r.getString("Expiration")));
+            PPermission perm = new PPermission(r.getString("Permission"), Context.fromString(r.getString("Context")), Long.parseLong(r.getString("Expiration")), UUID.fromString(r.getString("PermissionIdentifier")));
             perms.add(perm);
         }
 

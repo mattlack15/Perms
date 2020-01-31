@@ -24,12 +24,12 @@ public class CommandUserRemove extends GravSubCommand {
 
     @Override
     public String getDescription() {
-        return "Add a permission to a user";
+        return "removes a permission from a user";
     }
 
     @Override
     public String getAlias() {
-        return "add";
+        return "remove";
     }
 
     @Override
@@ -67,7 +67,7 @@ public class CommandUserRemove extends GravSubCommand {
         }
 
         if(permToRemove == null){
-            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "User does not contain &d" + gl + " permission " + perm);
+            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "User does not contain &d" + gl + "&7 permission &f" + perm);
             return true;
         }
 

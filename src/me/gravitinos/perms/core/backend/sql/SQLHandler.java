@@ -138,7 +138,7 @@ public class SQLHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> removePermission(Subject subject, String permission, UUID permIdentifier) {
+    public CompletableFuture<Void> removePermissionExact(Subject subject, String permission, UUID permIdentifier) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
             try{
@@ -249,6 +249,21 @@ public class SQLHandler extends DataManager {
         runAsync(() -> {
             try{
                 getDao().removePermissions(subject.getIdentifier(), list);
+                future.complete(null);
+            }catch(SQLException ignored){future.complete(null);}
+            return null;
+        });
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Void> removePermissionsExact(Subject subject, ArrayList<PPermission> list) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try{
+                ArrayList<UUID> ids = new ArrayList<>();
+                list.forEach(p -> ids.add(p.getPermissionIdentifier()));
+                getDao().removePermissionsExact(ids);
                 future.complete(null);
             }catch(SQLException ignored){future.complete(null);}
             return null;

@@ -51,7 +51,7 @@ public class UserManager {
             try {
                 CachedSubject cachedSubject = dataManager.getSubject(id.toString()).get();
                 User user;
-                if(cachedSubject.getData() == null || cachedSubject.getIdentifier() == null){
+                if(cachedSubject == null || cachedSubject.getData() == null || cachedSubject.getIdentifier() == null){
                     user = new UserBuilder(id, username).setDisplayGroup(GroupData.SERVER_GLOBAL, GroupManager.instance.getDefaultGroup()).addInheritance(GroupManager.instance.getDefaultGroup(), Context.CONTEXT_SERVER_LOCAL).build();
                 } else {
                     user = new User(cachedSubject, (s) -> new SubjectRef(GroupManager.instance.getGroup(s)), this);
@@ -80,7 +80,7 @@ public class UserManager {
      * @param uuid The unique ID of the user to unload
      */
     public void unloadUser(UUID uuid){
-        loadedUsers.stream().forEach(users -> {
+        ((ArrayList<User>)loadedUsers.clone()).forEach(users -> {
             if(users.getUniqueID().equals(uuid)){
                 loadedUsers.remove(users);
             }
@@ -119,5 +119,8 @@ public class UserManager {
 
     public void addUser(User user){
         this.loadedUsers.add(user);
+        if(dataManager != null){
+            dataManager.addSubject(user);
+        }
     }
 }

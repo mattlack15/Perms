@@ -30,7 +30,10 @@ import org.bukkit.event.player.PlayerLoginEvent;
 import java.util.ArrayList;
 
 public class ChatListener implements Listener {
+    public static ChatListener instance;
+
     public ChatListener(){
+        instance = this;
         Bukkit.getPluginManager().registerEvents(this, SpigotPerms.instance);
     }
 
@@ -44,12 +47,14 @@ public class ChatListener implements Listener {
         //Get user
         User user = UserManager.instance.getUser(event.getPlayer().getUniqueId());
 
+        event.setCancelled(true);
+
         //Get displaygroup
         String displayGroupName = user.getDisplayGroup();
         Group displayGroup = GroupManager.instance.getGroup(displayGroupName);
         if(displayGroup == null){
             displayGroup = GroupManager.instance.getDefaultGroup();
-            user.setDisplayGroup(displayGroup);
+            user.addInheritance(displayGroup, Context.CONTEXT_SERVER_LOCAL);
         }
 
         //Get Chat components
@@ -57,6 +62,7 @@ public class ChatListener implements Listener {
         ArrayList<TextComponent> components = new ArrayList<>();
 
         for(String part : chatFormat){
+            part = ChatColor.translateAlternateColorCodes('&', part);
             HoverEvent hoverEvent = null;
             ClickEvent clickEvent = null;
 
@@ -67,7 +73,9 @@ public class ChatListener implements Listener {
             part = part.replace("<username>", event.getPlayer().getName());
             part = part.replace("<uuid>", event.getPlayer().getUniqueId().toString());
             part = part.replace("<prefix>", toColour(displayGroup.getPrefix()));
-            part = part.replace("<chatcolor>", toColour(displayGroup.getChatColour()));
+            part = part.replace("<chatcolour>", toColour(displayGroup.getChatColour()));
+            part = part.replace("<message>", event.getMessage());
+
 
             //Placeholder API TODO
 

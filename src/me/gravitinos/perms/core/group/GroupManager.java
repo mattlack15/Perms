@@ -203,6 +203,7 @@ public class GroupManager {
         Group g = this.getGroup(groupName);
         if(g == null){
             g = this.getNewDefaultGroup();
+            this.addGroup(g);
             PermsManager.instance.getImplementation().getConfigSettings().setDefaultGroup(g.getName());
             PermsManager.instance.getImplementation().addToLog("Unable to find default group, a new default group was created!");
         }

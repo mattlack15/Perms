@@ -7,7 +7,7 @@ import me.gravitinos.perms.core.subject.Inheritance;
 import me.gravitinos.perms.core.user.User;
 import me.gravitinos.perms.core.user.UserManager;
 import me.gravitinos.perms.spigot.SpigotPerms;
-import me.gravitinos.perms.spigot.command.user.CommandUserGroup;
+import me.gravitinos.perms.spigot.command.user.*;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
@@ -22,11 +22,15 @@ public class CommandUser extends GravSubCommand {
     public CommandUser(GravCommandPermissionable parent, String cmdPath) {
         super(parent, cmdPath);
         this.addSubCommand(new CommandUserGroup(parent, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandUserAdd(parent, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandUserRemove(parent, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandUserSetPrefix(parent, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandUserList(parent, this.getSubCommandCmdPath()));
     }
 
     @Override
     public String getPermission() {
-        return SpigotPerms.commandName + ".use";
+        return this.getParentCommand().getPermission();
     }
 
     @Override
@@ -79,7 +83,13 @@ public class CommandUser extends GravSubCommand {
 
                 this.callSubCommand(subCommand, 1, sender, cmd, label, args, user);
             } else {
-                //Display group info
+
+                if(args.length < 1){
+                    this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "More arguments needed!");
+                    return;
+                }
+
+                //Display user info
 
                 Player p = Bukkit.getPlayer(args[0]);
                 User user;
@@ -115,7 +125,7 @@ public class CommandUser extends GravSubCommand {
                 sendErrorMessage(sender, "&3&lInheritances (Groups) &6>");
                 for (Inheritance inheritance : user.getInheritances()) {
                     boolean applies = inheritance.getContext().getServerName().equals(GroupData.SERVER_GLOBAL) || inheritance.getContext().getServerName().equals(GroupData.SERVER_LOCAL);
-                    sendErrorMessage(sender, "&7- &e" + inheritance.getParent() + (applies ? "" : "&cDoes not apply here"));
+                    sendErrorMessage(sender, "&7- &e" + inheritance.getParent().getIdentifier() + (applies ? "" : "&cDoes not apply here"));
                 }
 
             }

@@ -23,7 +23,7 @@ public class CommandUserSetPrefix extends GravSubCommand {
 
     @Override
     public String getAlias() {
-        return null;
+        return "setprefix";
     }
 
     @Override
@@ -31,6 +31,7 @@ public class CommandUserSetPrefix extends GravSubCommand {
         if(!this.checkPermission(sender, SpigotPerms.pluginPrefix + "You do not have permission to use this command!")){
             return true;
         }
+        this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Command in &cdevelopment!");
         return true;
     }
 }

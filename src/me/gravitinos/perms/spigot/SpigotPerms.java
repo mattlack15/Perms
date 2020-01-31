@@ -7,7 +7,11 @@ import me.gravitinos.perms.core.backend.sql.SQLHandler;
 import me.gravitinos.perms.core.config.PermsConfiguration;
 import me.gravitinos.perms.core.user.UserManager;
 import me.gravitinos.perms.spigot.command.CommandPerms;
+import me.gravitinos.perms.spigot.command.GravCommand;
+import me.gravitinos.perms.spigot.command.GravSubCommand;
 import me.gravitinos.perms.spigot.file.SpigotFileDataManager;
+import me.gravitinos.perms.spigot.listeners.ChatListener;
+import me.gravitinos.perms.spigot.listeners.LoginListener;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -19,16 +23,19 @@ import java.util.concurrent.ExecutionException;
 public class SpigotPerms extends JavaPlugin {
     public static SpigotPerms instance;
 
-    public static final String commandName = "ranks";
+    public static final String commandName = "tr";
 
     public static String pluginPrefix;
 
     private PermsManager manager;
 
+    private GravCommand mainCommand;
+
     private SpigotImpl impl;
 
-    public SpigotPerms(){
+    public void onEnable(){
         instance = this;
+        this.saveDefaultConfig();
         this.impl = new SpigotImpl();
         DataManager dataManager;
         if(impl.getConfigSettings().isUsingSQL()){
@@ -43,7 +50,11 @@ public class SpigotPerms extends JavaPlugin {
         manager = new PermsManager(impl, dataManager);
 
         //Commands
-        new CommandPerms();
+        this.mainCommand = new CommandPerms();
+
+        //Listeners
+        new ChatListener();
+        new LoginListener();
 
         //For all online players
         for(Player p : Bukkit.getOnlinePlayers()){
@@ -54,6 +65,9 @@ public class SpigotPerms extends JavaPlugin {
             SpigotPermissible.inject(p);
         }
 
+    }
+
+    public void onDisable(){
     }
 
     private boolean connectSQL(SQLHandler dataManager, PermsConfiguration config){

@@ -132,13 +132,14 @@ public class Group extends Subject<GroupData> {
      *
      * @param permission the permission to remove
      */
-    public void removeOwnPermission(@NotNull PPermission permission) {
-        super.removeOwnPermission(permission.getPermission());
+    public PPermission removeOwnPermission(@NotNull PPermission permission) {
+        PPermission perm = super.removeOwnPermission(permission);
 
         //Update backend
         if (dataManager != null) {
-            dataManager.removePermission(this, permission.getPermission());
+            dataManager.removePermissionExact(this, permission.getPermission(), perm.getPermissionIdentifier());
         }
+        return perm;
     }
 
     /**
@@ -153,6 +154,11 @@ public class Group extends Subject<GroupData> {
         if (dataManager != null) {
             dataManager.removePermission(this, permission);
         }
+    }
+
+    @Override
+    public DataManager getDataManager() {
+        return this.dataManager;
     }
 
     public ArrayList<Inheritance> getInheritances(){
@@ -204,9 +210,7 @@ public class Group extends Subject<GroupData> {
 
         //Update backend
         if(dataManager != null) {
-            ArrayList<String> perms = new ArrayList<>();
-            permissions.forEach(p -> perms.add(p.getPermission()));
-            dataManager.removePermissions(this, perms);
+            dataManager.removePermissionsExact(this, permissions);
         }
     }
 

@@ -65,8 +65,8 @@ public class CommandUserAdd extends GravSubCommand {
 
         if(args.length > 2){
             StringBuilder builder = new StringBuilder();
-            for(int i = 1; i < args.length; i++){
-                builder.append(args[0] + " ");
+            for(int i = 2; i < args.length; i++){
+                builder.append(args[i] + " ");
             }
             builder.deleteCharAt(builder.length()-1);
             String contextStr = builder.toString();

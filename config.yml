@@ -1,0 +1,27 @@
+plugin_prefix: "&7[&9TR&7] "
+
+#Set this once and never change it after that, choose a good name that has meaning
+#such as ex. "Lobby-1" or "Prison-1";
+server_name: ""
+
+default_group: "default"
+
+god_users: #God users will ALWAYS have all permissions, literally just sets all permission checking for the player to return true
+  - ExamplePlayer123456789 #Not an actual player, can't be its over 16 characters so don't worry
+
+case_sensitive_groups: false
+
+#SQL Information
+sql: false
+sql_host: ""
+sql_port: ""
+sql_database: ""
+sql_username: ""
+sql_password: ""
+
+chat_format:
+  - "<prefix> <username> &6&l> &r<chatcolour> <message>"
+
+help_format: "/&e<cmd_name> &6- &7<cmd_description>"
+help_header: "Permissions Help v1.0 Gravitinos"
+help_footer: ""

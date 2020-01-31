@@ -117,6 +117,8 @@ public class User extends Subject<UserData> {
             highest = GroupManager.instance.getDefaultGroup();
         }
 
+        this.setDisplayGroup(highest);
+
         return this.getData().getDisplayGroup(UserData.SERVER_LOCAL);
     }
 
@@ -221,7 +223,7 @@ public class User extends Subject<UserData> {
 
         //Update backend
         if (dataManager != null) {
-            dataManager.removePermission(this, p.getPermission(), p.getPermissionIdentifier());
+            dataManager.removePermissionExact(this, p.getPermission(), p.getPermissionIdentifier());
         }
         return p;
     }
@@ -262,9 +264,7 @@ public class User extends Subject<UserData> {
 
         //Update backend
         if(dataManager != null) {
-            ArrayList<String> perms = new ArrayList<>();
-            permissions.forEach(p -> perms.add(p.getPermission()));
-            dataManager.removePermissions(this, perms);
+            dataManager.removePermissionsExact(this, permissions);
         }
     }
 
@@ -274,6 +274,11 @@ public class User extends Subject<UserData> {
      */
     public ImmutablePermissionList getOwnPermissions(){
         return super.getPermissions();
+    }
+
+    @Override
+    public DataManager getDataManager() {
+        return this.dataManager;
     }
 
     /**

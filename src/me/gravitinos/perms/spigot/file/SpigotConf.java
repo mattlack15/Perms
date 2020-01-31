@@ -9,18 +9,17 @@ import java.util.ArrayList;
 
 public class SpigotConf implements PermsConfiguration {
     private static final String PLUGIN_PREFIX = "plugin_prefix";
-    private static final String HELP_MSGS = "help_messages";
     private static final String GOD_USERS = "god_users";
     private static final String CASE_SENSITIVE_GROUPS = "case_sensitive_groups";
     private static final String SQL_ENABLED = "sql";
     private static final String SQL_HOST = "sql_host";
+    private static final String SQL_PORT = "sql_port";
     private static final String SQL_DATABASE = "sql_database";
     private static final String SQL_USERNAME = "sql_username";
     private static final String SQL_PASSWORD = "sql_password";
     private static final String SERVER_NAME = "server_name";
     private static final String DEFAULT_GROUP = "default_group";
     private static final String CHAT_FORMAT = "chat_format";
-    private static final String SQL_PORT = "sql_port";
     private static final String HELP_HEADER = "help_header";
     private static final String HELP_FOOTER = "help_footer";
     private static final String HELP_FORMAT = "help_format";

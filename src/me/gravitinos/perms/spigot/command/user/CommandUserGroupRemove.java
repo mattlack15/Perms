@@ -24,12 +24,12 @@ public class CommandUserGroupRemove extends GravSubCommand {
 
     @Override
     public String getDescription() {
-        return null;
+        return "Removes a group from a user";
     }
 
     @Override
     public String getAlias() {
-        return null;
+        return "remove";
     }
 
     @Override
