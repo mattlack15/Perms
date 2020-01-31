@@ -76,7 +76,7 @@ public abstract class GravCommand implements CommandExecutor, GravCommandPermiss
 		String helpFormat = SpigotPerms.instance.getImpl().getConfigSettings().getHelpFormat();
 		ArrayList<String> helpMessages = new ArrayList<>();
 		for(GravSubCommand subCommand : this.getSubCommands()){
-			helpMessages.add(ChatColor.translateAlternateColorCodes('&', helpFormat.replace("<cmd_name>", subCommand.getCmdPath() + subCommand.getAlias() + subCommand.getArgumentString())
+			helpMessages.add(ChatColor.translateAlternateColorCodes('&', helpFormat.replace("<cmd_name>", subCommand.getCmdPath() + subCommand.getAlias() + " " + subCommand.getArgumentString())
 					.replace("<cmd_description>", subCommand.getDescription()).replace("<cmd_permission>", subCommand.getPermission())));
 		}
 		return helpMessages;
@@ -86,7 +86,7 @@ public abstract class GravCommand implements CommandExecutor, GravCommandPermiss
 		String helpFormat = SpigotPerms.instance.getImpl().getConfigSettings().getHelpFormat();
 		ArrayList<String> helpMessages = new ArrayList<>();
 		for(GravSubCommand subCommand : this.getEndingSubCommands()){
-			helpMessages.add(ChatColor.translateAlternateColorCodes('&', helpFormat.replace("<cmd_name>", subCommand.getCmdPath() + subCommand.getAlias() + subCommand.getArgumentString())
+			helpMessages.add(ChatColor.translateAlternateColorCodes('&', helpFormat.replace("<cmd_name>", subCommand.getCmdPath() + subCommand.getAlias() + " " + subCommand.getArgumentString())
 					.replace("<cmd_description>", subCommand.getDescription()).replace("<cmd_permission>", subCommand.getPermission())));
 		}
 		return helpMessages;

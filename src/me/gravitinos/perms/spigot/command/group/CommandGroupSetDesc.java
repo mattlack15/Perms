@@ -28,6 +28,11 @@ public class CommandGroupSetDesc extends GravSubCommand {
     }
 
     @Override
+    public String getArgumentString(){
+        return "<description>";
+    }
+
+    @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args, Object... passedArgs) {
         if(!this.checkPermission(sender, SpigotPerms.pluginPrefix + "You do not have permission to use this command")){
             return true;

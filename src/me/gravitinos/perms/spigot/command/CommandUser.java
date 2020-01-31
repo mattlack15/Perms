@@ -44,6 +44,11 @@ public class CommandUser extends GravSubCommand {
     }
 
     @Override
+    public String getArgumentString(){
+        return "<user>";
+    }
+
+    @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args, Object... passedArgs) {
         //Don't need to check permissions because the permission is the same as the parent command (CommandPerms)
 

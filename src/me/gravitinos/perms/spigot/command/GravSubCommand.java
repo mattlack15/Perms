@@ -59,7 +59,7 @@ public abstract class GravSubCommand implements GravCommandPermissionable{
 		return this.cmdPath;
 	}
 
-	protected String getSubCommandCmdPath(){
+	protected String getSubCommandCmdPath(){ //The path to a subcommand of this command
 		return this.cmdPath + this.getAlias() + (this.getArgumentString() != null && this.getArgumentString().length() > 0 ? " " + this.getArgumentString() : "") + " ";
 	}
 
@@ -69,11 +69,21 @@ public abstract class GravSubCommand implements GravCommandPermissionable{
 	 * @param page
 	 * @return
 	 */
-	public ArrayList<String> getHelpMessages(String format, int page){
+	public ArrayList<String> getHelpMessages(String format, int page){ // Get help messages from immediate sub commands
 		String helpFormat = SpigotPerms.instance.getImpl().getConfigSettings().getHelpFormat();
 		ArrayList<String> helpMessages = new ArrayList<>();
 		for(GravSubCommand subCommand : this.getSubCommands()){
-			helpMessages.add(ChatColor.translateAlternateColorCodes('&', helpFormat.replace("<cmd_name>", subCommand.getCmdPath() + subCommand.getAlias() + subCommand.getArgumentString())
+			helpMessages.add(ChatColor.translateAlternateColorCodes('&', helpFormat.replace("<cmd_name>", subCommand.getCmdPath() + subCommand.getAlias() + " " + subCommand.getArgumentString())
+					.replace("<cmd_description>", subCommand.getDescription()).replace("<cmd_permission>", subCommand.getPermission())));
+		}
+		return helpMessages;
+	}
+
+	public ArrayList<String> getEndingHelpMessages(String format, int page){ // Get help messages from the sub commands at the ends of the command tree (The ones that dont have any more sub commands after them)
+		String helpFormat = SpigotPerms.instance.getImpl().getConfigSettings().getHelpFormat();
+		ArrayList<String> helpMessages = new ArrayList<>();
+		for(GravSubCommand subCommand : this.getEndingSubCommands()){
+			helpMessages.add(ChatColor.translateAlternateColorCodes('&', helpFormat.replace("<cmd_name>", subCommand.getCmdPath() + subCommand.getAlias() + " " + subCommand.getArgumentString())
 					.replace("<cmd_description>", subCommand.getDescription()).replace("<cmd_permission>", subCommand.getPermission())));
 		}
 		return helpMessages;

@@ -31,6 +31,11 @@ public class CommandUserGroupSet extends GravSubCommand {
     }
 
     @Override
+    public String getArgumentString(){
+        return "<group>";
+    }
+
+    @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args, Object... passedArgs) {
         if(args.length < 1){
             this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Needs more arguments, (a group)");

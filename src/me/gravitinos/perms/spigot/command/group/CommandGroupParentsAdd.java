@@ -30,6 +30,11 @@ public class CommandGroupParentsAdd extends GravSubCommand {
     }
 
     @Override
+    public String getArgumentString(){
+        return "<group>";
+    }
+
+    @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args, Object... passedArgs) {
         //Don't need to check permission because that is handled by parent command
         if(args.length < 1){

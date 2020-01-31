@@ -25,6 +25,11 @@ public class CommandGroupParentsRemove extends GravSubCommand {
     }
 
     @Override
+    public String getArgumentString(){
+        return "<group>";
+    }
+
+    @Override
     public String getAlias() {
         return "remove";
     }
