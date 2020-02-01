@@ -70,9 +70,9 @@ public class UserManager {
         return result;
     }
 
-    public void saveTo(DataManager dataManager){
+    public CompletableFuture<Void> saveTo(DataManager dataManager){
         ArrayList<Subject> users = Lists.newArrayList(loadedUsers);
-        dataManager.addSubjects(users);
+        return dataManager.addSubjects(users);
     }
 
     /**

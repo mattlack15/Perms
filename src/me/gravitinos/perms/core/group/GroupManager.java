@@ -75,9 +75,9 @@ public class GroupManager {
         grps.forEach(s -> this.loadedGroups.add((Group) s));
     }
 
-    public void saveTo(DataManager dataManager){
+    public CompletableFuture<Void> saveTo(DataManager dataManager){
         ArrayList<Subject> groups = Lists.newArrayList(loadedGroups);
-        dataManager.addSubjects(groups);
+        return dataManager.addSubjects(groups);
     }
 
     /**

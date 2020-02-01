@@ -397,7 +397,7 @@ public class SQLHandler extends DataManager {
         try {
             Class.forName("com.mysql.jdbc.Driver");
             this.connection = DriverManager.getConnection(connectionURL, username, password);
-        } catch (ClassNotFoundException e) {
+        } catch (Exception e) {
             return false;
         }
         return true;

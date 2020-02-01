@@ -9,6 +9,7 @@ import net.md_5.bungee.api.ChatColor;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.SQLException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 public class PermsManager {
@@ -45,10 +46,20 @@ public class PermsManager {
         }
     }
 
-    public void copyTo(DataManager manager){
-        manager.clearAllData();
-        userManager.saveTo(manager);
-        groupManager.saveTo(manager);
+    public CompletableFuture<Void> copyTo(DataManager manager){
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        this.getImplementation().getAsyncExecutor().execute(() -> {
+            try {
+                manager.clearAllData().get();
+                userManager.saveTo(manager).get();
+                groupManager.saveTo(manager).get();
+                future.complete(null);
+            }catch(Exception e){
+                future.complete(null);
+                e.printStackTrace();
+            }
+        });
+        return future;
     }
 
     public boolean connectSQL(SQLHandler dataManager, PermsConfiguration config){
