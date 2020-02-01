@@ -9,6 +9,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -46,6 +47,7 @@ public abstract class Subject<T extends SubjectData> {
      */
     protected void setOwnPermissions(@NotNull ArrayList<PPermission> ownPermissions){
         this.ownPermissions = ownPermissions;
+        this.ownPermissions.removeIf(Objects::isNull);
     }
 
     /**
@@ -65,11 +67,13 @@ public abstract class Subject<T extends SubjectData> {
         }
 
         if(remove.size() > 0) {
-            remove.forEach(this::removeOwnPermission); //Remove from object
+            remove.forEach(this::removeOwnSubjectPermission); //Remove from object
             if(this.getDataManager() != null) {
                 this.getDataManager().removePermissionsExact(this, remove); //Update backend
             }
         }
+
+        this.ownPermissions.removeIf(Objects::isNull);
     }
 
     public static ArrayList<Inheritance> getInheritances(Subject<?> subject){
@@ -111,6 +115,7 @@ public abstract class Subject<T extends SubjectData> {
      * @return list of inheritances
      */
     protected ArrayList<Inheritance> getInheritances(){
+        this.inherited.removeIf(Objects::isNull);
         this.inherited.removeIf((i) -> !i.isValid());
         return Lists.newArrayList(this.inherited);
     }
@@ -119,7 +124,7 @@ public abstract class Subject<T extends SubjectData> {
      * Removes all inheritances where parent.equals(inheritance.getParent())
      * @param parent The specified parent to remove inheritances to
      */
-    protected void removeInheritance(Subject<? extends SubjectData> parent){
+    protected void removeOwnSubjectInheritance(Subject<? extends SubjectData> parent){
         this.inherited.removeIf(i -> !i.isValid() || parent.equals(i.getParent()));
     }
 
@@ -127,7 +132,7 @@ public abstract class Subject<T extends SubjectData> {
      * Removes all permissions where permission.equals(ownPermission)
      * @param permission The permission to remove
      */
-    protected PPermission removeOwnPermission(@NotNull PPermission permission){
+    protected PPermission removeOwnSubjectPermission(@NotNull PPermission permission){
         AtomicReference<PPermission> p = new AtomicReference<>();
         this.ownPermissions.removeIf(Objects::isNull);
         ((ArrayList<PPermission>)this.ownPermissions.clone()).forEach(perm -> {
@@ -143,7 +148,7 @@ public abstract class Subject<T extends SubjectData> {
      * Removes all permissions where p.getPermission().equalsIgnoreCase(permission)
      * @param permission the permission to remove
      */
-    protected void removeOwnPermission(@NotNull String permission){
+    protected void removeOwnSubjectPermission(@NotNull String permission){
         this.ownPermissions.removeIf(p -> p.getPermission().equalsIgnoreCase(permission));
     }
 
@@ -151,7 +156,7 @@ public abstract class Subject<T extends SubjectData> {
      * Adds an inheritance to this subject
      * @param subject The inheritance to add
      */
-    protected void addInheritance(Subject<? extends SubjectData> subject, Context context){
+    protected void addOwnSubjectInheritance(Subject<?> subject, Context context){
         this.inherited.add(new Inheritance(new SubjectRef(subject), new SubjectRef(this), context));
     }
 
@@ -159,7 +164,7 @@ public abstract class Subject<T extends SubjectData> {
      * Adds an inheritance to this subject
      * @param subject The inheritance to add
      */
-    protected void addInheritance(SubjectRef subject, Context context){
+    protected void addOwnSubjectInheritance(SubjectRef subject, Context context){
         this.inherited.add(new Inheritance(subject, new SubjectRef(this), context));
     }
 
@@ -168,7 +173,7 @@ public abstract class Subject<T extends SubjectData> {
      * Adds a permission to this subject's own permission set
      * @param permission the permission to add
      */
-    protected void addOwnPermission(@NotNull PPermission permission){
+    protected void addOwnSubjectPermission(@NotNull PPermission permission){
         if(permission == null){
             return;
         }
@@ -245,7 +250,7 @@ public abstract class Subject<T extends SubjectData> {
 
             //Add all the permissions to the perms array list
             inheritances.getParent().getAllPermissions(inheritanceContext);
-            perms.addAll(inheritances.getParent().getAllPermissions(inheritanceContext)); //TODO Possibly edit this if permissions are duplicated
+            perms.addAll(inheritances.getParent().getAllPermissions(inheritanceContext));
         }
 
         return perms;
@@ -265,7 +270,7 @@ public abstract class Subject<T extends SubjectData> {
                 int finalI = i1;
                 visited.get(i1).getInheritances().forEach(i -> {
                     if (visited.contains(i.getParent())) {
-                        visited.get(finalI).removeInheritance(i.getParent());
+                        visited.get(finalI).removeOwnSubjectInheritance(i.getParent());
                         PermsManager.instance.getImplementation().addToLog(ChatColor.RED + "Mistake in inheritances, temporarily removed inheritance \"" +
                                 i.getParent().getIdentifier() + "\" from subject \"" + i.getChild().getIdentifier() + " please manually remove inheritance for a permanent effect");
                         return;

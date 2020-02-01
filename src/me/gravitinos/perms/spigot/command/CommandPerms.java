@@ -47,14 +47,20 @@ public class CommandPerms extends GravCommand {
             this.callSubCommand(subCommand, sender, cmd, label, args);
         } else {
             int page = 1;
+            int pageSize = 8;
             try {
                 page = Integer.parseInt(args[1]);
             } catch (Exception ignored) { }
             ArrayList<String> helpMsgs = this.getEndingHelpMessages(SpigotPerms.instance.getImpl().getConfigSettings().getHelpFormat(), page);
-            helpMsgs.add(0, ChatColor.translateAlternateColorCodes('&', SpigotPerms.instance.getImpl().getConfigSettings().getHelpHeader().replace("<page>", page + "")));
-            helpMsgs.add(ChatColor.translateAlternateColorCodes('&', SpigotPerms.instance.getImpl().getConfigSettings().getHelpFooter().replace("<page>", page + "")));
+            ArrayList<String> toSendHelp = new ArrayList<>();
+            for(int i = (page-1) * pageSize; i < (page*pageSize) && i < helpMsgs.size(); i++){
+                toSendHelp.add(helpMsgs.get(i));
+            }
 
-            helpMsgs.forEach(sender::sendMessage); //Send the messages
+            toSendHelp.add(0, ChatColor.translateAlternateColorCodes('&', SpigotPerms.instance.getImpl().getConfigSettings().getHelpHeader().replace("<page>", page + "")));
+            toSendHelp.add(ChatColor.translateAlternateColorCodes('&', SpigotPerms.instance.getImpl().getConfigSettings().getHelpFooter().replace("<page>", page + "")));
+
+            toSendHelp.forEach(sender::sendMessage);
         }
         return true;
     }

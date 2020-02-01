@@ -15,6 +15,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
 public class LoginListener implements Listener {
@@ -55,6 +56,11 @@ public class LoginListener implements Listener {
                 UserManager.instance.unloadUser(event.getPlayer().getUniqueId());
             }
         }
+    }
+
+    @EventHandler
+    public void onLeave(PlayerQuitEvent event){
+        UserManager.instance.unloadUser(event.getPlayer().getUniqueId());
     }
 
     //Inject permissible

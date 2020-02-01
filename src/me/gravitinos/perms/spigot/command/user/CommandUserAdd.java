@@ -16,7 +16,7 @@ public class CommandUserAdd extends GravSubCommand {
 
     @Override
     public String getPermission() {
-        return SpigotPerms.commandName + "user.managepermissions";
+        return SpigotPerms.commandName + ".user.managepermissions";
     }
 
     @Override
@@ -57,6 +57,8 @@ public class CommandUserAdd extends GravSubCommand {
         if(args.length > 1){
             try{
                 expiration = Long.parseLong(args[1]);
+                expiration *= 1000;
+                expiration += System.currentTimeMillis();
             }catch(Exception ignored){
                 if(args.length == 2){
                     String[] args1 = new String[3];

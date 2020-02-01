@@ -76,9 +76,6 @@ public class ChatListener implements Listener {
             part = part.replace("<chatcolour>", toColour(displayGroup.getChatColour()));
             part = part.replace("<message>", event.getMessage());
 
-
-            //Placeholder API TODO
-
             //Rank description
             if(containsPrefix){
                 String[] description = displayGroup.getDescription().split("\\\\n");

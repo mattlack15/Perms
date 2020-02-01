@@ -1,9 +1,11 @@
 package me.gravitinos.perms.spigot.command.user;
 
+import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.user.User;
+import me.gravitinos.perms.core.user.UserManager;
 import me.gravitinos.perms.spigot.SpigotPerms;
 import me.gravitinos.perms.spigot.command.GravCommandPermissionable;
 import me.gravitinos.perms.spigot.command.GravSubCommand;
@@ -70,8 +72,12 @@ public class CommandUserGroupSet extends GravSubCommand {
             }
         }
 
-        user.clearInheritancesLocal();
-        user.addInheritance(group, context); //TODO Possibly change if clear inheritances sometimes executes after this line (addInheritance)
+        Context finalContext = context;
+        UserManager.instance.getDataManager().performOrderedOpAsync(() -> {
+            user.clearInheritancesLocal();
+            user.addInheritance(group, finalContext);
+            return null;
+        });
         this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + group.getName() + " &7was set as &b" + user.getName() + "&7's &conly&7 inheritance");
 
         return true;

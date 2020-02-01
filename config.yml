@@ -20,8 +20,12 @@ sql_username: ""
 sql_password: ""
 
 chat_format:
-  - "<prefix> <username> &6&l> &r<chatcolour> <message>"
+  - "<prefix>"
+  - " <username>"
+  - " &6&l>"
+  - " &r<chatcolour><message>"
 
+#Can use <cmd_name> <cmd_description> and <cmd_permission>
 help_format: "/&e<cmd_name> &6- &7<cmd_description>"
 help_header: "Permissions Help v1.0 Gravitinos"
-help_footer: ""
+help_footer: "&7&lPage &f<page>"

@@ -1,5 +1,6 @@
 package me.gravitinos.perms.spigot;
 
+import me.clip.placeholderapi.PlaceholderAPI;
 import me.gravitinos.perms.core.PermsImplementation;
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.backend.DataManager;
@@ -40,9 +41,6 @@ public class SpigotPerms extends JavaPlugin {
         DataManager dataManager;
         if(impl.getConfigSettings().isUsingSQL()){
             dataManager = new SQLHandler();
-            if(this.connectSQL((SQLHandler) dataManager, impl.getConfigSettings())){
-                this.impl.consoleLog(ChatColor.GREEN + "Connected to SQL successfully!");
-            }
         } else {
             dataManager = new SpigotFileDataManager();
         }
@@ -65,33 +63,11 @@ public class SpigotPerms extends JavaPlugin {
             SpigotPermissible.inject(p);
         }
 
+        PlaceholderAPI.registerPlaceholderHook(this, new Placeholders());
+
     }
 
     public void onDisable(){
-    }
-
-    private boolean connectSQL(SQLHandler dataManager, PermsConfiguration config){
-        try {
-            if (!dataManager.startConnection("jdbc:mysql://" + config.getSQLHost() + ":" + config.getSQLPort() + "/" + config.getSQLDatabase() + "?testWhileIdle=true?rewriteBatchedStatements=true", config.getSQLUsername(), config.getSQLPassword())) {
-                this.impl.addToLog(ChatColor.RED + "Unable to connect to SQL!");
-                this.impl.consoleLog(ChatColor.RED + "Unable to connect to SQL!");
-                return false;
-            }
-        } catch (SQLException e){
-            e.printStackTrace();
-            this.impl.addToLog(ChatColor.RED + "Unable to connect to SQL!");
-            this.impl.consoleLog(ChatColor.RED + "Unable to connect to SQL!");
-            return false;
-        }
-        try {
-            dataManager.setup().get();
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
-            this.impl.addToLog(ChatColor.RED + "Unable to setup SQL Database!");
-            this.impl.consoleLog(ChatColor.RED + "Unable to setup SQL Database!");
-            return false;
-        }
-        return true;
     }
 
     public SpigotImpl getImpl(){

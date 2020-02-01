@@ -37,7 +37,7 @@ public class SQLHandler extends DataManager {
             try {
                 SQLDao dao = getDao();
                 dao.addSubject(subject);
-            }catch(SQLException ignore){ }
+            }catch(Exception ignore){ }
             future.complete(null);
             return null;
         });
@@ -66,7 +66,7 @@ public class SQLHandler extends DataManager {
                SQLDao dao = getDao();
                dao.removeSubject(subject.getIdentifier());
                dao.addSubject(subject);
-           }catch(SQLException ignored){future.complete(null);}
+           }catch(Exception ignored){future.complete(null);}
            return null;
         });
         return future;
@@ -78,7 +78,7 @@ public class SQLHandler extends DataManager {
         runAsync(() -> {
             try{
                 getDao().removeSubject(name);
-            }catch(SQLException ignored){future.complete(null);}
+            }catch(Exception ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -90,7 +90,7 @@ public class SQLHandler extends DataManager {
         runAsync(() -> {
             try{
                 future.complete(new ImmutablePermissionList(getDao().getPermissions(name)));
-            }catch(SQLException ignored){future.complete(null);}
+            }catch(Exception ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -105,7 +105,7 @@ public class SQLHandler extends DataManager {
                 dao.removeAllPermissions(subject.getIdentifier());
                 dao.addPermissions(subject.getIdentifier(), Subject.getPermissions(subject));
                 future.complete(null);
-            }catch(SQLException ignored){future.complete(null);}
+            }catch(Exception ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -118,7 +118,7 @@ public class SQLHandler extends DataManager {
             try{
                 getDao().addPermission(subject.getIdentifier(), permission);
                 future.complete(null);
-            }catch(SQLException ignored){future.complete(null);}
+            }catch(Exception ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -131,7 +131,7 @@ public class SQLHandler extends DataManager {
             try{
                 getDao().removePermission(subject.getIdentifier(), permission);
                 future.complete(null);
-            }catch(SQLException ignored){future.complete(null);}
+            }catch(Exception ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -144,7 +144,7 @@ public class SQLHandler extends DataManager {
             try{
                 getDao().removePermission(permIdentifier);
                 future.complete(null);
-            }catch(SQLException ignored){future.complete(null);}
+            }catch(Exception ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -156,7 +156,7 @@ public class SQLHandler extends DataManager {
         runAsync(() -> {
             try{
                 future.complete(getDao().getInheritances(name));
-            }catch(SQLException ignored){future.complete(null);}
+            }catch(Exception ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -173,7 +173,7 @@ public class SQLHandler extends DataManager {
                 Subject.getInheritances(subject).forEach((i -> inheritances.add(new CachedInheritance(i.getChild().getIdentifier(), i.getParent().getIdentifier(), i.getChild().getType(), i.getParent().getType(), i.getContext()))));
                 dao.addInheritances(inheritances);
                 future.complete(null);
-            }catch(SQLException ignored){future.complete(null);}
+            } catch(Exception ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -186,7 +186,7 @@ public class SQLHandler extends DataManager {
             try{
                 getDao().addInheritance(subject.getIdentifier(), parent.getIdentifier(), subject.getType(), parent.getType(), context);
                 future.complete(null);
-            }catch(SQLException ignored){future.complete(null);}
+            }catch(Exception ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -199,7 +199,7 @@ public class SQLHandler extends DataManager {
             try{
                 getDao().removeInheritance(subjectIdentifier.getIdentifier(), parent);
                 future.complete(null);
-            }catch(SQLException ignored){future.complete(null);}
+            }catch(Exception ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -212,7 +212,7 @@ public class SQLHandler extends DataManager {
             try{
                 getDao().setSubjectData(subject.getIdentifier(), subject.getData(), subject.getType());
                 future.complete(null);
-            }catch(SQLException ignored){future.complete(null);}
+            }catch(Exception ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -224,7 +224,7 @@ public class SQLHandler extends DataManager {
         runAsync(() -> {
             try{
                 future.complete(getDao().getSubjectData(subjectIdentifier));
-            }catch(SQLException ignored){future.complete(null);}
+            }catch(Exception ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -237,7 +237,7 @@ public class SQLHandler extends DataManager {
             try{
                 getDao().addPermissions(subject.getIdentifier(), list);
                 future.complete(null);
-            }catch(SQLException ignored){future.complete(null);}
+            }catch(Exception ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -250,7 +250,7 @@ public class SQLHandler extends DataManager {
             try{
                 getDao().removePermissions(subject.getIdentifier(), list);
                 future.complete(null);
-            }catch(SQLException ignored){future.complete(null);}
+            }catch(Exception ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -265,7 +265,7 @@ public class SQLHandler extends DataManager {
                 list.forEach(p -> ids.add(p.getPermissionIdentifier()));
                 getDao().removePermissionsExact(ids);
                 future.complete(null);
-            }catch(SQLException ignored){future.complete(null);}
+            }catch(Exception ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -278,7 +278,7 @@ public class SQLHandler extends DataManager {
             try{
                 getDao().addSubjects(subjects);
                 future.complete(null);
-            }catch(SQLException ignored){future.complete(null);}
+            }catch(Exception ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -291,7 +291,7 @@ public class SQLHandler extends DataManager {
             try{
                 getDao().removeSubjects(subjects);
                 future.complete(null);
-            }catch(SQLException ignored){future.complete(null);}
+            }catch(Exception ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -305,7 +305,7 @@ public class SQLHandler extends DataManager {
                 ArrayList<CachedInheritance> inheritances = new ArrayList<>();
                 parents.forEach(p -> inheritances.add(new CachedInheritance(subjectIdentifier.getIdentifier(), p, "GENERIC", "GENERIC", Context.CONTEXT_ALL)));
                 getDao().removeInheritances(inheritances);
-            }catch(SQLException ignored){}
+            }catch(Exception ignored){}
             future.complete(null);
             return null;
         });
@@ -321,7 +321,7 @@ public class SQLHandler extends DataManager {
                 inheritances.forEach(i -> cachedInheritances.add(i.toCachedInheritance()));
                 getDao().addInheritances(cachedInheritances);
                 future.complete(null);
-            }catch(SQLException ignored){future.complete(null);}
+            }catch(Exception ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -334,7 +334,9 @@ public class SQLHandler extends DataManager {
             try{
                 SQLDao dao = getDao();
                 future.complete(dao.getAllSubjectsOfType(type));
-            }catch(SQLException ignored){future.complete(null);}
+            }catch(Exception ignored){
+                ignored.printStackTrace();
+                future.complete(null);}
             return null;
         });
         return future;
@@ -347,7 +349,7 @@ public class SQLHandler extends DataManager {
             try{
                 getDao().clearTables();
                 future.complete(null);
-            }catch(SQLException ignored){future.complete(null);}
+            }catch(Exception ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -360,7 +362,7 @@ public class SQLHandler extends DataManager {
             try{
                 getDao().removeSubjectsOftype(type);
                 future.complete(null);
-            }catch(SQLException ignored){future.complete(null);}
+            }catch(Exception ignored){future.complete(null);}
             return null;
         });
         return future;
@@ -435,25 +437,6 @@ public class SQLHandler extends DataManager {
             }
         }
 
-    }
-
-    public <T> CompletableFuture<T> performOrderedOpAsync(Supplier<T> op) {
-        return runAsync(() -> {
-            boolean before = this.isKeepSync();
-            this.setKeepSync(true);
-            SQLDao dao = getDao();
-            try {
-                heldDao.set(getDao());
-                dao.holdOpen++;
-                T a = op.get();
-                this.setKeepSync(before);
-                return a;
-            } finally {
-                if (--dao.holdOpen == 0) {
-                    heldDao.set(null);
-                }
-            }
-        });
     }
 
 }

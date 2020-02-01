@@ -117,6 +117,15 @@ public class UserManager {
         return null;
     }
 
+    public User getUserFromName(String name){
+        for (User u : loadedUsers) {
+            if (u.getName().equals(name)) {
+                return u;
+            }
+        }
+        return null;
+    }
+
     public void addUser(User user){
         this.loadedUsers.add(user);
         if(dataManager != null){

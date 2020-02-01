@@ -121,16 +121,18 @@ public class CommandUser extends GravSubCommand {
                 }
 
                 //Not being used for error though
-                sendErrorMessage(sender, "&3&lName &6> &7" + user.getName());
-                sendErrorMessage(sender, "&3&lUUID &6> &7" + user.getUniqueID());
-                sendErrorMessage(sender, "&3&lPrefix &6> " + user.getPrefix());
-                sendErrorMessage(sender, "&3&lSuffix &6> " + user.getSuffix());
-                sendErrorMessage(sender, "&3&lDisplay Group &6> &7" + user.getDisplayGroup());
+                sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&6&lUser Data > &b" + user.getName());
 
-                sendErrorMessage(sender, "&3&lInheritances (Groups) &6>");
+                sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fName &6> &b" + user.getName());
+                sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fUUID &6> &7" + user.getUniqueID());
+                sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fPrefix &6> " + user.getPrefix());
+                sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fSuffix &6> " + user.getSuffix());
+                sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fDisplay Group &6> &7" + user.getDisplayGroup());
+
+                sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fInheritances (Groups) &6>");
                 for (Inheritance inheritance : user.getInheritances()) {
                     boolean applies = inheritance.getContext().getServerName().equals(GroupData.SERVER_GLOBAL) || inheritance.getContext().getServerName().equals(GroupData.SERVER_LOCAL);
-                    sendErrorMessage(sender, "&7- &e" + inheritance.getParent().getIdentifier() + (applies ? "" : "&cDoes not apply here"));
+                    sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&7- &e" + inheritance.getParent().getIdentifier() + (applies ? "" : " &cDoes not apply here &7(&f" + inheritance.getContext().getServerName() + "&7)"));
                 }
 
             }

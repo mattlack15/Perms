@@ -9,6 +9,7 @@ import me.gravitinos.perms.core.util.SubjectSupplier;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.concurrent.CompletableFuture;
 
 public class Group extends Subject<GroupData> {
     private DataManager dataManager;
@@ -59,7 +60,7 @@ public class Group extends Subject<GroupData> {
         }
 
         this.setOwnPermissions(subject.getPermissions());
-        subject.getInheritances().forEach(i -> this.addInheritance(inheritanceSupplier.getSubject(i.getParent()), i.getContext()));
+        subject.getInheritances().forEach(i -> this.addOwnSubjectInheritance(inheritanceSupplier.getSubject(i.getParent()), i.getContext()));
 
     }
 
@@ -114,17 +115,22 @@ public class Group extends Subject<GroupData> {
      *
      * @param permission the permission to add
      */
-    public void addOwnPermission(@NotNull PPermission permission) {
+    public CompletableFuture<Void> addOwnPermission(@NotNull PPermission permission) {
         if(this.hasOwnPermission(permission)){
-            return;
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            future.complete(null);
+            return future;
         }
 
-        super.addOwnPermission(permission);
+        super.addOwnSubjectPermission(permission);
 
         //Update backend
         if (dataManager != null) {
-            dataManager.addPermission(this, permission);
+            return dataManager.addPermission(this, permission);
         }
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        future.complete(null);
+        return future;
     }
 
     /**
@@ -132,14 +138,16 @@ public class Group extends Subject<GroupData> {
      *
      * @param permission the permission to remove
      */
-    public PPermission removeOwnPermission(@NotNull PPermission permission) {
-        PPermission perm = super.removeOwnPermission(permission);
+    public CompletableFuture<Void> removeOwnPermission(@NotNull PPermission permission) {
+        PPermission perm = super.removeOwnSubjectPermission(permission);
 
         //Update backend
         if (dataManager != null) {
-            dataManager.removePermissionExact(this, permission.getPermission(), perm.getPermissionIdentifier());
+            return dataManager.removePermissionExact(this, permission.getPermission(), perm.getPermissionIdentifier());
         }
-        return perm;
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        future.complete(null);
+        return future;
     }
 
     /**
@@ -147,13 +155,16 @@ public class Group extends Subject<GroupData> {
      *
      * @param permission the permission to remove
      */
-    public void removeOwnPermission(@NotNull String permission) {
-        super.removeOwnPermission(permission);
+    public CompletableFuture<Void> removeOwnPermission(@NotNull String permission) {
+        super.removeOwnSubjectPermission(permission);
 
         //Update backend
         if (dataManager != null) {
-            dataManager.removePermission(this, permission);
+            return dataManager.removePermission(this, permission);
         }
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        future.complete(null);
+        return future;
     }
 
     @Override
@@ -170,11 +181,11 @@ public class Group extends Subject<GroupData> {
     /**
      * Adds a lot of permissions in bulk, please use this for large amounts of permissions as Transfers to SQL can be a lot quicker
      */
-    public void addOwnPermissions(@NotNull ArrayList<PPermission> permissions) {
+    public CompletableFuture<Void> addOwnPermissions(@NotNull ArrayList<PPermission> permissions) {
         ArrayList<PPermission> ps = (ArrayList<PPermission>)permissions.clone();
         permissions.forEach(p -> {
             if(!this.hasOwnPermission(p)){
-                super.addOwnPermission(p);
+                super.addOwnSubjectPermission(p);
             } else {
                 ps.remove(p);
             }
@@ -182,8 +193,11 @@ public class Group extends Subject<GroupData> {
 
         //Update backend
         if (dataManager != null) {
-            dataManager.addPermissions(this, new ImmutablePermissionList(ps));
+            return dataManager.addPermissions(this, new ImmutablePermissionList(ps));
         }
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        future.complete(null);
+        return future;
     }
 
     /**
@@ -205,13 +219,16 @@ public class Group extends Subject<GroupData> {
     /**
      * removes a lot of permissions in bulk, please use this for large amounts of permissions as Transfers to SQL can be a lot quicker
      */
-    public void removeOwnPermissions(@NotNull ArrayList<PPermission> permissions) {
-        permissions.forEach(p -> super.removeOwnPermission(p));
+    public CompletableFuture<Void> removeOwnPermissions(@NotNull ArrayList<PPermission> permissions) {
+        permissions.forEach(p -> super.removeOwnSubjectPermission(p));
 
         //Update backend
         if(dataManager != null) {
-            dataManager.removePermissionsExact(this, permissions);
+            return dataManager.removePermissionsExact(this, permissions);
         }
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        future.complete(null);
+        return future;
     }
 
     /**
@@ -233,44 +250,55 @@ public class Group extends Subject<GroupData> {
      * @param subject The inheritance to add
      * @param context The context that this will apply in
      */
-    public void addInheritance(Subject subject, Context context){
+    public CompletableFuture<Void> addInheritance(Subject subject, Context context){
         if(this.hasInheritance(subject)){
-            return;
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            future.complete(null);
+            return future;
         }
 
-        super.addInheritance(new SubjectRef(subject), context);
+        super.addOwnSubjectInheritance(new SubjectRef(subject), context);
 
         if(dataManager != null){
-            dataManager.addInheritance(this, subject, context);
+            return dataManager.addInheritance(this, subject, context);
         }
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        future.complete(null);
+        return future;
     }
 
     /**
      * Removes a parent/inheritance from this group
      * @param subject the parent to remove
      */
-    public void removeInheritance(Subject subject){
-        super.removeInheritance(subject);
+    public CompletableFuture<Void> removeInheritance(Subject subject){
+        super.removeOwnSubjectInheritance(subject);
 
         if(dataManager != null){
-            dataManager.removeInheritance(this, subject.getIdentifier());
+            return dataManager.removeInheritance(this, subject.getIdentifier());
         }
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        future.complete(null);
+        return future;
     }
 
     /**
      * Clears all inheritances from this group
      */
-    public void clearInheritances(){
+    public CompletableFuture<Void> clearInheritances(){
         ArrayList<String> parents = new ArrayList<>();
 
         for(Inheritance i : super.getInheritances()){
-            super.removeInheritance(i.getParent());
+            super.removeOwnSubjectInheritance(i.getParent());
             parents.add(i.getParent().getIdentifier());
         }
 
         if(dataManager != null){
-            dataManager.removeInheritances(this, parents);
+            return dataManager.removeInheritances(this, parents);
         }
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        future.complete(null);
+        return future;
     }
 
     /**

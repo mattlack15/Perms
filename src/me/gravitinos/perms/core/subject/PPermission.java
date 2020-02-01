@@ -9,7 +9,7 @@ import java.util.UUID;
  * Immutable representation of a permission node
  */
 public final class PPermission {
-    private final long expiry;
+    private long expiry = 0;
     private final String permission;
     private final Context context;
     private UUID permissionIdentifier = UUID.randomUUID();
@@ -34,7 +34,7 @@ public final class PPermission {
     }
 
     public PPermission(@NotNull String permission, long expiry){
-        this(permission, Context.CONTEXT_ALL, expiry);
+        this(permission, Context.CONTEXT_SERVER_LOCAL, expiry);
     }
 
     /**
@@ -45,10 +45,7 @@ public final class PPermission {
      * @return Whether this permission can apply to the situation
      */
     public boolean applies(String worldName, String serverName, long currentTimeMs){
-        if(!this.isExpired(currentTimeMs) && this.context.applies(worldName, serverName)){
-            return true;
-        }
-        return false;
+        return !this.isExpired(currentTimeMs) && this.context.applies(worldName, serverName);
     }
 
     public UUID getPermissionIdentifier() {

@@ -5,7 +5,6 @@ import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.subject.*;
-import sun.net.www.content.text.Generic;
 
 import java.util.ArrayList;
 import java.util.UUID;
@@ -19,11 +18,11 @@ public abstract class DataManager {
     /**
      * Keeps all async operations that are started on the thread this is called from sync
      */
-    protected void setKeepSync(boolean bool){
+    protected void setKeepSync(boolean bool) {
         keepSync.set(bool);
     }
 
-    protected boolean isKeepSync(){
+    protected boolean isKeepSync() {
         return keepSync.get();
     }
 
@@ -76,23 +75,38 @@ public abstract class DataManager {
     public abstract CompletableFuture<ArrayList<CachedSubject>> getAllSubjectsOfType(String type);
 
     public abstract CompletableFuture<Void> clearAllData();
+
     public abstract CompletableFuture<Void> clearSubjectOfType(String type);
 
     //Async execution
 
-    protected <T> CompletableFuture<T> runAsync(Supplier<T> supplier){
+    protected <T> CompletableFuture<T> runAsync(Supplier<T> supplier) {
 
         CompletableFuture<T> future = new CompletableFuture<>();
 
-        if(keepSync.get()){
+        if (keepSync.get()) {
             future.complete(supplier.get());
         } else {
             PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
-                future.complete(supplier.get());
+                try {
+                    future.complete(supplier.get());
+                } catch(Exception e){
+                    e.printStackTrace();
+                }
             });
         }
 
         return future;
+    }
+
+    public <T> CompletableFuture<T> performOrderedOpAsync(Supplier<T> op) {
+        return runAsync(() -> {
+            boolean before = this.isKeepSync();
+            this.setKeepSync(true);
+            T a = op.get();
+            this.setKeepSync(before);
+            return a;
+        });
     }
 
 }

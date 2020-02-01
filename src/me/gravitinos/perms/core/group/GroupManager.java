@@ -108,7 +108,7 @@ public class GroupManager {
      * @return A future
      */
     public CompletableFuture<Boolean> reloadGroups(){
-        this.loadedGroups.stream().forEach(this::unloadGroup);
+        ((ArrayList<Group>)this.loadedGroups.clone()).forEach(this::unloadGroup);
         return this.loadGroups();
     }
 
@@ -144,19 +144,20 @@ public class GroupManager {
         return true;
     }
 
-    public CompletableFuture<Boolean> loadGroup(@NotNull String groupName, @NotNull SubjectSupplier supplier){
+    public CompletableFuture<Boolean> loadGroup(@NotNull String groupIdentifier, @NotNull SubjectSupplier supplier){
         CompletableFuture<Boolean> future = new CompletableFuture<>();
-        if(this.isGroupLoaded(groupName)){
+        if(this.isGroupLoaded(groupIdentifier)){
             future.complete(false);
             return future;
         }
 
         PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
             try {
-                CachedSubject cachedSubject = dataManager.getSubject(groupName).get();
+                CachedSubject cachedSubject = dataManager.getSubject(groupIdentifier).get();
                 Group g = new Group(cachedSubject, supplier, this);
                 this.loadedGroups.add(g);
                 this.eliminateInheritanceMistakes();
+                future.complete(true);
             }catch (Exception e){
                 e.printStackTrace();
                 future.complete(false);

@@ -87,17 +87,19 @@ public class CommandGroup extends GravSubCommand {
             }
 
             //Not being used for error though
-            sendErrorMessage(sender, "&3&lName &6> &7" + group.getName());
-            sendErrorMessage(sender, "&3&lPrefix &6> &r" + group.getPrefix());
-            sendErrorMessage(sender, "&3&lSuffix &6> &r" + group.getSuffix());
-            sendErrorMessage(sender, "&3&lServer &6> &7" + group.getServerContext() + " (&e" + (GroupData.SERVER_GLOBAL.equals(group.getServerContext()) ? "Global&7)" : (GroupData.SERVER_LOCAL.equals(group.getServerContext()) ? "Local&7)" : "Foreign&7)")));
-            sendErrorMessage(sender, "&3&lChat Colour &6> &r" + group.getChatColour() + "People in this group have this chat colour");
-            sendErrorMessage(sender, "&3&lDescription &6> &r" + group.getDescription());
-            sendErrorMessage(sender, "&3&lDefault Group &6> " + (group.equals(GroupManager.instance.getDefaultGroup()) ? "&aTrue" : "&cFalse"));
-            sendErrorMessage(sender, "&3&lInheritances &6>");
+            sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&6&lGroup Data > &b" + group.getName());
+
+            sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fName &6> &b" + group.getName());
+            sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fPrefix &6> &r" + group.getPrefix());
+            sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fSuffix &6> &r" + group.getSuffix());
+            sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fServer &6> &7" + group.getServerContext() + " (&e" + (GroupData.SERVER_GLOBAL.equals(group.getServerContext()) ? "Global&7)" : (GroupData.SERVER_LOCAL.equals(group.getServerContext()) ? "Local&7)" : "Foreign&7)")));
+            sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fChat Colour &6> &r" + group.getChatColour() + "People in this group have this chat colour");
+            sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fDescription &6> &r" + group.getDescription());
+            sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fDefault Group &6> " + (group.equals(GroupManager.instance.getDefaultGroup()) ? "&aTrue" : "&cFalse"));
+            sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fInheritances &6>");
             for(Inheritance inheritance : group.getInheritances()){
                 boolean applies = inheritance.getContext().getServerName().equals(GroupData.SERVER_GLOBAL) || inheritance.getContext().getServerName().equals(GroupData.SERVER_LOCAL);
-                sendErrorMessage(sender, "&7- &e" + inheritance.getParent() + (applies ? "" : "&cDoes not apply here"));
+                sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&7- &e" + inheritance.getParent() + (applies ? "" : "&cDoes not apply here"));
             }
 
         }

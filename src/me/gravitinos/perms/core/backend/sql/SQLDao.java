@@ -6,15 +6,13 @@ import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.cache.OwnerPermissionPair;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.subject.*;
+import org.jetbrains.annotations.NotNull;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Supplier;
 
 public class SQLDao {
@@ -266,7 +264,7 @@ public class SQLDao {
     }
 
     protected String getInheritancesFromTypeJoinSubjectData(){
-        return "SELECT * FROM " + TABLE_SUBJECTDATA + " LEFT JOIN " + TABLE_INHERITANCE + " ON Identifier=OwnerIdentifier WHERE Type=?";
+        return "SELECT * FROM " + TABLE_SUBJECTDATA + " LEFT JOIN " + TABLE_INHERITANCE + " ON Identifier=Child WHERE Type=?";
     }
 
     //
@@ -305,7 +303,7 @@ public class SQLDao {
 
     }
 
-    public CachedSubject getSubject(String identifier) throws SQLException {
+    public CachedSubject getSubject(@NotNull String identifier) throws SQLException {
         GenericSubjectData data = this.getSubjectData(identifier);
         if(data == null){
             return null;
@@ -314,7 +312,7 @@ public class SQLDao {
         return new CachedSubject(identifier, type, data, this.getPermissions(identifier), this.getInheritances(identifier));
     }
 
-    public void addSubject(Subject subject) throws SQLException {
+    public void addSubject(@NotNull Subject subject) throws SQLException {
         if(subjectExists(subject.getIdentifier())){
             this.removeSubject(subject.getIdentifier());
         }
@@ -326,14 +324,14 @@ public class SQLDao {
         this.addInheritances(inheritances);
     }
 
-    public boolean subjectExists(String identifier) throws SQLException {
+    public boolean subjectExists(@NotNull String identifier) throws SQLException {
         PreparedStatement s = prepareStatement(getSubjectDataFromIdentifierQuery());
         s.setString(1, identifier);
         ResultSet r = s.executeQuery();
         return r.next();
     }
 
-    public void removeSubject(String identifier) throws SQLException {
+    public void removeSubject(@NotNull String identifier) throws SQLException {
         this.removeAllInheritances(identifier);
 
         PreparedStatement s = prepareStatement(this.getDeletePermissionByOwnerIdentifierUpdate());
@@ -345,7 +343,7 @@ public class SQLDao {
         s.executeUpdate();
     }
 
-    public void removePermission(UUID permissionIdentifier) throws SQLException {
+    public void removePermission(@NotNull UUID permissionIdentifier) throws SQLException {
         PreparedStatement s = prepareStatement(this.getDeletePermissionByPermissionIdentifierUpdate());
 
         s.setString(1, permissionIdentifier.toString());
@@ -356,6 +354,7 @@ public class SQLDao {
     public void removePermissionsExact(ArrayList<UUID> permissionIdentifiers) throws SQLException {
         PreparedStatement s = prepareStatement(this.getDeletePermissionByPermissionIdentifierUpdate());
 
+        permissionIdentifiers.removeIf(Objects::isNull);
         for(UUID id : permissionIdentifiers) {
             s.setString(1, id.toString());
             s.addBatch();
@@ -373,12 +372,22 @@ public class SQLDao {
 
         while(results.next()){
             String identifier = results.getString("Identifier");
+            if(identifier == null){
+                continue;
+            }
             CachedSubject sub = subjectMap.get(identifier);
             if(sub == null){
                 sub = new CachedSubject(identifier, type, SubjectData.fromString(results.getString("Data")), new ArrayList<>(), new ArrayList<>());
                 subjectMap.put(identifier, sub);
             }
-            sub.getPermissions().add(new PPermission(results.getString("Permission"), Context.fromString(results.getString("Context")), Long.parseLong(results.getString("Expiration")), UUID.fromString(results.getString("PermissionIdentifier"))));
+            long expiry = 0;
+            try {
+                expiry = Long.parseLong(results.getString("Expiration"));
+            }catch(Exception ignored){ }
+            if(results.getString("Permission") == null){
+                continue;
+            }
+            sub.getPermissions().add(new PPermission(results.getString("Permission"), Context.fromString(results.getString("Context")), expiry, UUID.fromString(results.getString("PermissionIdentifier") != null ? results.getString("PermissionIdentifier") : UUID.randomUUID().toString())));
         }
 
         s = prepareStatement(this.getInheritancesFromTypeJoinSubjectData());
@@ -406,12 +415,18 @@ public class SQLDao {
                 PreparedStatement sPermissions = prepareStatement(this.getInsertPermissionUpdate());
 
                 for(Subject subject : subjects){
+                    if(subject == null){
+                        continue;
+                    }
                     sData.setString(1, subject.getIdentifier());
                     sData.setString(2, subject.getType());
                     sData.setString(3, subject.getData().toString());
                     sData.addBatch();
 
                     for(Inheritance inheritances : Subject.getInheritances(subject)){
+                        if(inheritances == null){
+                            continue;
+                        }
                         sInheritances.setString(1, subject.getIdentifier());
                         sInheritances.setString(2, inheritances.getParent().getIdentifier());
                         sInheritances.setString(3, inheritances.getChild().getType());
@@ -421,6 +436,9 @@ public class SQLDao {
                     }
 
                     for(PPermission permissions : Subject.getPermissions(subject)){
+                        if(permissions == null){
+                            continue;
+                        }
                         sPermissions.setString(1, subject.getIdentifier());
                         sPermissions.setString(2, permissions.getPermission());
                         sPermissions.setString(3, permissions.getPermissionIdentifier().toString());
@@ -493,9 +511,10 @@ public class SQLDao {
         s.executeBatch();
     }
 
-    public void addInheritances(ArrayList<CachedInheritance> inheritances) throws SQLException {
+    public void addInheritances(@NotNull ArrayList<CachedInheritance> inheritances) throws SQLException {
         PreparedStatement s = prepareStatement(this.getInsertInheritanceUpdate());
 
+        inheritances.removeIf(Objects::isNull);
         for(CachedInheritance inheritance : inheritances){
             s.setString(1, inheritance.getChild());
             s.setString(2, inheritance.getParent());
@@ -509,9 +528,10 @@ public class SQLDao {
         s.executeBatch();
     }
 
-    public void addPermissions(ArrayList<OwnerPermissionPair> permissions) throws SQLException {
+    public void addPermissions(@NotNull ArrayList<OwnerPermissionPair> permissions) throws SQLException {
         PreparedStatement s = prepareStatement(this.getInsertPermissionUpdate());
 
+        permissions.removeIf(Objects::isNull);
         for(OwnerPermissionPair pair : permissions){
             s.setString(1, pair.getOwnerIdentifier());
             s.setString(2, pair.getPermission().getPermission());
@@ -525,15 +545,16 @@ public class SQLDao {
         s.executeBatch();
     }
 
-    public void removeAllPermissions(String identifier) throws SQLException {
+    public void removeAllPermissions(@NotNull String identifier) throws SQLException {
         PreparedStatement s = prepareStatement(this.getDeletePermissionByOwnerIdentifierUpdate());
         s.setString(1, identifier);
         s.executeUpdate();
     }
 
-    public void removePermissions(ArrayList<OwnerPermissionPair> permissions) throws SQLException {
+    public void removePermissions(@NotNull ArrayList<OwnerPermissionPair> permissions) throws SQLException {
         PreparedStatement s = prepareStatement(this.getDeletePermissionByOwnerIdentifierAndPermissionUpdate());
 
+        permissions.removeIf(Objects::isNull);
         for(OwnerPermissionPair pair : permissions){
             s.setString(1, pair.getOwnerIdentifier());
             s.setString(2, pair.getPermissionString());
@@ -546,7 +567,7 @@ public class SQLDao {
 
         //Subject data
 
-    public void setSubjectData(String identifier, SubjectData data, String type) throws SQLException {
+    public void setSubjectData(@NotNull String identifier, @NotNull SubjectData data, @NotNull String type) throws SQLException {
         this.removeSubjectData(identifier);
 
         PreparedStatement s = prepareStatement(this.getInsertSubjectDataUpdate());
@@ -558,7 +579,7 @@ public class SQLDao {
         s.executeUpdate();
     }
 
-    public void removeSubjectData(String identifier) throws SQLException {
+    public void removeSubjectData(@NotNull String identifier) throws SQLException {
         PreparedStatement s = prepareStatement(this.getDeleteSubjectDataByIdentifierUpdate());
 
         s.setString(1, identifier);
@@ -566,7 +587,7 @@ public class SQLDao {
         s.executeUpdate();
     }
 
-    public GenericSubjectData getSubjectData(String identifier) throws SQLException {
+    public GenericSubjectData getSubjectData(@NotNull String identifier) throws SQLException {
         PreparedStatement s = prepareStatement(this.getSubjectDataFromIdentifierQuery());
 
         s.setString(1, identifier);
@@ -589,7 +610,7 @@ public class SQLDao {
 
         //Inheritances
 
-    public void removeAllInheritances (String childOrParent) throws SQLException {
+    public void removeAllInheritances (@NotNull String childOrParent) throws SQLException {
         PreparedStatement s = prepareStatement(this.getDeleteInheritanceByChildOrParentUpdate());
 
         s.setString(1, childOrParent);
@@ -598,7 +619,7 @@ public class SQLDao {
         s.executeUpdate();
     }
 
-    public void removeInheritance(String child, String parent) throws SQLException {
+    public void removeInheritance(@NotNull String child, @NotNull String parent) throws SQLException {
         PreparedStatement s = prepareStatement(this.getDeleteInheritanceByChildAndParentUpdate());
 
         s.setString(1, child);
@@ -607,7 +628,7 @@ public class SQLDao {
         s.executeUpdate();
     }
 
-    public void addInheritance(String child, String parent, String childType, String parentType, Context context) throws SQLException {
+    public void addInheritance(@NotNull String child, @NotNull String parent, @NotNull String childType, @NotNull String parentType, @NotNull Context context) throws SQLException {
         PreparedStatement s = prepareStatement(this.getInsertInheritanceUpdate());
 
         s.setString(1, child);
@@ -619,7 +640,7 @@ public class SQLDao {
         s.executeUpdate();
     }
 
-    public ArrayList<CachedInheritance> getInheritances(String child) throws SQLException {
+    public ArrayList<CachedInheritance> getInheritances(@NotNull String child) throws SQLException {
         ArrayList<CachedInheritance> out = new ArrayList<>();
 
         PreparedStatement s = prepareStatement(this.getInheritancesFromChildQuery());
@@ -638,7 +659,7 @@ public class SQLDao {
 
         //Permissions
 
-    public ArrayList<PPermission> getPermissions(String ownerIdentifier) throws SQLException {
+    public ArrayList<PPermission> getPermissions(@NotNull String ownerIdentifier) throws SQLException {
         ArrayList<PPermission> perms = new ArrayList<>();
 
         PreparedStatement s = prepareStatement(this.getPermissionsFromOwnerIdentifierQuery());
@@ -648,14 +669,18 @@ public class SQLDao {
         ResultSet r = s.executeQuery();
 
         while(r.next()){
-            PPermission perm = new PPermission(r.getString("Permission"), Context.fromString(r.getString("Context")), Long.parseLong(r.getString("Expiration")), UUID.fromString(r.getString("PermissionIdentifier")));
+            long expiry = 0;
+            try {
+                expiry = Long.parseLong(r.getString("Expiration"));
+            }catch(Exception ignored){ }
+            PPermission perm = new PPermission(r.getString("Permission"), Context.fromString(r.getString("Context")), expiry, UUID.fromString(r.getString("PermissionIdentifier") != null ? r.getString("PermissionIdentifier") : UUID.randomUUID().toString()));
             perms.add(perm);
         }
 
         return perms;
     }
 
-    public void addPermissions(String ownerIdentifier, ImmutablePermissionList permissions) throws SQLException {
+    public void addPermissions(@NotNull String ownerIdentifier, @NotNull ImmutablePermissionList permissions) throws SQLException {
         PreparedStatement s = prepareStatement(this.getInsertPermissionUpdate());
 
         for (PPermission perm : permissions) {
@@ -671,7 +696,7 @@ public class SQLDao {
         s.executeBatch();
     }
 
-    public void addPermission(String ownerIdentifier, PPermission permission) throws SQLException {
+    public void addPermission(@NotNull String ownerIdentifier, @NotNull PPermission permission) throws SQLException {
         PreparedStatement s = prepareStatement(this.getInsertPermissionUpdate());
 
         s.setString(1, ownerIdentifier);
@@ -683,9 +708,10 @@ public class SQLDao {
         s.executeUpdate();
     }
 
-    public void removePermissions(String ownerIdentifier, ArrayList<String> permissions) throws SQLException {
+    public void removePermissions(@NotNull String ownerIdentifier, @NotNull ArrayList<String> permissions) throws SQLException {
         PreparedStatement s = prepareStatement(this.getDeletePermissionByOwnerIdentifierAndPermissionUpdate());
 
+        permissions.removeIf(Objects::isNull);
         for (String perms : permissions) {
             s.setString(1, ownerIdentifier);
             s.setString(2, perms);
@@ -696,7 +722,7 @@ public class SQLDao {
         s.executeBatch();
     }
 
-    public void removePermission(String ownerIdentifier, String permission) throws SQLException {
+    public void removePermission(@NotNull String ownerIdentifier, @NotNull String permission) throws SQLException {
         PreparedStatement s = prepareStatement(this.getDeletePermissionByOwnerIdentifierAndPermissionUpdate());
 
         s.setString(1, ownerIdentifier);
@@ -705,7 +731,7 @@ public class SQLDao {
         s.executeUpdate();
     }
 
-    public void removeSubjectsOftype(String type) throws SQLException{
+    public void removeSubjectsOftype(@NotNull String type) throws SQLException{
         PreparedStatement s = prepareStatement(this.getSubjectDataFromTypeQuery());
         s.setString(1, type);
         ResultSet set = s.executeQuery();

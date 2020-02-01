@@ -51,13 +51,15 @@ public class CommandGroupAdd extends GravSubCommand {
 
         Group group = (Group) passedArgs[0];
 
-        Context context = Context.CONTEXT_SERVER_LOCAL;
+        Context context = new Context(group.getServerContext(), Context.VAL_ALL);
 
         long expiration = 0;
 
         if(args.length > 1){
             try{
                 expiration = Long.parseLong(args[1]);
+                expiration *= 1000;
+                expiration += System.currentTimeMillis();
             }catch(Exception ignored){
                 if(args.length == 2){
                     String[] args1 = new String[3];
@@ -80,6 +82,8 @@ public class CommandGroupAdd extends GravSubCommand {
                 context = Context.CONTEXT_SERVER_GLOBAL;
             } else if(!contextStr.equalsIgnoreCase("local")) { //If the argument doesn't say global (else) and doesn't say local (!)
                 context = Context.fromString(builder.toString());
+            } else {
+                context = Context.CONTEXT_SERVER_LOCAL;
             }
         }
 

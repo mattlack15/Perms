@@ -15,13 +15,13 @@ public final class Context {
     private static final String SERVER_IDENTIFIER = "server";
     private static final String WORLD_IDENTIFIER = "world";
 
+    public static final String VAL_ALL = "";
+    public static final String VAL_NONE = "|-|";
+
     public static final Context CONTEXT_NONE = new Context("|-|", "|-|");
     public static final Context CONTEXT_ALL = new Context("", "");
     public static final Context CONTEXT_SERVER_GLOBAL = new Context("", "");
-    public static final Context CONTEXT_SERVER_LOCAL = new Context(PermsManager.instance.getImplementation().getConfigSettings().getServerName(), "");
-
-    public static final String VAL_ALL = "";
-    public static final String VAL_NONE = "|-|";
+    public static final Context CONTEXT_SERVER_LOCAL = new Context(PermsManager.instance.getImplementation().getConfigSettings().getServerName(), VAL_ALL);
 
     public Context(String serverName, String worldName) {
         this.serverName = serverName;
@@ -34,6 +34,10 @@ public final class Context {
     }
 
     public static Context fromString(String str){
+        if(str == null){
+            return Context.CONTEXT_SERVER_LOCAL;
+        }
+        System.out.println(str);
         Context context = new Context(CONTEXT_SERVER_LOCAL.getServerName(), VAL_ALL);
         int index;
 
@@ -44,7 +48,7 @@ public final class Context {
             String[] quoteSplit = afterIdentifier.split("'");
             String[] spaceSplit = afterIdentifier.split(" ");
             if(quoteSplit.length < 2){
-                context.serverName = spaceSplit.length != 0 ? spaceSplit[0] : VAL_ALL;
+                context.serverName = spaceSplit.length != 0 ? (quoteSplit.length != 0 ? spaceSplit[0] : VAL_ALL) : VAL_ALL;
             } else {
                 context.serverName = quoteSplit[1];
             }
@@ -57,11 +61,13 @@ public final class Context {
             String[] quoteSplit = afterIdentifier.split("'");
             String[] spaceSplit = afterIdentifier.split(" ");
             if(quoteSplit.length < 2){
-                context.worldName = spaceSplit.length != 0 ? spaceSplit[0] : VAL_ALL;
+                context.worldName = spaceSplit.length != 0 ? (quoteSplit.length != 0 ? spaceSplit[0] : VAL_ALL) : VAL_ALL;
             } else {
                 context.worldName = quoteSplit[1];
             }
         }
+        System.out.println(context.getServerName());
+        System.out.println("---");
         return context;
     }
 
