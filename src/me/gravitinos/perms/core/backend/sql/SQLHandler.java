@@ -186,7 +186,9 @@ public class SQLHandler extends DataManager {
             try{
                 getDao().addInheritance(subject.getIdentifier(), parent.getIdentifier(), subject.getType(), parent.getType(), context);
                 future.complete(null);
-            }catch(Exception ignored){future.complete(null);}
+            }catch(Exception e){
+                e.printStackTrace();
+                future.complete(null);}
             return null;
         });
         return future;
@@ -224,6 +226,19 @@ public class SQLHandler extends DataManager {
         runAsync(() -> {
             try{
                 future.complete(getDao().getSubjectData(subjectIdentifier));
+            }catch(Exception ignored){future.complete(null);}
+            return null;
+        });
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Void> renameSubject(Subject subject, String oldIdentifier, String newIdentifier) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try{
+                getDao().renameSubject(oldIdentifier, newIdentifier);
+                future.complete(null);
             }catch(Exception ignored){future.complete(null);}
             return null;
         });
@@ -398,6 +413,7 @@ public class SQLHandler extends DataManager {
             Class.forName("com.mysql.jdbc.Driver");
             this.connection = DriverManager.getConnection(connectionURL, username, password);
         } catch (Exception e) {
+            e.printStackTrace();
             return false;
         }
         return true;

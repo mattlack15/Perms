@@ -37,7 +37,6 @@ public final class Context {
         if(str == null){
             return Context.CONTEXT_SERVER_LOCAL;
         }
-        System.out.println(str);
         Context context = new Context(CONTEXT_SERVER_LOCAL.getServerName(), VAL_ALL);
         int index;
 
@@ -66,8 +65,6 @@ public final class Context {
                 context.worldName = quoteSplit[1];
             }
         }
-        System.out.println(context.getServerName());
-        System.out.println("---");
         return context;
     }
 

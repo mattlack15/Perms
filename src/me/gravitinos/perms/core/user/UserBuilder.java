@@ -83,7 +83,7 @@ public class UserBuilder {
     }
 
     public User build(){
-        return new User(this.toCachedSubject(), (s) -> new SubjectRef(GroupManager.instance.getGroup(s)), UserManager.instance);
+        return new User(this.toCachedSubject(), (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s)), UserManager.instance);
     }
 
 }

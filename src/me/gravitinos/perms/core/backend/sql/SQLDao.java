@@ -1,6 +1,7 @@
 package me.gravitinos.perms.core.backend.sql;
 
 import com.google.common.collect.Lists;
+import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.cache.OwnerPermissionPair;
@@ -267,6 +268,22 @@ public class SQLDao {
         return "SELECT * FROM " + TABLE_SUBJECTDATA + " LEFT JOIN " + TABLE_INHERITANCE + " ON Identifier=Child WHERE Type=?";
     }
 
+    protected String getRenameIdentifiersInPermissionsUpdate(){
+        return "UPDATE " + TABLE_PERMISSIONS + " SET OwnerIdentifier=? WHERE OwnerIdentifier=?";
+    }
+
+    protected String getRenameChildsInInheritancesUpdate(){
+        return "UPDATE " + TABLE_INHERITANCE + " SET Child=? WHERE Child=?";
+    }
+
+    protected String getRenameParentsInInheritancesUpdate(){
+        return "UPDATE " + TABLE_INHERITANCE + " SET Parent=? WHERE Parent=?";
+    }
+
+    protected String getRenameIdentifiersInSubjectDataUpdate(){
+        return "UPDATE " + TABLE_SUBJECTDATA + " SET Identifier=? WHERE Identifier=?";
+    }
+
     //
 
     /**
@@ -289,9 +306,10 @@ public class SQLDao {
             try {
                 prepareStatement(this.getClearInheritanceTableUpdate()).executeUpdate();
                 prepareStatement(this.getClearPermissionsTableUpdate()).executeUpdate();
-                prepareStatement(this.getClearInheritanceTableUpdate()).executeUpdate();
+                prepareStatement(this.getClearSubjectDataTableUpdate()).executeUpdate();
                 return null;
             }catch(SQLException ex){
+                ex.printStackTrace();
                 return ex;
             }
         });
@@ -309,7 +327,8 @@ public class SQLDao {
             return null;
         }
         String type = data.getType();
-        return new CachedSubject(identifier, type, data, this.getPermissions(identifier), this.getInheritances(identifier));
+        CachedSubject subject =  new CachedSubject(identifier, type, data, this.getPermissions(identifier), this.getInheritances(identifier));
+        return subject;
     }
 
     public void addSubject(@NotNull Subject subject) throws SQLException {
@@ -637,7 +656,7 @@ public class SQLDao {
         s.setString(4, parentType);
         s.setString(5, context.toString());
 
-        s.executeUpdate();
+        int rowsAffected = s.executeUpdate();
     }
 
     public ArrayList<CachedInheritance> getInheritances(@NotNull String child) throws SQLException {
@@ -652,7 +671,6 @@ public class SQLDao {
         while(results.next()){
             out.add(new CachedInheritance(child, results.getString("Parent"), results.getString("ChildType"), results.getString("ParentType"), Context.fromString(results.getString("Context"))));
         }
-
         return out;
     }
 
@@ -776,4 +794,26 @@ public class SQLDao {
         });
     }
 
+    public void renameSubject(String oldIdentifier, String newIdentifier) throws SQLException {
+        PreparedStatement s = prepareStatement(this.getRenameChildsInInheritancesUpdate());
+        s.setString(1, newIdentifier);
+        s.setString(2, oldIdentifier);
+        s.executeUpdate();
+
+        s = prepareStatement(this.getRenameParentsInInheritancesUpdate());
+        s.setString(1, newIdentifier);
+        s.setString(2, oldIdentifier);
+        s.executeUpdate();
+
+        s = prepareStatement(this.getRenameIdentifiersInPermissionsUpdate());
+        s.setString(1, newIdentifier);
+        s.setString(2, oldIdentifier);
+        s.executeUpdate();
+
+        s = prepareStatement(this.getRenameIdentifiersInSubjectDataUpdate());
+        s.setString(1, newIdentifier);
+        s.setString(2, oldIdentifier);
+        s.executeUpdate();
+
+    }
 }

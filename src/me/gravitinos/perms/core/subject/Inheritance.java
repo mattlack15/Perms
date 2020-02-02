@@ -1,5 +1,6 @@
 package me.gravitinos.perms.core.subject;
 
+import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.subject.Subject;
@@ -22,7 +23,7 @@ public class Inheritance {
      * @return the parent
      */
     public Subject<? extends SubjectData> getParent(){
-        return this.parent.get();
+        return this.parent != null ? this.parent.get() : null;
     }
 
     /**
@@ -30,7 +31,7 @@ public class Inheritance {
      * @return the child
      */
     public Subject<? extends SubjectData> getChild(){
-        return this.child.get();
+        return this.child != null ? this.child.get() : null;
     }
 
     public CachedInheritance toCachedInheritance(){

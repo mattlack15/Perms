@@ -8,8 +8,12 @@ import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupData;
+import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.subject.*;
+import me.gravitinos.perms.core.user.User;
+import me.gravitinos.perms.core.user.UserBuilder;
 import me.gravitinos.perms.core.user.UserData;
+import me.gravitinos.perms.core.user.UserManager;
 import me.gravitinos.perms.core.util.MapUtil;
 import me.gravitinos.perms.spigot.SpigotPerms;
 import org.bukkit.configuration.ConfigurationSection;
@@ -68,6 +72,15 @@ public class SpigotFileDataManager extends DataManager {
         return true;
     }
 
+    public SpigotFileDataManager(){
+        if(!groupsConfig.isConfigurationSection(GROUP_SECTION)) {
+            groupsConfig.createSection(GROUP_SECTION);
+        }
+        if (!usersConfig.isConfigurationSection(USER_SECTION)) {
+            usersConfig.createSection(USER_SECTION);
+        }
+    }
+
     private synchronized void setSavingGroups(boolean value){
         if (!saveGroups && value) {
             saveGroups = true;
@@ -90,7 +103,6 @@ public class SpigotFileDataManager extends DataManager {
             SpigotPerms.instance.getImpl().getAsyncExecutor().execute(() -> {
                 try {
                     usersConfig.save(Files.USERS_FILE);
-                    SpigotPerms.instance.getImpl().addToLog("Saved userdata");
                     setSavingUsers(false);
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -106,10 +118,17 @@ public class SpigotFileDataManager extends DataManager {
         return true;
     }
 
+
+    /**
+     * Adds a subject to the files
+     * @param subject
+     * @return
+     */
     @Override
     public CompletableFuture<Void> addSubject(Subject subject) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
+            //If it already exists, remove it, then continue execution
             if (this.subjectExists(subject.getIdentifier())) {
                 try {
                     this.removeSubject(subject.getIdentifier()).get();
@@ -117,6 +136,8 @@ public class SpigotFileDataManager extends DataManager {
                     e.printStackTrace();
                 }
             }
+
+            //What type is it? user or group?
             if (subject.getType().equals(Subject.USER)) {
                 //User Data
                 UserData data = new UserData(subject.getData());
@@ -135,7 +156,7 @@ public class SpigotFileDataManager extends DataManager {
             } else if (subject.getType().equals(Subject.GROUP)) {
                 //Group Data
                 GroupData data = new GroupData(subject.getData());
-                ConfigurationSection section = groupsConfig.createSection(GROUP_SECTION + "." + ((Group)subject).getName());
+                ConfigurationSection section = groupsConfig.createSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(subject.getIdentifier()));
                 section.set(GROUP_DATA_PREFIX, data.getPrefix());
                 section.set(GROUP_DATA_SUFFIX, data.getSuffix());
                 section.set(GROUP_DATA_CHATCOLOUR, data.getChatColour());
@@ -155,7 +176,7 @@ public class SpigotFileDataManager extends DataManager {
     }
 
     private boolean subjectExists(String identifier) {
-        return this.groupsConfig.isConfigurationSection(GROUP_SECTION + "." + identifier) ||
+        return this.groupsConfig.isConfigurationSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(identifier)) ||
                 this.usersConfig.isConfigurationSection(USER_SECTION + "." + identifier);
     }
 
@@ -164,7 +185,7 @@ public class SpigotFileDataManager extends DataManager {
         runAsync(() -> {
             if (this.getSubjectType(identifier).equals(Subject.GROUP)) {
                 GroupData data = new GroupData();
-                ConfigurationSection section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + identifier);
+                ConfigurationSection section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(identifier));
                 if (section == null) {
                     future.complete(null);
                     return null;
@@ -195,8 +216,34 @@ public class SpigotFileDataManager extends DataManager {
         return future;
     }
 
+    @Override
+    public CompletableFuture<Void> renameSubject(Subject subject, String identifier, String newIdentifier) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try {
+                this.removeSubject(identifier).get();
+                ArrayList<CachedInheritance> inheritances = new ArrayList<>();
+                Subject.getInheritances(subject).forEach(i -> inheritances.add(i.toCachedInheritance()));
+                CachedSubject csub = new CachedSubject(subject.getIdentifier(), subject.getType(), subject.getData(), Subject.getPermissions(subject).getPermissions(), inheritances);
+                if(subject.getType().equals(Subject.USER)){
+                    User user = new User(csub, (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s)), UserManager.instance);
+                    Subject.setIdentifier(user, newIdentifier);
+                } else {
+                    Group group = new Group(csub, (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s)), GroupManager.instance);
+                    Subject.setIdentifier(group, newIdentifier);
+                }
+                this.addSubject(subject).get();
+                future.complete(null);
+            }catch(Exception ignored){
+                future.complete(null);
+            }
+            return null;
+        });
+        return future;
+    }
+
     private String getSubjectType(String identifier) {
-        if (this.groupsConfig.isConfigurationSection(GROUP_SECTION + "." + identifier)) {
+        if (this.groupsConfig.isConfigurationSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(identifier))) {
             return Subject.GROUP;
         } else if (this.usersConfig.isConfigurationSection(USER_SECTION + "." + identifier)) {
             return Subject.USER;
@@ -215,6 +262,7 @@ public class SpigotFileDataManager extends DataManager {
                     return null;
                 }
                 CachedSubject subject = new CachedSubject(name, this.getSubjectType(name), this.getSubjectData(name).get(), this.getPermissions(name).get().getPermissions(), this.getInheritances(name).get());
+
                 if (subject.getData() == null) {
                     future.complete(null);
                     return null;
@@ -242,7 +290,7 @@ public class SpigotFileDataManager extends DataManager {
                 usersConfig.set(USER_SECTION + "." + name, null);
                 saveUsersConfig();
             } else {
-                groupsConfig.set(GROUP_SECTION + "." + name, null);
+                groupsConfig.set(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(name), null);
                 saveGroupsConfig();
             }
             future.complete(null);
@@ -259,7 +307,7 @@ public class SpigotFileDataManager extends DataManager {
             if (this.getSubjectType(name).equals(Subject.USER)) {
                 section = usersConfig.getConfigurationSection(USER_SECTION + "." + name);
             } else {
-                section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + name);
+                section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(name));
             }
             if (section == null) {
                 future.complete(null);
@@ -302,7 +350,7 @@ public class SpigotFileDataManager extends DataManager {
             if (subject.getType().equals(Subject.USER)) {
                 section = usersConfig.getConfigurationSection(USER_SECTION + "." + subject.getIdentifier());
             } else {
-                section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + subject.getIdentifier());
+                section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(subject.getIdentifier()));
             }
             if (section == null) {
                 future.complete(null);
@@ -328,7 +376,7 @@ public class SpigotFileDataManager extends DataManager {
             if (subject.getType().equals(Subject.USER)) {
                 section = usersConfig.getConfigurationSection(USER_SECTION + "." + subject.getIdentifier());
             } else {
-                section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + subject.getIdentifier());
+                section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(subject.getIdentifier()));
             }
             if (section == null) {
                 future.complete(null);
@@ -365,7 +413,7 @@ public class SpigotFileDataManager extends DataManager {
             if (subject.getType().equals(Subject.USER)) {
                 section = usersConfig.getConfigurationSection(USER_SECTION + "." + subject.getIdentifier());
             } else {
-                section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + subject.getIdentifier());
+                section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(subject.getIdentifier()));
             }
             if (section == null) {
                 future.complete(null);
@@ -402,7 +450,7 @@ public class SpigotFileDataManager extends DataManager {
         if (this.getSubjectType(identifier).equals(Subject.USER)) {
             return usersConfig.getConfigurationSection(USER_SECTION + "." + identifier);
         } else {
-            return groupsConfig.getConfigurationSection(GROUP_SECTION + "." + identifier);
+            return groupsConfig.getConfigurationSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(identifier));
         }
     }
 
@@ -435,7 +483,7 @@ public class SpigotFileDataManager extends DataManager {
                     }
                     inheritance = inheritanceString.substring(0, inheritanceString.indexOf(" "));
                 }
-                out.add(new CachedInheritance(name, inheritance, type, inheritanceType, context));
+                out.add(new CachedInheritance(name, PermsManager.addServerToIdentifier(inheritance, GroupData.SERVER_LOCAL), type, inheritanceType, context));
             }
 
             future.complete(out);
@@ -452,7 +500,7 @@ public class SpigotFileDataManager extends DataManager {
             if (subject.getType().equals(Subject.USER)) {
                 section = usersConfig.getConfigurationSection(USER_SECTION + "." + subject.getIdentifier());
             } else {
-                section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + subject.getIdentifier());
+                section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(subject.getIdentifier()));
             }
             if (section == null) {
                 future.complete(null);
@@ -478,7 +526,7 @@ public class SpigotFileDataManager extends DataManager {
             if (subject.getType().equals(Subject.USER)) {
                 section = usersConfig.getConfigurationSection(USER_SECTION + "." + subject.getIdentifier());
             } else {
-                section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + subject.getIdentifier());
+                section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(subject.getIdentifier()));
             }
             if (section == null) {
                 future.complete(null);
@@ -493,7 +541,7 @@ public class SpigotFileDataManager extends DataManager {
             }
 
             String contextString = contextMap.size() > 0 ? " " + MapUtil.mapToString(contextMap) : "";
-            String inheritanceString = inheritance.getIdentifier() + contextString;
+            String inheritanceString = PermsManager.removeServerFromIdentifier(inheritance.getIdentifier()) + contextString;
             current.add(inheritanceString);
 
             section.set(SUBJECT_INHERITANCES, current);
@@ -514,22 +562,23 @@ public class SpigotFileDataManager extends DataManager {
             if (subject.getType().equals(Subject.USER)) {
                 section = usersConfig.getConfigurationSection(USER_SECTION + "." + subject.getIdentifier());
             } else {
-                section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + subject.getIdentifier());
+                section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(subject.getIdentifier()));
             }
             if (section == null) {
                 future.complete(null);
                 return null;
             }
             ArrayList<String> current = Lists.newArrayList(section.getStringList(SUBJECT_INHERITANCES));
+            String editedParent = PermsManager.removeServerFromIdentifier(parent);
             current.removeIf(s -> {
-                if (s.equals(" ") && parent.equals(" ")) {
+                if (s.equals(" ") && editedParent.equals(" ")) {
                     return true;
                 }
                 String[] split = s.split(" ");
                 if (split.length == 0) {
                     return false;
                 }
-                return split[0].equals(parent);
+                return split[0].equals(editedParent);
             });
             section.set(SUBJECT_INHERITANCES, current);
             saveUsersConfig();
@@ -707,7 +756,7 @@ public class SpigotFileDataManager extends DataManager {
             } else if (Subject.GROUP.equals(type)) {
                 for (String keys : groupsConfig.getConfigurationSection(GROUP_SECTION).getKeys(false)) {
                     try {
-                        subjects.add(this.getSubject(keys).get());
+                        subjects.add(this.getSubject(PermsManager.addServerToIdentifier(keys, GroupData.SERVER_LOCAL)).get());
                     } catch (Exception ignored) {
                     }
                 }

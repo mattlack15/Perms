@@ -44,7 +44,7 @@ public class CommandUserGroupAdd extends GravSubCommand {
 
         User user = (User) passedArgs[0];
         String groupStr = args[0];
-        Group group = GroupManager.instance.getGroup(groupStr);
+        Group group = GroupManager.instance.getVisibleGroup(groupStr);
         if(group == null){
             this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Group not found!");
             return true;

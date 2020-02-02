@@ -43,7 +43,7 @@ public class CommandGroupParentsAdd extends GravSubCommand {
         }
 
         String groupName = args[0];
-        Group groupToAdd = GroupManager.instance.getGroup(groupName);
+        Group groupToAdd = GroupManager.instance.getVisibleGroup(groupName);
         if(groupToAdd == null){
             this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Group (last argument) does not exist!");
             return true;

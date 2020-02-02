@@ -36,24 +36,27 @@ public class CommandLoadToSQL extends GravSubCommand {
         if (!this.checkPermission(sender, SpigotPerms.pluginPrefix + "You do not have permission to use this command!")) {
             return true;
         }
+        SpigotPerms.instance.reloadConfig();
+
         if (PermsManager.instance.getImplementation().getConfigSettings().isUsingSQL()) {
-            this.sendErrorMessage(sender, SpigotPerms.instance + "Please switch the SQL setting in config to false, then try again");
+            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Please switch the SQL setting in config to false, then try again");
             return true;
         }
 
         SQLHandler handler = new SQLHandler();
         if (!PermsManager.instance.connectSQL(handler, SpigotPerms.instance.getImpl().getConfigSettings())) {
-            this.sendErrorMessage(sender, SpigotPerms.instance + "Please make sure that the credentials and host specified in SQL settings are correct");
+            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Please make sure that the credentials and host specified in SQL settings are correct");
             return true;
         }
 
         PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
             try {
                 PermsManager.instance.copyTo(handler).get();
+                this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&aFinished &7Data Operation &aSuccessfully!");
             } catch (InterruptedException | ExecutionException e) {
                 e.printStackTrace();
+                this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&cError occurred while completing operation!");
             }
-            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&aFinished &7Data Operation &aSuccessfully!");
         });
 
         this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Working..");

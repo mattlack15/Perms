@@ -1,10 +1,10 @@
 main: me.gravitinos.perms.spigot.SpigotPerms
-name: Perms
-version: 1.0
+name: SoraxusPerms
+version: 2.0
 author: Gravitinos
 description: Permissions Plugin by Gravitinos
 softdepend: [PlaceholderAPI]
 commands:
-  tr:
+  ranks:
     description: Permissions main command
     usage: /<command>

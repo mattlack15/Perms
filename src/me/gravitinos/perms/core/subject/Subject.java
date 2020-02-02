@@ -9,7 +9,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -84,6 +83,8 @@ public abstract class Subject<T extends SubjectData> {
         return subject.getPermissions();
     }
 
+    public static void setIdentifier(Subject<?> subject, String identifier) {subject.setIdentifier(identifier); }
+
 
     /**
      * Get an immutable set of the permissions this subject contains
@@ -136,7 +137,7 @@ public abstract class Subject<T extends SubjectData> {
         AtomicReference<PPermission> p = new AtomicReference<>();
         this.ownPermissions.removeIf(Objects::isNull);
         ((ArrayList<PPermission>)this.ownPermissions.clone()).forEach(perm -> {
-            if(perm.equals(permission)){
+            if(perm.getPermissionIdentifier().equals(permission.getPermissionIdentifier())){
                 p.set(perm);
                 ownPermissions.remove(perm);
             }
@@ -261,22 +262,23 @@ public abstract class Subject<T extends SubjectData> {
      * @param subjects the group of subjects to check
      */
     public static void checkForAndRemoveInheritanceMistakes(ArrayList<Subject> subjects){
-        ArrayList<Subject<?>> visited = new ArrayList<>();
-        for(Subject<?> subject : subjects){
-            visited.clear();
-            visited.add(subject);
+        for(Subject subject : subjects){
+            treeSearchThing(subject, new ArrayList<>());
+        }
+    }
 
-            for(int i1 = 0; i1 < visited.size(); i1++){
-                int finalI = i1;
-                visited.get(i1).getInheritances().forEach(i -> {
-                    if (visited.contains(i.getParent())) {
-                        visited.get(finalI).removeOwnSubjectInheritance(i.getParent());
-                        PermsManager.instance.getImplementation().addToLog(ChatColor.RED + "Mistake in inheritances, temporarily removed inheritance \"" +
-                                i.getParent().getIdentifier() + "\" from subject \"" + i.getChild().getIdentifier() + " please manually remove inheritance for a permanent effect");
-                        return;
-                    }
-                    visited.add(i.getParent());
-                });
+    private static void treeSearchThing(Subject<?> sub, ArrayList<Subject<?>> prev){
+        ArrayList<Subject<?>> subs = Lists.newArrayList(prev);
+        subs.add(sub);
+
+        for(Inheritance i : sub.getInheritances()){
+            Subject<?> subj = i.getParent();
+            if(subs.contains(subj)){
+                sub.removeOwnSubjectInheritance(subj);
+                PermsManager.instance.getImplementation().addToLog(ChatColor.RED + "Mistake in inheritances, temporarily removed inheritance \"" +
+                        subj.getIdentifier() + "\" from subject \"" + i.getChild().getIdentifier() + "\" please manually remove inheritance for a permanent effect");
+            } else {
+                treeSearchThing(subj, subs);
             }
         }
     }

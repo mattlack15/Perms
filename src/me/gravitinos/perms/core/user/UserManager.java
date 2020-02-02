@@ -7,6 +7,7 @@ import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.group.GroupManager;
+import me.gravitinos.perms.core.subject.Inheritance;
 import me.gravitinos.perms.core.subject.Subject;
 import me.gravitinos.perms.core.subject.SubjectRef;
 
@@ -52,11 +53,11 @@ public class UserManager {
                 CachedSubject cachedSubject = dataManager.getSubject(id.toString()).get();
                 User user;
                 if(cachedSubject == null || cachedSubject.getData() == null || cachedSubject.getIdentifier() == null){
-                    user = new UserBuilder(id, username).setDisplayGroup(GroupData.SERVER_GLOBAL, GroupManager.instance.getDefaultGroup()).addInheritance(GroupManager.instance.getDefaultGroup(), Context.CONTEXT_SERVER_LOCAL).build();
+                    user = new UserBuilder(id, username).addInheritance(GroupManager.instance.getDefaultGroup(), Context.CONTEXT_SERVER_LOCAL).build();
                 } else {
-                    user = new User(cachedSubject, (s) -> new SubjectRef(GroupManager.instance.getGroup(s)), this);
+                    user = new User(cachedSubject, (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s)), this);
                 }
-                this.addUser(user);
+                this.loadedUsers.add(user);
 
             } catch (Exception e) {
                 result.complete(false);
@@ -80,11 +81,7 @@ public class UserManager {
      * @param uuid The unique ID of the user to unload
      */
     public void unloadUser(UUID uuid){
-        ((ArrayList<User>)loadedUsers.clone()).forEach(users -> {
-            if(users.getUniqueID().equals(uuid)){
-                loadedUsers.remove(users);
-            }
-        });
+        loadedUsers.removeIf(u -> u.getUniqueID().equals(uuid));
     }
 
     /**

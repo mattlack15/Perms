@@ -1,6 +1,7 @@
 package me.gravitinos.perms.core.user;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
@@ -63,8 +64,14 @@ public class User extends Subject<UserData> {
             this.getData().addUpdateListener("MAIN_LISTENER", (k, v) -> dataManager.updateSubjectData(this));
         }
 
-        this.setOwnPermissions(subject.getPermissions());
-        subject.getInheritances().forEach(i -> this.addOwnSubjectInheritance(inheritanceSupplier.getSubject(i.getParent()), i.getContext()));
+        super.setOwnPermissions(subject.getPermissions());
+        ArrayList<Inheritance> inheritances = Lists.newArrayList(super.getInheritances());
+        inheritances.forEach(i -> super.removeOwnSubjectInheritance(i.getParent()));
+        subject.getInheritances().forEach(i -> super.addOwnSubjectInheritance(inheritanceSupplier.getSubject(i.getParent()), i.getContext()));
+
+        if(save && dataManager != null){
+            dataManager.updateSubject(this);
+        }
 
         if(save && dataManager != null){
             dataManager.updateSubject(this);
@@ -332,7 +339,7 @@ public class User extends Subject<UserData> {
      * @param subject The inheritance to add
      * @param context The context that this will apply in
      */
-    public CompletableFuture<Void> addInheritance(Subject subject, Context context){
+    public CompletableFuture<Void> addInheritance(Subject<?> subject, Context context){
 
         if(this.hasInheritance(subject, context)){
             CompletableFuture<Void> future = new CompletableFuture<>();

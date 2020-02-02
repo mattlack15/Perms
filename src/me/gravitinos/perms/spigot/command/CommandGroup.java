@@ -1,5 +1,6 @@
 package me.gravitinos.perms.spigot.command;
 
+import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.group.GroupManager;
@@ -26,6 +27,7 @@ public class CommandGroup extends GravSubCommand {
         this.addSubCommand(new CommandGroupCreate(this, this.getSubCommandCmdPath()));
         this.addSubCommand(new CommandGroupDelete(this, this.getSubCommandCmdPath()));
         this.addSubCommand(new CommandGroupList(this, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandGroupSetServer(this, this.getSubCommandCmdPath()));
     }
 
     @Override
@@ -61,7 +63,7 @@ public class CommandGroup extends GravSubCommand {
                 return true;
             }
 
-            Group group = GroupManager.instance.getGroup(args[0]);
+            Group group = GroupManager.instance.getVisibleGroup(args[0]);
             if(group == null){
                 if(subCommand.getAlias().equalsIgnoreCase("create")){
                     this.callSubCommand(subCommand, 1, sender, cmd, label, args, args[0]);
@@ -80,7 +82,7 @@ public class CommandGroup extends GravSubCommand {
 
             //Display group info
 
-            Group group = GroupManager.instance.getGroup(args[0]);
+            Group group = GroupManager.instance.getVisibleGroup(args[0]);
             if(group == null){
                 this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Group not found!");
                 return true;
@@ -99,7 +101,7 @@ public class CommandGroup extends GravSubCommand {
             sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fInheritances &6>");
             for(Inheritance inheritance : group.getInheritances()){
                 boolean applies = inheritance.getContext().getServerName().equals(GroupData.SERVER_GLOBAL) || inheritance.getContext().getServerName().equals(GroupData.SERVER_LOCAL);
-                sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&7- &e" + inheritance.getParent() + (applies ? "" : "&cDoes not apply here"));
+                sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&7- &e" + PermsManager.removeServerFromIdentifier(inheritance.getParent().getIdentifier()) + (applies ? "" : "&cDoes not apply here"));
             }
 
         }

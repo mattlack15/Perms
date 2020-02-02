@@ -10,6 +10,7 @@ import me.gravitinos.perms.core.user.UserManager;
 import me.gravitinos.perms.spigot.command.CommandPerms;
 import me.gravitinos.perms.spigot.command.GravCommand;
 import me.gravitinos.perms.spigot.command.GravSubCommand;
+import me.gravitinos.perms.spigot.file.Files;
 import me.gravitinos.perms.spigot.file.SpigotFileDataManager;
 import me.gravitinos.perms.spigot.listeners.ChatListener;
 import me.gravitinos.perms.spigot.listeners.LoginListener;
@@ -24,7 +25,7 @@ import java.util.concurrent.ExecutionException;
 public class SpigotPerms extends JavaPlugin {
     public static SpigotPerms instance;
 
-    public static final String commandName = "tr";
+    public static final String commandName = "ranks";
 
     public static String pluginPrefix;
 
@@ -38,6 +39,7 @@ public class SpigotPerms extends JavaPlugin {
         instance = this;
         this.saveDefaultConfig();
         this.impl = new SpigotImpl();
+        new Files();
         DataManager dataManager;
         if(impl.getConfigSettings().isUsingSQL()){
             dataManager = new SQLHandler();

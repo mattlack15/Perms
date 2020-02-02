@@ -45,7 +45,7 @@ public class CommandGroups extends GravSubCommand {
                     continue;
                 }
 
-                this.sendErrorMessage(sender, "&7 - &f" + groups.getName() + " (" + groups.getPrefix() + "&f) &a" + groups.getPriority());
+                this.sendErrorMessage(sender, "&7 - &f" + groups.getName() + " (" + groups.getPrefix() + "&f) (&e" + groups.getServerContext() + "&f) &a" + groups.getPriority());
             }
 
         } else if(args.length > 0 && args[0].equalsIgnoreCase("global")){
@@ -57,14 +57,14 @@ public class CommandGroups extends GravSubCommand {
                     continue;
                 }
 
-                this.sendErrorMessage(sender, "&7 - &f" + groups.getName() + " (" + groups.getPrefix() + "&f) &a" + groups.getPriority());
+                this.sendErrorMessage(sender, "&7 - &f" + groups.getName() + " (" + groups.getPrefix() + "&f) (&e" + groups.getServerContext() + "&f) &a" + groups.getPriority());
             }
 
         } else if (args.length > 0 && args[0].equalsIgnoreCase("all")){
             this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&4&lALL &fExisting Groups:");
 
             for(Group groups : GroupManager.instance.getLoadedGroups()){
-                this.sendErrorMessage(sender, "&7 - &f" + groups.getName() + " (" + groups.getPrefix() + "&f) &a" + groups.getPriority());
+                this.sendErrorMessage(sender, "&7 - &f" + groups.getName() + " (" + groups.getPrefix() + "&f) (&e" + groups.getServerContext() + "&f) &a" + groups.getPriority());
             }
         } else {
             this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&6&lVisible &fExisting Groups:");
@@ -74,7 +74,7 @@ public class CommandGroups extends GravSubCommand {
                     continue;
                 }
 
-                this.sendErrorMessage(sender, "&7 - &f" + groups.getName() + " (" + groups.getPrefix() + "&f) &a" + groups.getPriority());
+                this.sendErrorMessage(sender, "&7 - &f" + groups.getName() + " (" + groups.getPrefix() + "&f) (&e" + groups.getServerContext() + "&f) &a" + groups.getPriority());
             }
         }
 

@@ -1,11 +1,11 @@
 <component name="ArtifactManager">
-  <artifact type="jar" name="Perms:jar">
+  <artifact type="jar" name="SoraxusPerms:jar">
     <output-path>$USER_HOME$/Desktop/Plugins</output-path>
-    <root id="archive" name="Perms.jar">
+    <root id="archive" name="SoraxusPerms.jar">
       <element id="module-output" name="Perms" />
       <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/jetbrains/annotations/17.0.0/annotations-17.0.0.jar" path-in-jar="/" />
       <element id="file-copy" path="$PROJECT_DIR$/config.yml" />
-      <element id="file-copy" path="$PROJECT_DIR$/src/me/gravitinos/perms/bungee/plugin.yml" />
+      <element id="file-copy" path="$PROJECT_DIR$/src/me/gravitinos/perms/spigot/plugin.yml" />
     </root>
   </artifact>
 </component>

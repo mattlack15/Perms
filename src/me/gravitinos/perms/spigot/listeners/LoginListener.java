@@ -38,14 +38,6 @@ public class LoginListener implements Listener {
             e.printStackTrace();
         }
 
-        if (!loadResult) {
-            //Create user
-            UserBuilder builder = new UserBuilder(event.getUniqueId(), event.getName());
-            builder.addInheritance(GroupManager.instance.getDefaultGroup(), Context.CONTEXT_SERVER_LOCAL)
-                    .setDisplayGroup(UserData.SERVER_LOCAL, GroupManager.instance.getDefaultGroup());
-            UserManager.instance.addUser(builder.build());
-        }
-
     }
 
     //Handle when users are not allowed to login

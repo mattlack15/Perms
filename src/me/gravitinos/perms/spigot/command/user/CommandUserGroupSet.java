@@ -46,7 +46,7 @@ public class CommandUserGroupSet extends GravSubCommand {
 
         User user = (User) passedArgs[0];
         String groupStr = args[0];
-        Group group = GroupManager.instance.getGroup(groupStr);
+        Group group = GroupManager.instance.getVisibleGroup(groupStr);
         if(group == null){
             this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Group not found!");
             return true;
@@ -61,7 +61,7 @@ public class CommandUserGroupSet extends GravSubCommand {
         if(args.length > 1){
             StringBuilder builder = new StringBuilder();
             for(int i = 1; i < args.length; i++){
-                builder.append(args[0] + " ");
+                builder.append(args[i] + " ");
             }
             builder.deleteCharAt(builder.length()-1);
             String contextStr = builder.toString();

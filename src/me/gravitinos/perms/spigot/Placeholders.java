@@ -15,21 +15,21 @@ public class Placeholders extends PlaceholderHook{
         //%<pluginname>_<identifier>%
         if(identifier.equalsIgnoreCase("prefix")){
             String dg = UserManager.instance.getUser(p.getUniqueId()).getDisplayGroup();
-            Group displayGroup = GroupManager.instance.getGroup(dg);
+            Group displayGroup = GroupManager.instance.getVisibleGroup(dg);
             if(displayGroup == null){
                 return "";
             }
             return ChatColor.translateAlternateColorCodes('&', displayGroup.getPrefix());
         } else if(identifier.equalsIgnoreCase("suffix")){
             String dg = UserManager.instance.getUser(p.getUniqueId()).getDisplayGroup();
-            Group displayGroup = GroupManager.instance.getGroup(dg);
+            Group displayGroup = GroupManager.instance.getVisibleGroup(dg);
             if(displayGroup == null){
                 return "";
             }
             return ChatColor.translateAlternateColorCodes('&', displayGroup.getSuffix());
         } else if(identifier.equalsIgnoreCase("displaygroup")){
             String dg = UserManager.instance.getUser(p.getUniqueId()).getDisplayGroup();
-            Group displayGroup = GroupManager.instance.getGroup(dg);
+            Group displayGroup = GroupManager.instance.getVisibleGroup(dg);
             if(displayGroup == null){
                 return "";
             }

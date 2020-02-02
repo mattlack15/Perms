@@ -58,6 +58,8 @@ public abstract class DataManager {
 
     //Large Operations
 
+    public abstract CompletableFuture<Void> renameSubject(Subject subject, String oldIdentifier, String newIdentifier);
+
     public abstract CompletableFuture<Void> addPermissions(Subject subject, ImmutablePermissionList list);
 
     public abstract CompletableFuture<Void> removePermissions(Subject subject, ArrayList<String> list);

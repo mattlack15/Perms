@@ -36,8 +36,10 @@ public class CommandLoadToFiles extends GravSubCommand {
         if (!this.checkPermission(sender, SpigotPerms.pluginPrefix + "You do not have permission to use this command!")) {
             return true;
         }
-        if (PermsManager.instance.getImplementation().getConfigSettings().isUsingSQL()) {
-            this.sendErrorMessage(sender, SpigotPerms.instance + "Please switch the SQL setting in config to true, then try again");
+        SpigotPerms.instance.reloadConfig();
+
+        if (!PermsManager.instance.getImplementation().getConfigSettings().isUsingSQL()) {
+            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Please switch the SQL setting in config to true, then try again");
             return true;
         }
 

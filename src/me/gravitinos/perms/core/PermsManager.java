@@ -35,8 +35,10 @@ public class PermsManager {
             implementation.getConfigSettings().setServerName("server_" + Math.round(Math.random() * 1000));
         }
 
-        if(this.connectSQL((SQLHandler) dataManager, implementation.getConfigSettings())){
-            this.implementation.consoleLog(ChatColor.GREEN + "Connected to SQL successfully!");
+        if(dataManager instanceof SQLHandler) {
+            if (this.connectSQL((SQLHandler) dataManager, implementation.getConfigSettings())) {
+                this.implementation.consoleLog(ChatColor.GREEN + "Connected to SQL successfully!");
+            }
         }
 
         try {
@@ -51,8 +53,10 @@ public class PermsManager {
         this.getImplementation().getAsyncExecutor().execute(() -> {
             try {
                 manager.clearAllData().get();
-                userManager.saveTo(manager).get();
-                groupManager.saveTo(manager).get();
+                CompletableFuture<Void> future1 = userManager.saveTo(manager);
+                CompletableFuture<Void> future2 = groupManager.saveTo(manager);
+                future1.get();
+                future2.get();
                 future.complete(null);
             }catch(Exception e){
                 future.complete(null);
@@ -84,6 +88,23 @@ public class PermsManager {
             return false;
         }
         return true;
+    }
+
+    public static final String SERVER_NAME_SEPERATOR = "~~";
+
+    public static String removeServerFromIdentifier(String identifier){
+        int index = identifier.indexOf(SERVER_NAME_SEPERATOR);
+        if(index == -1){
+            return identifier;
+        }
+        if(index == identifier.length() - SERVER_NAME_SEPERATOR.length()){
+            return "";
+        }
+        return identifier.substring(index + SERVER_NAME_SEPERATOR.length());
+    }
+
+    public static String addServerToIdentifier(String identifier, String server){
+        return server + SERVER_NAME_SEPERATOR + identifier;
     }
 
     public PermsImplementation getImplementation() {

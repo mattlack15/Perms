@@ -1,6 +1,7 @@
 package me.gravitinos.perms.core.group;
 
-import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
@@ -18,15 +19,29 @@ public class Group extends Subject<GroupData> {
         this(builder, inheritanceSupplier, null);
     }
 
-    public Group(@NotNull CachedSubject cachedSubject, @NotNull SubjectSupplier inheritanceSupplier, GroupManager manager){
+    public Group(@NotNull CachedSubject cachedSubject, @NotNull SubjectSupplier inheritanceSupplier, GroupManager manager) {
         super(cachedSubject.getIdentifier(), Subject.GROUP, new GroupData(cachedSubject.getData()));
+        this.dataManager = manager != null ? manager.getDataManager() : null;
         this.updateFromCachedSubject(cachedSubject, inheritanceSupplier, false);
 
-        this.dataManager = manager != null ? manager.getDataManager() : null;
-
-        if (dataManager != null) {
-            this.getData().addUpdateListener("MAIN_LISTENER", (k, v) -> dataManager.updateSubjectData(this));
-        }
+        this.getData().addUpdateListener("MAIN_LISTENER", (k, v) -> {
+            String oldIdentifier = this.getIdentifier();
+            if (k.equals(GroupData.SERVER_CONTEXT_KEY)) {
+                this.setIdentifier(PermsManager.addServerToIdentifier(this.getName(), v));
+            }
+            String newIdentifier = this.getIdentifier();
+            if(dataManager != null) {
+                if (k.equals(GroupData.SERVER_CONTEXT_KEY)) {
+                    dataManager.performOrderedOpAsync(() -> {
+                        dataManager.renameSubject(this, oldIdentifier, newIdentifier);
+                        dataManager.updateSubjectData(this);
+                        return null;
+                    });
+                } else {
+                    dataManager.updateSubjectData(this);
+                }
+            }
+        });
     }
 
     public Group(@NotNull GroupBuilder builder, @NotNull SubjectSupplier inheritanceSupplier, GroupManager manager) {
@@ -36,54 +51,78 @@ public class Group extends Subject<GroupData> {
     /**
      * Updates this group with a cachedSubject's values with what is compatible (everything, if this cachedSubject's type is Subject.GROUP)
      *
-     * @param subject The cachedSubject to copy from
+     * @param subject             The cachedSubject to copy from
      * @param inheritanceSupplier Inheritance supplier to handle getting inherited subject objects usually just groupManager::getGroup
      */
-    public void updateFromCachedSubject(@NotNull CachedSubject subject, @NotNull SubjectSupplier inheritanceSupplier){
+    public void updateFromCachedSubject(@NotNull CachedSubject subject, @NotNull SubjectSupplier inheritanceSupplier) {
         this.updateFromCachedSubject(subject, inheritanceSupplier, false);
     }
 
     /**
      * Updates this group with a cachedSubject's values with what is compatible (everything, if this cachedSubject's type is Subject.GROUP)
      *
-     * @param subject The cachedSubject to copy from
+     * @param subject             The cachedSubject to copy from
      * @param inheritanceSupplier Inheritance supplier to handle getting inherited subject objects usually just groupManager::getGroup
-     * @param save Whether or not to save this change to the backend (files or sql)
+     * @param save                Whether or not to save this change to the backend (files or sql)
      */
-    public void updateFromCachedSubject(@NotNull CachedSubject subject, @NotNull SubjectSupplier inheritanceSupplier, boolean save){
+    public void updateFromCachedSubject(@NotNull CachedSubject subject, @NotNull SubjectSupplier inheritanceSupplier, boolean save) {
 
         this.setIdentifier(subject.getIdentifier());
 
         this.setData(new GroupData(subject.getData()));
-        if (dataManager != null) {
-            this.getData().addUpdateListener("MAIN_LISTENER", (k, v) -> dataManager.updateSubjectData(this));
+
+        this.getData().addUpdateListener("MAIN_LISTENER", (k, v) -> {
+            String oldIdentifier = this.getIdentifier();
+            if (k.equals(GroupData.SERVER_CONTEXT_KEY)) {
+                this.setIdentifier(PermsManager.addServerToIdentifier(this.getName(), v));
+            }
+            String newIdentifier = this.getIdentifier();
+            if(dataManager != null) {
+                if (k.equals(GroupData.SERVER_CONTEXT_KEY)) {
+                    dataManager.performOrderedOpAsync(() -> {
+                        dataManager.renameSubject(this, oldIdentifier, newIdentifier);
+                        dataManager.updateSubjectData(this);
+                        return null;
+                    });
+                } else {
+                    dataManager.updateSubjectData(this);
+                }
+            }
+        });
+
+
+        super.setOwnPermissions(subject.getPermissions());
+        ArrayList<Inheritance> inheritances = Lists.newArrayList(super.getInheritances());
+        inheritances.forEach(i -> super.removeOwnSubjectInheritance(i.getParent()));
+        subject.getInheritances().forEach(i -> super.addOwnSubjectInheritance(inheritanceSupplier.getSubject(i.getParent()), i.getContext()));
+
+        if(save && dataManager != null){
+            dataManager.updateSubject(this);
         }
-
-        this.setOwnPermissions(subject.getPermissions());
-        subject.getInheritances().forEach(i -> this.addOwnSubjectInheritance(inheritanceSupplier.getSubject(i.getParent()), i.getContext()));
-
     }
 
     /**
      * Gets the priority or weight of this group
+     *
      * @return
      */
-    public int getPriority(){
+    public int getPriority() {
         return this.getData().getPriority();
     }
 
     /**
      * Sets the priority of weight of this group
+     *
      * @param i
      */
-    public void setPriority(int i){
+    public void setPriority(int i) {
         this.getData().setPriority(i); //Automatically saved to data-manager
     }
 
     /**
      * Updates this group with a builder's values
      *
-     * @param builder the builder to update from
+     * @param builder             the builder to update from
      * @param inheritanceSupplier Inheritance supplier to handle getting inherited subject objects usually just groupManager::getGroup
      */
     public void updateFromBuilder(@NotNull GroupBuilder builder, @NotNull SubjectSupplier inheritanceSupplier, boolean save) {
@@ -116,7 +155,7 @@ public class Group extends Subject<GroupData> {
      * @param permission the permission to add
      */
     public CompletableFuture<Void> addOwnPermission(@NotNull PPermission permission) {
-        if(this.hasOwnPermission(permission)){
+        if (this.hasOwnPermission(permission)) {
             CompletableFuture<Void> future = new CompletableFuture<>();
             future.complete(null);
             return future;
@@ -172,7 +211,7 @@ public class Group extends Subject<GroupData> {
         return this.dataManager;
     }
 
-    public ArrayList<Inheritance> getInheritances(){
+    public ArrayList<Inheritance> getInheritances() {
         return super.getInheritances();
     }
 
@@ -182,9 +221,9 @@ public class Group extends Subject<GroupData> {
      * Adds a lot of permissions in bulk, please use this for large amounts of permissions as Transfers to SQL can be a lot quicker
      */
     public CompletableFuture<Void> addOwnPermissions(@NotNull ArrayList<PPermission> permissions) {
-        ArrayList<PPermission> ps = (ArrayList<PPermission>)permissions.clone();
+        ArrayList<PPermission> ps = (ArrayList<PPermission>) permissions.clone();
         permissions.forEach(p -> {
-            if(!this.hasOwnPermission(p)){
+            if (!this.hasOwnPermission(p)) {
                 super.addOwnSubjectPermission(p);
             } else {
                 ps.remove(p);
@@ -202,17 +241,19 @@ public class Group extends Subject<GroupData> {
 
     /**
      * Gets if this group is applicable to this server
+     *
      * @return true or false
      */
-    public boolean serverContextAppliesToThisServer(){
+    public boolean serverContextAppliesToThisServer() {
         return this.getServerContext().equals(GroupData.SERVER_GLOBAL) || this.getServerContext().equals(GroupData.SERVER_LOCAL);
     }
 
     /**
      * Gets a list of all the permissions that are possessed by this group
+     *
      * @return
      */
-    public ImmutablePermissionList getOwnPermissions(){
+    public ImmutablePermissionList getOwnPermissions() {
         return super.getPermissions();
     }
 
@@ -223,7 +264,7 @@ public class Group extends Subject<GroupData> {
         permissions.forEach(p -> super.removeOwnSubjectPermission(p));
 
         //Update backend
-        if(dataManager != null) {
+        if (dataManager != null) {
             return dataManager.removePermissionsExact(this, permissions);
         }
         CompletableFuture<Void> future = new CompletableFuture<>();
@@ -233,12 +274,13 @@ public class Group extends Subject<GroupData> {
 
     /**
      * Checks whether this has the parent/inheritance specified
+     *
      * @param subject The parent/inheritance to check for
      * @return true if this user has the specified inheritance
      */
-    public boolean hasInheritance(@NotNull Subject subject){
-        for(Inheritance inheritance : super.getInheritances()){
-            if(subject.equals(inheritance.getParent())){
+    public boolean hasInheritance(@NotNull Subject subject) {
+        for (Inheritance inheritance : super.getInheritances()) {
+            if (subject.equals(inheritance.getParent())) {
                 return true;
             }
         }
@@ -247,11 +289,12 @@ public class Group extends Subject<GroupData> {
 
     /**
      * Adds a parent/inheritance to this user
+     *
      * @param subject The inheritance to add
      * @param context The context that this will apply in
      */
-    public CompletableFuture<Void> addInheritance(Subject subject, Context context){
-        if(this.hasInheritance(subject)){
+    public CompletableFuture<Void> addInheritance(Subject subject, Context context) {
+        if (this.hasInheritance(subject)) {
             CompletableFuture<Void> future = new CompletableFuture<>();
             future.complete(null);
             return future;
@@ -259,7 +302,7 @@ public class Group extends Subject<GroupData> {
 
         super.addOwnSubjectInheritance(new SubjectRef(subject), context);
 
-        if(dataManager != null){
+        if (dataManager != null) {
             return dataManager.addInheritance(this, subject, context);
         }
         CompletableFuture<Void> future = new CompletableFuture<>();
@@ -269,12 +312,13 @@ public class Group extends Subject<GroupData> {
 
     /**
      * Removes a parent/inheritance from this group
+     *
      * @param subject the parent to remove
      */
-    public CompletableFuture<Void> removeInheritance(Subject subject){
+    public CompletableFuture<Void> removeInheritance(Subject subject) {
         super.removeOwnSubjectInheritance(subject);
 
-        if(dataManager != null){
+        if (dataManager != null) {
             return dataManager.removeInheritance(this, subject.getIdentifier());
         }
         CompletableFuture<Void> future = new CompletableFuture<>();
@@ -285,15 +329,15 @@ public class Group extends Subject<GroupData> {
     /**
      * Clears all inheritances from this group
      */
-    public CompletableFuture<Void> clearInheritances(){
+    public CompletableFuture<Void> clearInheritances() {
         ArrayList<String> parents = new ArrayList<>();
 
-        for(Inheritance i : super.getInheritances()){
+        for (Inheritance i : super.getInheritances()) {
             super.removeOwnSubjectInheritance(i.getParent());
             parents.add(i.getParent().getIdentifier());
         }
 
-        if(dataManager != null){
+        if (dataManager != null) {
             return dataManager.removeInheritances(this, parents);
         }
         CompletableFuture<Void> future = new CompletableFuture<>();
@@ -307,7 +351,16 @@ public class Group extends Subject<GroupData> {
      * @return
      */
     public String getName() {
-        return this.getIdentifier();
+        return PermsManager.removeServerFromIdentifier(this.getIdentifier());
+    }
+
+    /**
+     * Sets the name of this group
+     *
+     * @param name The name to set to
+     */
+    public void setName(String name) {
+        this.setIdentifier(PermsManager.addServerToIdentifier(name, this.getServerContext())); //Update name with the server context then set identifier to that
     }
 
     /**
@@ -348,17 +401,19 @@ public class Group extends Subject<GroupData> {
 
     /**
      * Get the server in which this group applies (Custom or GroupData.SERVER_LOCAL or GroupData.SERVER_GLOBAL)
+     *
      * @return
      */
-    public String getServerContext(){
+    public String getServerContext() {
         return this.getData().getServerContext();
     }
 
     /**
      * Set the server in which this group applies (Custom or GroupData.SERVER_LOCAL or GroupData.SERVER_GLOBAL)
+     *
      * @param context
      */
-    public void setServerContext(String context){
+    public void setServerContext(String context) {
         this.getData().setServerContext(context);
     } //Automatically saved to data-manager
 

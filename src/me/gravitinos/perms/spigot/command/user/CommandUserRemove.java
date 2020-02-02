@@ -1,6 +1,5 @@
 package me.gravitinos.perms.spigot.command.user;
 
-import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.user.User;
 import me.gravitinos.perms.core.user.UserData;
@@ -33,18 +32,18 @@ public class CommandUserRemove extends GravSubCommand {
     }
 
     @Override
-    public String getArgumentString(){
+    public String getArgumentString() {
         return "<permission>";
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args, Object... passedArgs) {
         //Check for permission
-        if(!this.checkPermission(sender, SpigotPerms.pluginPrefix + "You do not have permission to use this command!")){
+        if (!this.checkPermission(sender, SpigotPerms.pluginPrefix + "You do not have permission to use this command!")) {
             return true;
         }
 
-        if(args.length < 1){
+        if (args.length < 1) {
             this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "More arguments needed! Permission node needed!");
             return true;
         }
@@ -54,29 +53,30 @@ public class CommandUserRemove extends GravSubCommand {
         User user = (User) passedArgs[0];
 
         String gl = "local";
-        if(args.length > 1){
-            if(args[1].equalsIgnoreCase("global")){
+        if (args.length > 1) {
+            if (args[1].equalsIgnoreCase("global")) {
                 gl = "global";
             }
         }
+        int i = 0;
 
-        PPermission permToRemove = null;
-        for(PPermission perms : user.getOwnPermissions()){
-            if(perms.getContext().getServerName().equals(UserData.SERVER_LOCAL) && gl.equals("local") && perms.getPermission().equals(perm)){
-                permToRemove = perms;
-                break;
-            } else if(gl.equals("global") && perms.getPermission().equals(perm)){
-                permToRemove = perms;
-                break;
+        ArrayList<PPermission> permsToRemove = new ArrayList<>();
+
+        for (PPermission perms : user.getOwnPermissions()) {
+            if (perms.getContext().getServerName().equals(UserData.SERVER_LOCAL) && gl.equals("local") && perms.getPermission().equals(perm)) {
+                permsToRemove.add(perms);
+            } else if (gl.equals("global") && perms.getPermission().equals(perm)) {
+                permsToRemove.add(perms);
             }
         }
 
-        if(permToRemove == null){
+        if (permsToRemove.size() == 0) {
             this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "User does not contain &d" + gl + "&7 permission &f" + perm);
             return true;
         }
 
-        user.removeOwnPermission(permToRemove);
+        user.removeOwnPermissions(permsToRemove);
+
         this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + perm.toLowerCase() + " &7has been &cremoved&7 from their permissions!");
         return true;
     }

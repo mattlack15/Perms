@@ -94,10 +94,6 @@ public class BungeePerms extends Plugin implements Listener {
         }
     }
 
-    public void onPostLogin(PostLoginEvent event){
-
-    }
-
     public boolean hasPermission(CommandSender sender, String requ) {
         User user = UserManager.instance.getUserFromName(sender.getName());
         if((BungeeConfigSettings.instance.getGodUsers().contains(sender.getName()))) {

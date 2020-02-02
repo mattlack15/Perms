@@ -1,5 +1,6 @@
 package me.gravitinos.perms.spigot.command;
 
+import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.group.GroupManager;
@@ -132,7 +133,7 @@ public class CommandUser extends GravSubCommand {
                 sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fInheritances (Groups) &6>");
                 for (Inheritance inheritance : user.getInheritances()) {
                     boolean applies = inheritance.getContext().getServerName().equals(GroupData.SERVER_GLOBAL) || inheritance.getContext().getServerName().equals(GroupData.SERVER_LOCAL);
-                    sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&7- &e" + inheritance.getParent().getIdentifier() + (applies ? "" : " &cDoes not apply here &7(&f" + inheritance.getContext().getServerName() + "&7)"));
+                    sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&7- &e" + PermsManager.removeServerFromIdentifier(inheritance.getParent().getIdentifier()) + (applies ? "" : " &cDoes not apply here &7(&f" + inheritance.getContext().getServerName() + "&7)"));
                 }
 
             }

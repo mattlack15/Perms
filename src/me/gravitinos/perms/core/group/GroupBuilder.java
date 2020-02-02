@@ -1,6 +1,7 @@
 package me.gravitinos.perms.core.group;
 
 import com.google.common.cache.Cache;
+import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
@@ -29,7 +30,7 @@ public class GroupBuilder {
 
     public GroupBuilder setName(String name){
         this.name = name;
-        inherited.forEach(i -> i.setChild(this.name)); // Update the cached Inheritances
+        inherited.forEach(i -> i.setChild(PermsManager.addServerToIdentifier(this.name, data.getServerContext()))); // Update the cached Inheritances
         return this;
     }
     public GroupBuilder setPrefix(String prefix){
@@ -56,7 +57,7 @@ public class GroupBuilder {
     }
 
     public GroupBuilder addInheritance(Subject inheritance, Context context){
-        this.inherited.add(new CachedInheritance(this.name, inheritance.getIdentifier(), Subject.GROUP, inheritance.getType(), context));
+        this.inherited.add(new CachedInheritance(PermsManager.addServerToIdentifier(this.name, data.getServerContext()), inheritance.getIdentifier(), Subject.GROUP, inheritance.getType(), context));
         return this;
     }
 
@@ -66,7 +67,7 @@ public class GroupBuilder {
     }
 
     public CachedSubject toCachedSubject(){
-        return new CachedSubject(this.name, Subject.GROUP, this.data, this.permissions, inherited);
+        return new CachedSubject(PermsManager.addServerToIdentifier(this.name, data.getServerContext()), Subject.GROUP, this.data, this.permissions, inherited);
     }
 
     public ArrayList<PPermission> getPermissions(){
@@ -78,7 +79,7 @@ public class GroupBuilder {
     }
 
     public Group build(){
-        return new Group(this.toCachedSubject(), (s) -> new SubjectRef(GroupManager.instance.getGroup(s)), GroupManager.instance);
+        return new Group(this.toCachedSubject(), (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s)), GroupManager.instance);
     }
 
 }

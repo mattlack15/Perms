@@ -51,7 +51,7 @@ public class ChatListener implements Listener {
 
         //Get displaygroup
         String displayGroupName = user.getDisplayGroup();
-        Group displayGroup = GroupManager.instance.getGroup(displayGroupName);
+        Group displayGroup = GroupManager.instance.getVisibleGroup(displayGroupName);
         if(displayGroup == null){
             displayGroup = GroupManager.instance.getDefaultGroup();
             user.addInheritance(displayGroup, Context.CONTEXT_SERVER_LOCAL);

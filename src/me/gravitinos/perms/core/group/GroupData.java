@@ -12,6 +12,7 @@ public class GroupData extends SubjectData {
     private static final String DESCRIPTION = "description";
     private static final String SERVER_CONTEXT = "server_context";
     private static final String PRIORITY = "priority";
+    public static final String SERVER_CONTEXT_KEY = SERVER_CONTEXT;
 
     public static final String SERVER_LOCAL = PermsManager.instance.getImplementation().getConfigSettings().getServerName();
     public static final String SERVER_GLOBAL = Context.VAL_ALL;
