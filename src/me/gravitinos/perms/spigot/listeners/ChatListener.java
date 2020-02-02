@@ -1,5 +1,6 @@
 package me.gravitinos.perms.spigot.listeners;
 
+import me.clip.placeholderapi.PlaceholderAPI;
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.group.Group;
@@ -74,7 +75,14 @@ public class ChatListener implements Listener {
             part = part.replace("<uuid>", event.getPlayer().getUniqueId().toString());
             part = part.replace("<prefix>", toColour(displayGroup.getPrefix()));
             part = part.replace("<chatcolour>", toColour(displayGroup.getChatColour()));
-            part = part.replace("<message>", event.getMessage());
+
+            if(event.getPlayer().hasPermission("chat.placeholders")) {
+                part = part.replace("<message>", event.getMessage());
+                part = PlaceholderAPI.setPlaceholders(event.getPlayer(), part);
+            } else {
+                part = PlaceholderAPI.setPlaceholders(event.getPlayer(), part);
+                part = part.replace("<message>", event.getMessage());
+            }
 
             //Rank description
             if(containsPrefix){
@@ -118,7 +126,7 @@ public class ChatListener implements Listener {
             p.spigot().sendMessage(mainComponent);
         });
 
-        Bukkit.getLogger().info("CHAT: " + ChatColor.stripColor(mainComponent.toLegacyText()));
+        SpigotPerms.instance.getImpl().consoleLog("CHAT: " + ChatColor.stripColor(mainComponent.toLegacyText()));
 
     }
 

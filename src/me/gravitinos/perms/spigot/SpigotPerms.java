@@ -14,9 +14,11 @@ import me.gravitinos.perms.spigot.file.Files;
 import me.gravitinos.perms.spigot.file.SpigotFileDataManager;
 import me.gravitinos.perms.spigot.listeners.ChatListener;
 import me.gravitinos.perms.spigot.listeners.LoginListener;
+import net.milkbowl.vault.permission.Permission;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.sql.SQLException;
@@ -35,13 +37,13 @@ public class SpigotPerms extends JavaPlugin {
 
     private SpigotImpl impl;
 
-    public void onEnable(){
+    public void onEnable() {
         instance = this;
         this.saveDefaultConfig();
         this.impl = new SpigotImpl();
         new Files();
         DataManager dataManager;
-        if(impl.getConfigSettings().isUsingSQL()){
+        if (impl.getConfigSettings().isUsingSQL()) {
             dataManager = new SQLHandler();
         } else {
             dataManager = new SpigotFileDataManager();
@@ -57,7 +59,7 @@ public class SpigotPerms extends JavaPlugin {
         new LoginListener();
 
         //For all online players
-        for(Player p : Bukkit.getOnlinePlayers()){
+        for (Player p : Bukkit.getOnlinePlayers()) {
             //Load the user
             UserManager.instance.loadUser(p.getUniqueId(), p.getName());
 
@@ -66,18 +68,29 @@ public class SpigotPerms extends JavaPlugin {
         }
 
         PlaceholderAPI.registerPlaceholderHook(this, new Placeholders());
-
+        if(integrateWithVault()){
+            impl.consoleLog("Integrated with vault!");
+        }
     }
 
-    public void onDisable(){
+    public void onDisable() {
     }
 
-    public SpigotImpl getImpl(){
+    public SpigotImpl getImpl() {
         return this.impl;
     }
 
-    public PermsManager getManager(){
+    public PermsManager getManager() {
         return this.manager;
+    }
+
+    public boolean integrateWithVault() {
+        if (Bukkit.getPluginManager().isPluginEnabled("Vault")) {
+            PermsVault permsVault = new PermsVault();
+            this.getServer().getServicesManager().register(Permission.class, permsVault, this, ServicePriority.High);
+            return true;
+        }
+        return false;
     }
 
 }
