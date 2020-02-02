@@ -11,6 +11,7 @@ import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.subject.*;
 import me.gravitinos.perms.core.util.SubjectSupplier;
 import me.gravitinos.perms.spigot.SpigotPerms;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.attribute.UserDefinedFileAttributeView;
@@ -423,6 +424,40 @@ public class User extends Subject<UserData> {
         CompletableFuture<Void> future = new CompletableFuture<>();
         future.complete(null);
         return future;
+    }
+
+    /**
+     * Checks if this user has a permission of its own or inherits a permission
+     */
+    public boolean hasPermission(String permission, Context context){
+        ArrayList<PPermission> permissions = this.getAllPermissions(context);
+        for(PPermission perms : permissions){
+            if(perms.getPermission().equalsIgnoreCase(permission) && perms.getContext().applies(context)){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Checks if this user has a permission of its own or inherits a permission
+     */
+    public boolean hasPermission(PPermission perm){
+        return this.getAllPermissions().contains(perm);
+    }
+
+    /**
+     * Gets all permissions, including inherited
+     */
+    public ArrayList<PPermission> getAllPermissions(){
+        return super.getAllPermissions();
+    }
+
+    /**
+     * Gets all permissions, including inherited
+     */
+    public ArrayList<PPermission> getAllPermissions(Context context){
+        return super.getAllPermissions(context);
     }
 
     /**

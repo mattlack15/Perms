@@ -5,16 +5,13 @@ import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
-import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.group.GroupManager;
-import me.gravitinos.perms.core.subject.Inheritance;
 import me.gravitinos.perms.core.subject.Subject;
 import me.gravitinos.perms.core.subject.SubjectRef;
 
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 public class UserManager {
 
@@ -44,19 +41,17 @@ public class UserManager {
         CompletableFuture<Boolean> result = new CompletableFuture<>();
 
         PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
-            if (this.isUserLoaded(id)) {
-                result.complete(true);
-                return;
-            }
 
             try {
                 CachedSubject cachedSubject = dataManager.getSubject(id.toString()).get();
                 User user;
-                if(cachedSubject == null || cachedSubject.getData() == null || cachedSubject.getIdentifier() == null){
+                if (cachedSubject == null || cachedSubject.getData() == null || cachedSubject.getIdentifier() == null) {
                     user = new UserBuilder(id, username).addInheritance(GroupManager.instance.getDefaultGroup(), Context.CONTEXT_SERVER_LOCAL).build();
                 } else {
                     user = new User(cachedSubject, (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s)), this);
                 }
+
+                this.unloadUser(id); //In case they are already loaded
                 this.loadedUsers.add(user);
 
             } catch (Exception e) {
@@ -71,16 +66,17 @@ public class UserManager {
         return result;
     }
 
-    public CompletableFuture<Void> saveTo(DataManager dataManager){
+    public CompletableFuture<Void> saveTo(DataManager dataManager) {
         ArrayList<Subject> users = Lists.newArrayList(loadedUsers);
         return dataManager.addSubjects(users);
     }
 
     /**
      * Unload a user
+     *
      * @param uuid The unique ID of the user to unload
      */
-    public void unloadUser(UUID uuid){
+    public void unloadUser(UUID uuid) {
         loadedUsers.removeIf(u -> u.getUniqueID().equals(uuid));
     }
 
@@ -114,7 +110,7 @@ public class UserManager {
         return null;
     }
 
-    public User getUserFromName(String name){
+    public User getUserFromName(String name) {
         for (User u : loadedUsers) {
             if (u.getName().equals(name)) {
                 return u;
@@ -123,9 +119,9 @@ public class UserManager {
         return null;
     }
 
-    public void addUser(User user){
+    public void addUser(User user) {
         this.loadedUsers.add(user);
-        if(dataManager != null){
+        if (dataManager != null) {
             dataManager.addSubject(user);
         }
     }

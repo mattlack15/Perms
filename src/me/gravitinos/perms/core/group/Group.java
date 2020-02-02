@@ -346,6 +346,40 @@ public class Group extends Subject<GroupData> {
     }
 
     /**
+     * Gets all permissions, including inherited
+     */
+    public ArrayList<PPermission> getAllPermissions(){
+        return super.getAllPermissions();
+    }
+
+    /**
+     * Gets all permissions, including inherited
+     */
+    public ArrayList<PPermission> getAllPermissions(Context context){
+        return super.getAllPermissions(context);
+    }
+
+    /**
+     * Checks if this group has a permission of its own or inherits a permission
+     */
+    public boolean hasPermission(String permission, Context context){
+        ArrayList<PPermission> permissions = this.getAllPermissions(context);
+        for(PPermission perms : permissions){
+            if(perms.getPermission().equalsIgnoreCase(permission) && perms.getContext().applies(context)){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Checks if this group has a permission of its own or inherits a permission
+     */
+    public boolean hasPermission(PPermission perm){
+        return this.getAllPermissions().contains(perm);
+    }
+
+    /**
      * Gets the name of this group
      *
      * @return

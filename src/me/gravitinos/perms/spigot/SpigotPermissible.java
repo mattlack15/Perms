@@ -51,13 +51,10 @@ public class SpigotPermissible extends PermissibleBase {
         Context context = new Context(SpigotPerms.instance.getImpl().getConfigSettings().getServerName(), player.getWorld().getName());
 
         if(player.isOp()) {
-            if(user.hasOwnPermission("-op", context)) {
-                return false;
-            }
-            return true;
+            return !user.hasPermission("-op", context);
         }
         ArrayList<String> perms = new ArrayList<>();
-        user.getOwnPermissions().forEach(p -> {
+        user.getAllPermissions(context).forEach(p -> {
             if(p.getContext().applies(context)) { //Check context
                 perms.add(p.getPermission());
             }
@@ -92,14 +89,11 @@ public class SpigotPermissible extends PermissibleBase {
         Context context = new Context(SpigotPerms.instance.getImpl().getConfigSettings().getServerName(), player.getWorld().getName());
 
         if(player.isOp()) {
-            if(user.hasOwnPermission("-op", context)) {
-                return false;
-            }
-            return true;
+            return !user.hasPermission("-op", context);
         }
         ArrayList<String> perms = new ArrayList<>();
-        user.getOwnPermissions().forEach(p -> {
-            if (p.getContext().applies(context)) { //Check context
+        user.getAllPermissions(context).forEach(p -> {
+            if(p.getContext().applies(context)) { //Check context
                 perms.add(p.getPermission());
             }
         });

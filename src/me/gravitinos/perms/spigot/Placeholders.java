@@ -4,6 +4,7 @@ import me.clip.placeholderapi.PlaceholderHook;
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupManager;
+import me.gravitinos.perms.core.user.User;
 import me.gravitinos.perms.core.user.UserManager;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -11,6 +12,14 @@ import org.bukkit.entity.Player;
 public class Placeholders extends PlaceholderHook{
     @Override
     public String onPlaceholderRequest(Player p, String identifier) {
+
+        if(p == null || UserManager.instance == null){
+            return "-";
+        }
+        User user = UserManager.instance.getUser(p.getUniqueId());
+        if(user == null){
+            return "-";
+        }
 
         //%<pluginname>_<identifier>%
         if(identifier.equalsIgnoreCase("prefix")){

@@ -250,8 +250,23 @@ public abstract class Subject<T extends SubjectData> {
             }
 
             //Add all the permissions to the perms array list
-            inheritances.getParent().getAllPermissions(inheritanceContext);
             perms.addAll(inheritances.getParent().getAllPermissions(inheritanceContext));
+        }
+
+        return perms;
+    }
+
+    /**
+     * Gets all permissions from this subject, including inherited permissions
+     * @return
+     */
+    protected ArrayList<PPermission> getAllPermissions(){
+        ArrayList<PPermission> perms = new ArrayList<>(this.getPermissions().getPermissions());
+
+        for(Inheritance inheritances : getInheritances()){
+
+            //Add all the permissions to the perms array list
+            perms.addAll(inheritances.getParent().getAllPermissions());
         }
 
         return perms;

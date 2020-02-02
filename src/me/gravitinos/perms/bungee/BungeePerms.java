@@ -12,6 +12,7 @@ import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.api.event.PermissionCheckEvent;
 import net.md_5.bungee.api.event.PostLoginEvent;
 import net.md_5.bungee.api.event.PreLoginEvent;
+import net.md_5.bungee.api.event.ServerConnectEvent;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.api.plugin.Plugin;
 import net.md_5.bungee.config.Configuration;
@@ -94,6 +95,10 @@ public class BungeePerms extends Plugin implements Listener {
         }
     }
 
+    public void onSwitchServers(ServerConnectEvent event){
+        UserManager.instance.loadUser(event.getPlayer().getUniqueId(), event.getPlayer().getName()); //reload the user again (the load operation is async since .get() is not called)
+    }
+
     public boolean hasPermission(CommandSender sender, String requ) {
         User user = UserManager.instance.getUserFromName(sender.getName());
         if((BungeeConfigSettings.instance.getGodUsers().contains(sender.getName()))) {
@@ -106,7 +111,7 @@ public class BungeePerms extends Plugin implements Listener {
         Context context = new Context(BungeeConfigSettings.instance.getServerName(), Context.VAL_ALL);
 
         ArrayList<String> perms = new ArrayList<>();
-        user.getOwnPermissions().forEach(p -> {
+        user.getAllPermissions(context).forEach(p -> {
             if(p.getContext().applies(context)) { //Check context
                 perms.add(p.getPermission());
             }
