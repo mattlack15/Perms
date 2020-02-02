@@ -4,6 +4,7 @@
       <root url="jar://$USER_HOME$/Downloads/BungeeCord.jar!/" />
       <root url="jar://$USER_HOME$/Downloads/PlaceholderAPI-2.9.2.jar!/" />
       <root url="jar://$USER_HOME$/Downloads/spigot-1.12.2.jar!/" />
+      <root url="jar://$USER_HOME$/Downloads/Vault.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>

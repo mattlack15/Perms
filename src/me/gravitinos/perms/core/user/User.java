@@ -403,11 +403,32 @@ public class User extends Subject<UserData> {
         return future;
     }
 
+    /**
+     * Clears all global inheritances
+     */
+    public CompletableFuture<Void> clearInheritancesGlobal(){
+        ArrayList<String> parents = new ArrayList<>();
+
+        for(Inheritance i : super.getInheritances()){
+            if(!i.getContext().getServerName().equals(UserData.SERVER_GLOBAL)){
+                continue;
+            }
+            super.removeOwnSubjectInheritance(i.getParent());
+            parents.add(i.getParent().getIdentifier());
+        }
+
+        if(dataManager != null){
+            return dataManager.removeInheritances(this, parents);
+        }
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        future.complete(null);
+        return future;
+    }
 
     /**
      * Clears ALL inheritances from this user
      */
-    public CompletableFuture<Void> clearInheritancesGlobal(){
+    public CompletableFuture<Void> clearInheritances(){
         ArrayList<String> parents = new ArrayList<>();
 
         for(Inheritance i : super.getInheritances()){

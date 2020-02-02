@@ -15,6 +15,7 @@ public class CommandUserGroup extends GravSubCommand {
         this.addSubCommand(new CommandUserGroupAdd(this, this.getSubCommandCmdPath()));
         this.addSubCommand(new CommandUserGroupRemove(this, this.getSubCommandCmdPath()));
         this.addSubCommand(new CommandUserGroupSet(this, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandUserGroupClear(this, this.getSubCommandCmdPath()));
     }
 
     @Override

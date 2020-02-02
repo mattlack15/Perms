@@ -11,6 +11,7 @@ public class CommandGroupParents extends GravSubCommand {
         super(parentCommand, cmdPath);
         this.addSubCommand(new CommandGroupParentsAdd(this, this.getSubCommandCmdPath()));
         this.addSubCommand(new CommandGroupParentsRemove(this, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandGroupParentsClear(this, this.getSubCommandCmdPath()));
     }
 
     @Override
