@@ -67,13 +67,16 @@ public class SpigotPerms extends JavaPlugin {
             SpigotPermissible.inject(p);
         }
 
-        PlaceholderAPI.registerPlaceholderHook(this, new Placeholders());
+        if(Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            PlaceholderAPI.registerPlaceholderHook(this, new Placeholders());
+        }
         if(integrateWithVault()){
             impl.consoleLog("Integrated with vault!");
         }
     }
 
     public void onDisable() {
+        PlaceholderAPI.unregisterPlaceholderHook(this);
     }
 
     public SpigotImpl getImpl() {

@@ -4,6 +4,8 @@ import com.google.common.collect.Lists;
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.group.Group;
+import me.gravitinos.perms.core.user.User;
 import net.md_5.bungee.api.ChatColor;
 import org.jetbrains.annotations.NotNull;
 
@@ -289,9 +291,15 @@ public abstract class Subject<T extends SubjectData> {
         for(Inheritance i : sub.getInheritances()){
             Subject<?> subj = i.getParent();
             if(subs.contains(subj)){
-                sub.removeOwnSubjectInheritance(subj);
-                PermsManager.instance.getImplementation().addToLog(ChatColor.RED + "Mistake in inheritances, temporarily removed inheritance \"" +
-                        subj.getIdentifier() + "\" from subject \"" + i.getChild().getIdentifier() + "\" please manually remove inheritance for a permanent effect");
+                if(sub instanceof User){
+                    ((User) sub).removeInheritance(subj);
+                } else if(sub instanceof Group){
+                    ((Group) sub).removeInheritance(subj);
+                } else {
+                    sub.removeOwnSubjectInheritance(subj);
+                }
+                PermsManager.instance.getImplementation().addToLog(ChatColor.RED + "Mistake in inheritances, removed inheritance \"" +
+                        subj.getIdentifier() + "\" from subject \"" + i.getChild().getIdentifier() + "\"");
             } else {
                 treeSearchThing(subj, subs);
             }

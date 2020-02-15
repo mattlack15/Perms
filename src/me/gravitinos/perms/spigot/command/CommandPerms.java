@@ -3,6 +3,7 @@ package me.gravitinos.perms.spigot.command;
 import me.gravitinos.perms.spigot.SpigotPerms;
 import me.gravitinos.perms.spigot.command.admin.CommandLoadToFiles;
 import me.gravitinos.perms.spigot.command.admin.CommandLoadToSQL;
+import me.gravitinos.perms.spigot.command.admin.CommandReload;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -12,11 +13,13 @@ import java.util.ArrayList;
 public class CommandPerms extends GravCommand {
 
     public CommandPerms(){
+        this.addSubCommand(new CommandGUI(this, this.getSubCommandCmdPath()));
         this.addSubCommand(new CommandGroup(this, this.getSubCommandCmdPath()));
         this.addSubCommand(new CommandUser(this, this.getSubCommandCmdPath()));
         this.addSubCommand(new CommandGroups(this, this.getSubCommandCmdPath()));
         this.addSubCommand(new CommandLoadToFiles(this, this.getSubCommandCmdPath()));
         this.addSubCommand(new CommandLoadToSQL(this, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandReload(this, this.getSubCommandCmdPath()));
     }
 
     @Override

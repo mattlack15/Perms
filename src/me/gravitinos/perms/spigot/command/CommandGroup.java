@@ -92,6 +92,7 @@ public class CommandGroup extends GravSubCommand {
             sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&6&lGroup Data > &b" + group.getName());
 
             sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fName &6> &b" + group.getName());
+            sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fPriority &6> &a" + group.getPriority());
             sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fPrefix &6> &r" + group.getPrefix());
             sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fSuffix &6> &r" + group.getSuffix());
             sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fServer &6> &7" + group.getServerContext() + " (&e" + (GroupData.SERVER_GLOBAL.equals(group.getServerContext()) ? "Global&7)" : (GroupData.SERVER_LOCAL.equals(group.getServerContext()) ? "Local&7)" : "Foreign&7)")));

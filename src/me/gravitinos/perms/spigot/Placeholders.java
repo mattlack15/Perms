@@ -14,11 +14,11 @@ public class Placeholders extends PlaceholderHook{
     public String onPlaceholderRequest(Player p, String identifier) {
 
         if(p == null || UserManager.instance == null){
-            return "-";
+            return "<--->";
         }
         User user = UserManager.instance.getUser(p.getUniqueId());
         if(user == null){
-            return "-";
+            return "<--->";
         }
 
         //%<pluginname>_<identifier>%
@@ -36,6 +36,20 @@ public class Placeholders extends PlaceholderHook{
                 return "";
             }
             return ChatColor.translateAlternateColorCodes('&', displayGroup.getSuffix());
+        } else if(identifier.equalsIgnoreCase("prefix2")){
+            String dg = UserManager.instance.getUser(p.getUniqueId()).getDisplayGroup();
+            Group displayGroup = GroupManager.instance.getVisibleGroup(dg);
+            if(displayGroup == null){
+                return "";
+            }
+            return ChatColor.translateAlternateColorCodes('&', displayGroup.getPrefix().replace("[", "").replace("]", ""));
+        } else if(identifier.equalsIgnoreCase("suffix2")){
+            String dg = UserManager.instance.getUser(p.getUniqueId()).getDisplayGroup();
+            Group displayGroup = GroupManager.instance.getVisibleGroup(dg);
+            if(displayGroup == null){
+                return "";
+            }
+            return ChatColor.translateAlternateColorCodes('&', displayGroup.getSuffix().replace("[", "").replace("]", ""));
         } else if(identifier.equalsIgnoreCase("displaygroup")){
             String dg = UserManager.instance.getUser(p.getUniqueId()).getDisplayGroup();
             Group displayGroup = GroupManager.instance.getVisibleGroup(dg);

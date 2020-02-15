@@ -67,6 +67,7 @@ public class BungeePerms extends Plugin implements Listener {
         manager = new PermsManager(new BungeeImpl(), handler);
 
         getProxy().getPluginManager().registerListener(this, this);
+        getProxy().getPluginManager().registerCommand(this, new CommandReloadGroups());
     }
 
     @EventHandler

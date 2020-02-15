@@ -53,6 +53,7 @@ public class LoginListener implements Listener {
     @EventHandler
     public void onLeave(PlayerQuitEvent event){
         UserManager.instance.unloadUser(event.getPlayer().getUniqueId());
+        ChatListener.instance.clearChatInputHandler(event.getPlayer().getUniqueId());
     }
 
     //Inject permissible

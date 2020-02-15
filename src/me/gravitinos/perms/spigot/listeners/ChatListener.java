@@ -27,21 +27,49 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Consumer;
 
 public class ChatListener implements Listener {
     public static ChatListener instance;
+    private Map<UUID, ArrayList<Consumer<String>>> chatInputHandlers = new HashMap<>();
 
     public ChatListener(){
         instance = this;
         Bukkit.getPluginManager().registerEvents(this, SpigotPerms.instance);
     }
 
+    public void addChatInputHandler(@NotNull UUID player, @NotNull Consumer<String> consumer){
+        chatInputHandlers.computeIfAbsent(player, k -> new ArrayList<>());
+        chatInputHandlers.get(player).add(consumer);
+    }
+
+    protected void clearChatInputHandler(@NotNull UUID player){
+        this.chatInputHandlers.remove(player);
+    }
+
     @EventHandler(priority=EventPriority.LOW)
     public void onChat(AsyncPlayerChatEvent event){
 
         if(event.isCancelled()){
+            return;
+        }
+
+        if(chatInputHandlers.containsKey(event.getPlayer().getUniqueId())){
+            event.setCancelled(true);
+            chatInputHandlers.get(event.getPlayer().getUniqueId()).forEach(c -> {
+                try{
+                    c.accept(event.getMessage());
+                } catch(Exception e){
+                    e.printStackTrace();
+                }
+            });
+            chatInputHandlers.remove(event.getPlayer().getUniqueId());
             return;
         }
 
@@ -78,9 +106,13 @@ public class ChatListener implements Listener {
 
             if(event.getPlayer().hasPermission("chat.placeholders")) {
                 part = part.replace("<message>", event.getMessage());
-                part = PlaceholderAPI.setPlaceholders(event.getPlayer(), part);
+                if(Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+                    part = PlaceholderAPI.setPlaceholders(event.getPlayer(), part);
+                }
             } else {
-                part = PlaceholderAPI.setPlaceholders(event.getPlayer(), part);
+                if(Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+                    part = PlaceholderAPI.setPlaceholders(event.getPlayer(), part);
+                }
                 part = part.replace("<message>", event.getMessage());
             }
 

@@ -13,6 +13,7 @@ import me.gravitinos.perms.core.util.SubjectSupplier;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -50,9 +51,10 @@ public class GroupManager {
                 //Load and set references
                 groups.forEach(cs -> {
                     Group g = new Group(cs, references::get, this);
-                    if(!this.isGroupExactLoaded(g.getIdentifier())){
-                        this.loadedGroups.add(g); //Add groups to loadedGroups
+                    if(this.isGroupExactLoaded(g.getIdentifier())){
+                        this.unloadGroup(this.getGroupExact(g.getIdentifier()));
                     }
+                    this.loadedGroups.add(g); //Add groups to loadedGroups
                     references.get(cs.getIdentifier()).setReference(g);
                 });
 
@@ -157,7 +159,8 @@ public class GroupManager {
      * @return all loaded groups
      */
     public ArrayList<Group> getLoadedGroups(){
-        return this.loadedGroups;
+        this.loadedGroups.sort(Comparator.comparingInt(Group::getPriority));
+        return Lists.newArrayList(this.loadedGroups);
     }
 
     /**
@@ -165,7 +168,6 @@ public class GroupManager {
      * @return A future
      */
     public CompletableFuture<Boolean> reloadGroups(){
-        ((ArrayList<Group>)this.loadedGroups.clone()).forEach(this::unloadGroup);
         return this.loadGroups();
     }
 

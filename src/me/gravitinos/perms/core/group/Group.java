@@ -279,6 +279,9 @@ public class Group extends Subject<GroupData> {
      * @return true if this user has the specified inheritance
      */
     public boolean hasInheritance(@NotNull Subject subject) {
+        if(this.equals(subject)){
+            return true;
+        }
         for (Inheritance inheritance : super.getInheritances()) {
             if (subject.equals(inheritance.getParent())) {
                 return true;

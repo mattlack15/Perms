@@ -10,8 +10,11 @@ import me.gravitinos.perms.core.subject.Subject;
 import me.gravitinos.perms.core.subject.SubjectRef;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 public class UserManager {
 
@@ -47,12 +50,14 @@ public class UserManager {
                 User user;
                 if (cachedSubject == null || cachedSubject.getData() == null || cachedSubject.getIdentifier() == null) {
                     user = new UserBuilder(id, username).addInheritance(GroupManager.instance.getDefaultGroup(), Context.CONTEXT_SERVER_LOCAL).build();
+                    this.unloadUser(id);
+                    this.addUser(user);
                 } else {
                     user = new User(cachedSubject, (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s)), this);
+                    this.unloadUser(id); //In case they are already loaded
+                    this.loadedUsers.add(user);
                 }
 
-                this.unloadUser(id); //In case they are already loaded
-                this.loadedUsers.add(user);
 
             } catch (Exception e) {
                 result.complete(false);
@@ -64,6 +69,36 @@ public class UserManager {
         });
 
         return result;
+    }
+
+    public CompletableFuture<Boolean> reloadUsers(){
+        Map<UUID, String> loaded = new HashMap<>();
+        for(User user : Lists.newArrayList(this.loadedUsers)){
+            loaded.put(user.getUniqueID(), user.getName());
+            this.unloadUser(user.getUniqueID());
+        }
+
+        ArrayList<CompletableFuture<Void>> futures = new ArrayList<>();
+        for(UUID ids : loaded.keySet()){
+            this.loadUser(ids, loaded.get(ids));
+        }
+
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
+            for (CompletableFuture<Void> voidCompletableFuture : futures) {
+                try {
+                    voidCompletableFuture.get();
+                } catch (InterruptedException | ExecutionException e) {
+                    e.printStackTrace();
+                }
+            }
+            future.complete(true);
+        });
+        return future;
+    }
+
+    public ArrayList<User> getLoadedUsers(){
+        return Lists.newArrayList(this.loadedUsers);
     }
 
     public CompletableFuture<Void> saveTo(DataManager dataManager) {

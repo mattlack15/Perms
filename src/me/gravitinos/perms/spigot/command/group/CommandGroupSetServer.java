@@ -73,7 +73,7 @@ public class CommandGroupSetServer extends GravSubCommand {
             ArrayList<PPermission> perms = group.getOwnPermissions().getPermissions();
             group.removeOwnPermissions(perms);
             ArrayList<PPermission> newPerms = new ArrayList<>();
-            perms.forEach(p -> newPerms.add(new PPermission(p.getPermission(), new Context(finalServer, p.getContext().getWorldName()), p.getExpiry())));
+            perms.forEach(p -> newPerms.add(new PPermission(p.getPermission(), new Context(finalServer, p.getContext().getWorldName()), p.getExpiry(), p.getPermissionIdentifier())));
             group.addOwnPermissions(newPerms);
             return null;
         });

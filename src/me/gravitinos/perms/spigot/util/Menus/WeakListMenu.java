@@ -1,21 +1,23 @@
 package me.gravitinos.perms.spigot.util.Menus;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 
-public class WeakListMenu<T> extends ArrayList {
+public class WeakListMenu<T> extends ArrayList<T> {
 
     private ArrayList<WeakReference<T>> items;
 
     /** Creates new WeakList */
     public WeakListMenu() {
-        items = new ArrayList();
+        items = new ArrayList<>();
     }
 
     public WeakListMenu(Collection c) {
-        items = new ArrayList();
+        items = new ArrayList<>();
         addAll(0, c);
     }
 
@@ -33,7 +35,9 @@ public class WeakListMenu<T> extends ArrayList {
         items.add(index, new WeakReference(element));
     }
 
-    public WeakListIterator iterator() {
+    @NotNull
+    @Override
+    public Iterator<T> iterator() {
         return new WeakListIterator();
     }
 

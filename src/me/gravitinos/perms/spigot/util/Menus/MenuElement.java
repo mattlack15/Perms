@@ -1,7 +1,11 @@
 package me.gravitinos.perms.spigot.util.Menus;
 
+import me.gravitinos.perms.spigot.SpigotPerms;
+import me.gravitinos.perms.spigot.util.ItemBuilder;
+import org.bukkit.ChatColor;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.scheduler.BukkitRunnable;
 
 public class MenuElement {
     private boolean staticItem = true;
@@ -45,6 +49,31 @@ public class MenuElement {
     public MenuElement setUpdateEvery(int updateEvery) {
         this.updateEvery = updateEvery;
         return this;
+    }
+
+    /**
+     * Adds a temporary lore
+     * @param menu The menu this element is assigned to
+     * @param lore The lore to add
+     * @param ticks The length of time in ticks (20ths of a second) that it will stay in effect
+     */
+    public void addTempLore(Menu menu, String lore, int ticks){
+        int index = menu.indexOfElement(this);
+        if(index == -1 || this.getItem() == null){
+            return;
+        }
+        this.setItem(new ItemBuilder(this.getItem()).addLore(lore).build());
+        MenuManager.instance.invalidateElementsInInvForMenu(menu, index);
+        new BukkitRunnable(){
+            @Override
+            public void run() {
+                if(menu == null){
+                    return;
+                }
+                MenuElement.this.setItem(new ItemBuilder(MenuElement.this.getItem()).removeLore(lore, false).build());
+                MenuManager.instance.invalidateElementsInInvForMenu(menu, index);
+            }
+        }.runTaskLater(SpigotPerms.instance, ticks);
     }
 
     public int getUpdateEvery() {
