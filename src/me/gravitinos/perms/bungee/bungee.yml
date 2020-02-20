@@ -1,0 +1,9 @@
+main: me.gravitinos.perms.bungee.BungeePerms
+name: SoraxusPerms
+version: 1.0
+author: Gravitinos
+description: Permissions Plugin by Gravitinos
+commands:
+  tr:
+    description: Permissions main command
+    usage: /<command>

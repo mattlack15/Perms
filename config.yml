@@ -19,7 +19,6 @@ sql_database: ""
 sql_username: ""
 sql_password: ""
 
-use_built_in_chat_handler: true
 chat_format:
   - "<prefix>"
   - " <username>"
