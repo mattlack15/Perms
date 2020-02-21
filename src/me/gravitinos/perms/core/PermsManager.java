@@ -1,5 +1,7 @@
 package me.gravitinos.perms.core;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.backend.sql.SQLHandler;
 import me.gravitinos.perms.core.config.PermsConfiguration;
@@ -8,6 +10,8 @@ import me.gravitinos.perms.core.user.UserManager;
 import net.md_5.bungee.api.ChatColor;
 import org.jetbrains.annotations.NotNull;
 
+import javax.sql.DataSource;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -66,9 +70,21 @@ public class PermsManager {
         return future;
     }
 
+    private DataSource getHikariDataSource(String url, PermsConfiguration configuration) throws SQLException {
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(url);
+        config.setDriverClassName(DriverManager.getDriver(url).getClass().getCanonicalName());
+        config.setUsername(configuration.getSQLUsername());
+        config.setPassword(configuration.getSQLPassword());
+        config.setMaximumPoolSize(Runtime.getRuntime().availableProcessors()*2 + 1);
+
+        return new HikariDataSource(config);
+    }
+
     public boolean connectSQL(SQLHandler dataManager, PermsConfiguration config){
         try {
-            if (!dataManager.startConnection("jdbc:mysql://" + config.getSQLHost() + ":" + config.getSQLPort() + "/" + config.getSQLDatabase() + "?testWhileIdle=true?rewriteBatchedStatements=true", config.getSQLUsername(), config.getSQLPassword())) {
+            dataManager.setDataSource(getHikariDataSource("jdbc:mysql://" + config.getSQLHost() + ":" + config.getSQLPort() + "/" + config.getSQLDatabase() + "?rewriteBatchedStatements=true", config));
+            if(dataManager.getConnection() == null){
                 this.implementation.addToLog(ChatColor.RED + "Unable to connect to SQL!");
                 this.implementation.consoleLog(ChatColor.RED + "Unable to connect to SQL!");
                 return false;

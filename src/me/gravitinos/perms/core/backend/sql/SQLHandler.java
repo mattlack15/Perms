@@ -1,14 +1,13 @@
 package me.gravitinos.perms.core.backend.sql;
 
-import com.google.common.cache.Cache;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.subject.*;
 
+import javax.sql.DataSource;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.UUID;
@@ -16,11 +15,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 public class SQLHandler extends DataManager {
-    private Connection connection;
-    private String connectionURL = "";
+    private DataSource dataSource;
     private ThreadLocal<SQLDao> heldDao = new ThreadLocal<>();
-    private String password;
-    private String username;
 
     public SQLDao getDao() {
         if (heldDao.get() != null) {
@@ -390,33 +386,15 @@ public class SQLHandler extends DataManager {
      */
     public Connection getConnection() {
         try {
-            if (this.connection == null || this.connection.isClosed()) {
-                this.startConnection(connectionURL, username, password);
-            }
-        } catch (SQLException ignored) {
+            return this.dataSource.getConnection();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
         }
-        return this.connection;
     }
 
-    /**
-     * Starts a connection between this SQL handler and the URL
-     *
-     * @param connectionURL The url to use
-     * @return Whether the connection was successful or not
-     * @throws SQLException If this device does not support SQL
-     */
-    public boolean startConnection(String connectionURL, String username, String password) throws SQLException {
-        this.connectionURL = connectionURL;
-        this.username = username;
-        this.password = password;
-        try {
-            Class.forName("com.mysql.jdbc.Driver");
-            this.connection = DriverManager.getConnection(connectionURL, username, password);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-        return true;
+    public void setDataSource(DataSource source){
+        this.dataSource = source;
     }
 
     /**

@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/Perms.iml" filepath="$PROJECT_DIR$/.idea/Perms.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Perms.iml" filepath="$PROJECT_DIR$/Perms.iml" />
     </modules>
   </component>
 </project>
