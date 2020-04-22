@@ -2,6 +2,7 @@ package me.gravitinos.perms.bungee;
 
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.group.GroupManager;
+import me.gravitinos.perms.core.user.UserManager;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.CommandSender;
 import net.md_5.bungee.api.plugin.Command;

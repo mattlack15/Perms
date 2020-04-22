@@ -20,6 +20,7 @@ public class CommandPerms extends GravCommand {
         this.addSubCommand(new CommandLoadToFiles(this, this.getSubCommandCmdPath()));
         this.addSubCommand(new CommandLoadToSQL(this, this.getSubCommandCmdPath()));
         this.addSubCommand(new CommandReload(this, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandVerbose(this, this.getSubCommandCmdPath()));
     }
 
     @Override
@@ -41,6 +42,7 @@ public class CommandPerms extends GravCommand {
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+
         if (!this.checkPermission(sender, SpigotPerms.pluginPrefix + "You do not have permission to use this command!")) {
             return true;
         }

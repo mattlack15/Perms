@@ -21,5 +21,7 @@ public interface PermsImplementation {
     String getLog(int line);
     void addToLog(String message);
     void consoleLog(String message);
+    void sendDebugMessage(String message);
+    String getPluginName();
 
 }

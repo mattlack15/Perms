@@ -1,9 +1,12 @@
 package me.gravitinos.perms.spigot;
 
+import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.user.User;
 import me.gravitinos.perms.core.user.UserManager;
 import me.gravitinos.perms.spigot.util.Injector;
+import me.gravitinos.perms.spigot.verbose.VerboseController;
 import org.bukkit.entity.Player;
 import org.bukkit.permissions.Permissible;
 import org.bukkit.permissions.PermissibleBase;
@@ -40,7 +43,18 @@ public class SpigotPermissible extends PermissibleBase {
     }
     @Override
     public boolean hasPermission(String requ) {
+
+        //Verbose
+        StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
+        if(stackTraceElements.length > 1) {
+            VerboseController.instance.handlePermissionCheck(player, stackTraceElements[3], requ);
+        }
+
+        //Permission Index
+        PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> SpigotPerms.instance.addPermissionToIndex(requ));
+
         User user = UserManager.instance.getUser(player.getUniqueId());
+
         if(SpigotPerms.instance.getManager().getImplementation().getConfigSettings().getGodUsers().contains(player.getName())) {
             return true;
         }
@@ -48,11 +62,11 @@ public class SpigotPermissible extends PermissibleBase {
             return false;
         }
 
-        Context context = new Context(SpigotPerms.instance.getImpl().getConfigSettings().getServerName(), player.getWorld().getName());
+        Context context = new Context(GroupData.SERVER_LOCAL, player.getWorld().getName());
 
-        if(player.isOp()) {
-            return !user.hasPermission("-op", context);
-        }
+//        if(player.isOp()) {
+//            return !user.hasPermission("-op", context);
+//        }
         ArrayList<String> perms = new ArrayList<>();
         user.getAllPermissions(context).forEach(p -> {
             if(p.getContext().applies(context)) { //Check context
@@ -79,41 +93,7 @@ public class SpigotPermissible extends PermissibleBase {
     }
     @Override
     public boolean hasPermission(Permission requ) {
-        User user = UserManager.instance.getUser(player.getUniqueId());
-        if(SpigotPerms.instance.getManager().getImplementation().getConfigSettings().getGodUsers().contains(player.getName())) {
-            return true;
-        }
-        if(user == null){
-            return false;
-        }
-        Context context = new Context(SpigotPerms.instance.getImpl().getConfigSettings().getServerName(), player.getWorld().getName());
-
-        if(player.isOp()) {
-            return !user.hasPermission("-op", context);
-        }
-        ArrayList<String> perms = new ArrayList<>();
-        user.getAllPermissions(context).forEach(p -> {
-            if(p.getContext().applies(context)) { //Check context
-                perms.add(p.getPermission());
-            }
-        });
-        if(perms.contains("-" + requ.getName())) {
-            return false;
-        }
-        for (String perm : perms) {
-            boolean value = true;
-            if (perm.startsWith("-")) {
-                perm = perm.substring(1);
-                value = false;
-            }
-            if (perm.equals("*") || perm.equalsIgnoreCase(requ.getName())) {
-                return value;
-            }
-            if (perm.endsWith("*") && requ.getName().startsWith(perm.substring(0, perm.length() - 1))) {
-                return value;
-            }
-        }
-        return false;
+        return this.hasPermission(requ.getName());
     }
 
     public static Permissible inject(Player p){

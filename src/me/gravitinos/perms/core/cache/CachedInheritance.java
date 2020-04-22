@@ -2,17 +2,19 @@ package me.gravitinos.perms.core.cache;
 
 import me.gravitinos.perms.core.context.Context;
 
+import java.util.UUID;
+
 /**
  * Immutable
  */
 public final class CachedInheritance {
-    private String child;
-    private String parent;
+    private UUID child;
+    private UUID parent;
     private String childType;
     private String parentType;
     private Context context;
 
-    public CachedInheritance(String child, String parent, String childType, String parentType, String context){
+    public CachedInheritance(UUID child, UUID parent, String childType, String parentType, String context){
         this.child = child;
         this.parent = parent;
         this.childType = childType;
@@ -20,7 +22,7 @@ public final class CachedInheritance {
         this.context = Context.fromString(context);
     }
 
-    public CachedInheritance(String child, String parent, String childType, String parentType, Context context){
+    public CachedInheritance(UUID child, UUID parent, String childType, String parentType, Context context){
         this.child = child;
         this.parent = parent;
         this.childType = childType;
@@ -36,11 +38,11 @@ public final class CachedInheritance {
         return childType;
     }
 
-    public String getChild() {
+    public UUID getChild() {
         return child;
     }
 
-    public String getParent() {
+    public UUID getParent() {
         return parent;
     }
 
@@ -48,7 +50,7 @@ public final class CachedInheritance {
         return parentType;
     }
 
-    public void setChild(String child) {
+    public void setChild(UUID child) {
         this.child = child;
     }
 
@@ -60,7 +62,7 @@ public final class CachedInheritance {
         this.context = context;
     }
 
-    public void setParent(String parent) {
+    public void setParent(UUID parent) {
         this.parent = parent;
     }
 

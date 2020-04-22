@@ -80,4 +80,9 @@ public class BungeeImpl implements PermsImplementation {
     public void consoleLog(String message) {
         BungeePerms.instance.getLogger().info(message);
     }
+
+    @Override
+    public void sendDebugMessage(String message) {
+
+    }
 }

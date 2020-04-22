@@ -63,7 +63,7 @@ public class CommandUserRemove extends GravSubCommand {
         ArrayList<PPermission> permsToRemove = new ArrayList<>();
 
         for (PPermission perms : user.getOwnPermissions()) {
-            if (perms.getContext().getServerName().equals(UserData.SERVER_LOCAL) && gl.equals("local") && perms.getPermission().equals(perm)) {
+            if (perms.getContext().getServer().equals(UserData.SERVER_LOCAL) && gl.equals("local") && perms.getPermission().equals(perm)) {
                 permsToRemove.add(perms);
             } else if (gl.equals("global") && perms.getPermission().equals(perm)) {
                 permsToRemove.add(perms);

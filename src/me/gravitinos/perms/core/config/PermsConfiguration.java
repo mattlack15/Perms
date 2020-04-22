@@ -19,6 +19,8 @@ public interface PermsConfiguration {
     String getSQLHost();
     String getServerName();
     String getDefaultGroup();
+    boolean isUsingBuiltInChat();
+    int getServerId();
 
     //Setters
     void setServerName(String name);

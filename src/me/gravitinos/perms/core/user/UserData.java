@@ -2,25 +2,50 @@ package me.gravitinos.perms.core.user;
 
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.subject.SubjectData;
+
+import java.util.UUID;
 
 public class UserData extends SubjectData {
     public UserData(SubjectData data) {
         super(data);
     }
 
-    public static final String SERVER_LOCAL = PermsManager.instance.getImplementation().getConfigSettings().getServerName();
+    public static final String SERVER_LOCAL = Integer.toString(PermsManager.instance.getImplementation().getConfigSettings().getServerId());
     public static final String SERVER_GLOBAL = Context.VAL_ALL;
 
     public UserData() {
     }
 
+    public void setExtraData(String key, String value){
+        this.setData("EXTRA_" + key, value);
+    }
+
+    public String getExtraData(String key){
+        return this.getData("EXTRA_" + key);
+    }
+
+    public boolean hasExtraData(String key) { return getExtraData("EXTRA_" + key) != null; }
+
     public void setName(String name) {
         this.setData("username", name);
     }
 
-    public void setDisplayGroup(String server, String displayGroup) {
-        this.setData("displaygroup_" + server, displayGroup);
+    public void setDisplayGroup(String server, UUID groupId) {
+        this.setData("displaygroup_" + server, groupId.toString());
+    }
+
+    public long getFirstJoined(){
+        try {
+            return Long.parseLong(this.getData("first_joined_ms"));
+        } catch(Exception e){
+            return -1;
+        }
+    }
+
+    public void setFirstJoined(long timeMs){
+        this.setData("first_joined_ms", Long.toString(timeMs));
     }
 
     public void setPrefix(String prefix) {
@@ -39,12 +64,16 @@ public class UserData extends SubjectData {
         return this.getData("notes", "");
     }
 
-    public String getDisplayGroup(String server) {
+    public UUID getDisplayGroup(String server) {
         String out = this.getData("displaygroup_" + server);
         if(out == null){
             out = this.getData("displaygroup_");
         }
-        return out;
+        try {
+            return UUID.fromString(out);
+        } catch(Exception e){
+            return null;
+        }
     }
 
     public String getPrefix() {
@@ -55,6 +84,7 @@ public class UserData extends SubjectData {
         return this.getData("suffix", "");
     }
 
+    @Override
     public String getName() {
         return this.getData("username", "");
     }

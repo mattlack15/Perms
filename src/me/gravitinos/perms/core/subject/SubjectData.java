@@ -7,6 +7,7 @@ import me.gravitinos.perms.core.util.SubjectDataUpdateListener;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Base class for GroupData and UserData
@@ -14,6 +15,8 @@ import java.util.Map;
 public abstract class SubjectData {
     private Map<String, SubjectDataUpdateListener> listeners = new HashMap<>();
     private Map<String, String> data = new HashMap<>();
+
+    public String INTERNAL_DATA_KEY_NAME = "internal.name";
 
     public SubjectData(SubjectData copy){
         data = copy.data;
@@ -25,6 +28,10 @@ public abstract class SubjectData {
     protected void setData(String key, String val){
         this.data.put(key, val);
         this.listeners.values().forEach(v -> v.update(key, val));
+    }
+
+    protected boolean hasData(String key){
+        return this.getData(key) != null;
     }
 
     protected String getData(String key){
@@ -58,6 +65,21 @@ public abstract class SubjectData {
 
     public void addUpdateListener(String name, SubjectDataUpdateListener listener){
         this.listeners.put(name, listener);
+    }
+
+    /**
+     * Accessory for setting data INTERNAL_DATA_KEY_NAME in data
+     * @param name the name
+     */
+    public void setName(String name){
+        this.setData(INTERNAL_DATA_KEY_NAME, name);
+    }
+
+    /**
+     * Accessory for getting data INTERNAL_DATA_KEY_NAME in data
+     */
+    public String getName(){
+        return this.getData(INTERNAL_DATA_KEY_NAME);
     }
 
     public SubjectData copy(){

@@ -1,6 +1,7 @@
 package me.gravitinos.perms.spigot.gui;
 
 import me.gravitinos.perms.core.group.Group;
+import me.gravitinos.perms.core.group.GroupBuilder;
 import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.subject.Inheritance;
@@ -14,6 +15,7 @@ import me.gravitinos.perms.spigot.util.Menus.Menu;
 import me.gravitinos.perms.spigot.util.Menus.MenuElement;
 import me.gravitinos.perms.spigot.util.StringUtil;
 import me.gravitinos.perms.spigot.util.UtilColour;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
@@ -86,7 +88,7 @@ public class MenuGroupList extends UtilMenuActionableList {
             }
 
             builder.setName("&e" + name);
-            builder.addLore("&fServer Context: &6" + (group.getServerContext().equals(GroupData.SERVER_GLOBAL) ? "&cGLOBAL" : (group.getServerContext().equals(GroupData.SERVER_LOCAL) ? "&aLOCAL" : group.getServerContext())));
+            builder.addLore("&fServer Context: &6" + (group.getServerContext().equals(GroupData.SERVER_GLOBAL) ? "&cGLOBAL" : (group.getServerContext().equals(GroupData.SERVER_LOCAL) ? "&aLOCAL" : group.getServerNameOfServerContext())));
             builder.addLore("&fDefault Group: " + (GroupManager.instance.getDefaultGroup().equals(group) ? "&atrue" : "&cfalse"));
             builder.addLore("&fPriority: &a" + group.getPriority());
             builder.addLore("&fPrefix: " + group.getPrefix());
@@ -137,8 +139,20 @@ public class MenuGroupList extends UtilMenuActionableList {
         MenuElement listForeignSetting = new MenuElement(new ItemBuilder(mat, 1, (byte) data).setName("&eShow Foreign Groups")
                 .addLore(listForeign ? "&aEnabled" : "&cDisabled").build()).setClickHandler((e, i) -> new MenuGroupList(p, listRows, !listForeign, this.getBackButton(), filters).open(p)); //If setting up in constructor is removed later, change this
 
+        //Create Group
+        MenuElement createGroup = new MenuElement(new ItemBuilder(Material.ANVIL, 1).setName("&a&lCreate New Group").build())
+                .setClickHandler((e, i) -> {
+                    ChatListener.instance.addChatInputHandler(p.getUniqueId(), (s) -> {
+                        Group group = new GroupBuilder(s).build();
+                        GroupManager.instance.addGroup(group);
+                        doInMainThread(() -> new MenuGroup(group, getBackButton(new MenuGroupList(p, listRows, listForeign, this.getBackButton(), filters))).open(p));
+                    });
+                    e.getWhoClicked().closeInventory();
+                });
+
         //Add them to menu
         this.setElement(6, searchElement);
+        this.setElement(listRows * 9 + 9 + 4, createGroup);
         this.setElement(2, listForeignSetting);
 
         this.setupPage(0);

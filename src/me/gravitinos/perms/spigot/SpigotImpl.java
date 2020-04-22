@@ -2,12 +2,16 @@ package me.gravitinos.perms.spigot;
 
 import me.gravitinos.perms.core.PermsImplementation;
 import me.gravitinos.perms.core.config.PermsConfiguration;
+import me.gravitinos.perms.spigot.file.Files;
 import me.gravitinos.perms.spigot.file.SpigotConf;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -74,15 +78,34 @@ public class SpigotImpl implements PermsImplementation {
 
     @Override
     public void addToLog(String message) {
-        for(Player p : Bukkit.getOnlinePlayers()){
-            if(p.hasPermission(SpigotPerms.commandName + ".viewlog")){
-                p.sendMessage(ChatColor.translateAlternateColorCodes('&', SpigotPerms.pluginPrefix + " &c&lLOG: &f" + message));
-            }
+        try {
+            FileWriter writer = new FileWriter(Files.LOG_FILE, true);
+            writer.write("[" + (new Timestamp(System.currentTimeMillis())).toString() + "] LOG > " + message + "\n");
+            writer.flush();
+            writer.close();
+        } catch (IOException var4) {
+            var4.printStackTrace();
         }
     }
 
     @Override
     public void consoleLog(String message) {
         Bukkit.getConsoleSender().sendMessage("Perms: " + message);
+    }
+
+    @Override
+    public void sendDebugMessage(String message) {
+        message = "&c&lPerms DEBUG &f> &7" + message;
+        message = ChatColor.translateAlternateColorCodes('&', message);
+        for(Player players : Bukkit.getOnlinePlayers()){
+            if(players.hasPermission(SpigotPerms.commandName + ".seelog")){
+                players.sendMessage(message);
+            }
+        }
+    }
+
+    @Override
+    public String getPluginName() {
+        return SpigotPerms.instance.getName();
     }
 }

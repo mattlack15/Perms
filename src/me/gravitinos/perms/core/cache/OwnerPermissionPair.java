@@ -9,19 +9,19 @@ import java.util.UUID;
  */
 public class OwnerPermissionPair {
     private PPermission permission;
-    private String ownerIdentifier;
+    private UUID ownerSubjectId;
     private UUID identifier;
     private String perm;
 
-    public OwnerPermissionPair(String ownerIdentifier, PPermission permission) {
-        this.ownerIdentifier = ownerIdentifier;
+    public OwnerPermissionPair(UUID ownerSubjectId, PPermission permission) {
+        this.ownerSubjectId = ownerSubjectId;
         this.permission = permission;
         this.perm = permission.getPermission();
         this.identifier = permission.getPermissionIdentifier();
     }
-    public OwnerPermissionPair(String ownerIdentifier, String perm, UUID permissionIdentifier){
+    public OwnerPermissionPair(UUID ownerSubjectId, String perm, UUID permissionIdentifier){
         this.perm = perm;
-        this.ownerIdentifier = ownerIdentifier;
+        this.ownerSubjectId = ownerSubjectId;
         this.identifier = permissionIdentifier;
     }
 
@@ -35,7 +35,7 @@ public class OwnerPermissionPair {
         return permission;
     }
 
-    public String getOwnerIdentifier() {
-        return ownerIdentifier;
+    public UUID getOwnerSubjectId() {
+        return ownerSubjectId;
     }
 }

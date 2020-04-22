@@ -4,6 +4,7 @@ import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.subject.SubjectData;
 import org.jetbrains.annotations.NotNull;
+import sun.font.CoreMetrics;
 
 public class GroupData extends SubjectData {
     private static final String PREFIX = "prefix";
@@ -14,7 +15,7 @@ public class GroupData extends SubjectData {
     private static final String PRIORITY = "priority";
     public static final String SERVER_CONTEXT_KEY = SERVER_CONTEXT;
 
-    public static final String SERVER_LOCAL = PermsManager.instance.getImplementation().getConfigSettings().getServerName();
+    public static final String SERVER_LOCAL = Integer.toString(PermsManager.instance.getImplementation().getConfigSettings().getServerId());
     public static final String SERVER_GLOBAL = Context.VAL_ALL;
 
     public GroupData(){
@@ -25,6 +26,15 @@ public class GroupData extends SubjectData {
         super(data);
         this.checkForServerContext();
     }
+
+    public void setExtraData(String key, String value){
+        this.setData("EXTRA_" + key, value);
+    }
+
+    public String getExtraData(String key){
+        return this.getData("EXTRA_" + key);
+    }
+
 
     public void setDescription(String description){
         this.setData(DESCRIPTION, description);

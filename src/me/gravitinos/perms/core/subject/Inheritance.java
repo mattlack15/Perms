@@ -38,7 +38,7 @@ public class Inheritance {
         if(!this.isValid()) {
             return null;
         }
-        return new CachedInheritance(this.getChild().getIdentifier(), this.getParent().getIdentifier(), this.getChild().getType(), this.getParent().getType(), this.getContext());
+        return new CachedInheritance(this.getChild().getSubjectId(), this.getParent().getSubjectId(), this.getChild().getType(), this.getParent().getType(), this.getContext());
     }
 
     /**
@@ -55,5 +55,20 @@ public class Inheritance {
      */
     public boolean isValid(){
         return this.child != null && this.parent != null && this.child.get() != null && this.parent.get() != null && this.context != null;
+    }
+
+    @Override
+    public boolean equals(Object o){
+        if(o == this) return true;
+        if(o instanceof Inheritance){
+            if(!((Inheritance) o).isValid()){
+                return !this.isValid();
+            }
+
+            if(((Inheritance) o).getChild().getSubjectId().equals(this.getChild().getSubjectId())){
+                return ((Inheritance) o).getParent().getSubjectId().equals(this.getParent().getSubjectId());
+            }
+        }
+        return false;
     }
 }

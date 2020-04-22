@@ -1,9 +1,9 @@
 main: me.gravitinos.perms.bungee.BungeePerms
-name: SoraxusPerms
+name: SoraxusPermsProxy
 version: 1.0
 author: Gravitinos
 description: Permissions Plugin by Gravitinos
 commands:
-  tr:
+  ranks:
     description: Permissions main command
     usage: /<command>

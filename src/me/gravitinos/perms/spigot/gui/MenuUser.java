@@ -33,75 +33,72 @@ public class MenuUser extends Menu {
     }
 
     public void setup() {
-        MenuElement permissionsEditor;
-        MenuElement groupsEditor;
-
-        groupsEditor = new MenuElement(new ItemBuilder(Material.BOOK, 1).setName("&eGroups").addLore("&7Click to manage groups").build()).setClickHandler((e, i) -> {
-            Player p = (Player) e.getWhoClicked();
-            if(!p.hasPermission(SpigotPerms.commandName + ".user.managegroups")){
+        MenuElement deleteButton = (new MenuElement((new ItemBuilder(Material.REDSTONE_BLOCK, 1)).setName("&4&lDelete").addLore("&cClick to delete this user's player-data").build())).setClickHandler((e, i) -> {
+            if (!e.getWhoClicked().hasPermission("ranks.user.delete")) {
                 this.getElement(e.getSlot()).addTempLore(this, "&cYou do not have access to this!", 60);
                 MenuManager.instance.invalidateElementsInInvForMenu(this, e.getSlot());
-                return;
+            } else {
+                UserManager.instance.removeUser(this.user);
+                this.backElement.getClickHandler().handleClick(e, i);
             }
-
-            new MenuGroupInheritanceEditor(user.getName() + " > Groups", new MenuGroupInheritanceEditor.GroupInheritanceEditorHandler() {
-                @Override
-                public CompletableFuture<Void> addGroup(Group group, Context context) {
-                    return user.addInheritance(group, context);
-                }
-
-                @Override
-                public CompletableFuture<Void> removeGroup(Group group) {
-                    return user.removeInheritance(group);
-                }
-
-                @Override
-                public Map<Group, Context> getGroups() {
-                    Map<Group, Context> groupContextMap = new HashMap<>();
-                    user.getInheritances().forEach(i -> {
-                        if (i.getParent() instanceof Group){
-                            groupContextMap.put((Group) i.getParent(), i.getContext());
-                        }
-                    });
-                    return groupContextMap;
-                }
-            }, Menu.getBackButton(this)).open(p);
-
         });
-
-        permissionsEditor = new MenuElement(new ItemBuilder(Material.EMPTY_MAP, 1).setName("&ePermissions").addLore("&7Click to manage permissions").build()).setClickHandler((e, i) -> {
-            Player p = (Player) e.getWhoClicked();
-            if(!p.hasPermission(SpigotPerms.commandName + ".user.managepermissions")){
+        MenuElement groupsEditor = (new MenuElement((new ItemBuilder(Material.BOOK, 1)).setName("&eGroups").addLore("&7Click to manage groups").build())).setClickHandler((e, i) -> {
+            Player p = (Player)e.getWhoClicked();
+            if (!p.hasPermission("ranks.user.managegroups")) {
                 this.getElement(e.getSlot()).addTempLore(this, "&cYou do not have access to this!", 60);
                 MenuManager.instance.invalidateElementsInInvForMenu(this, e.getSlot());
-                return;
+            } else {
+                (new MenuGroupInheritanceEditor(this.user.getName() + " > Groups", new MenuGroupInheritanceEditor.GroupInheritanceEditorHandler() {
+                    public CompletableFuture<Void> addGroup(Group group, Context context) {
+                        return MenuUser.this.user.addInheritance(group, context);
+                    }
+
+                    public CompletableFuture<Void> removeGroup(Group group) {
+                        return MenuUser.this.user.removeInheritance(group);
+                    }
+
+                    public Map<Group, Context> getGroups() {
+                        Map groupContextMap = new HashMap();
+                        MenuUser.this.user.getInheritances().forEach((i) -> {
+                            if (i.getParent() instanceof Group) {
+                                groupContextMap.put(i.getParent(), i.getContext());
+                            }
+
+                        });
+                        return groupContextMap;
+                    }
+                }, Menu.getBackButton((Menu)this))).open(p, new Object[0]);
             }
-            new MenuPermissionEditor("Permissions for " + user.getName(), 4, new MenuPermissionEditor.PermissionEditorHandler() {
-                @Override
-                public CompletableFuture<Void> addPermission(PPermission p) {
-                    return user.addOwnPermission(p);
-                }
-
-                @Override
-                public CompletableFuture<Void> addPermissions(ArrayList<PPermission> permissions) {
-                    return user.addOwnPermissions(permissions);
-                }
-
-                @Override
-                public CompletableFuture<Void> removePermission(PPermission p) {
-                    return user.removeOwnPermission(p);
-                }
-
-                @Override
-                public ImmutablePermissionList getPermissions() {
-                    return user.getOwnPermissions();
-                }
-            }, Menu.getBackButton(this)).open(p);
         });
+        MenuElement permissionsEditor = (new MenuElement((new ItemBuilder(Material.EMPTY_MAP, 1)).setName("&ePermissions").addLore("&7Click to manage permissions").build())).setClickHandler((e, i) -> {
+            Player p = (Player)e.getWhoClicked();
+            if (!p.hasPermission("ranks.user.managepermissions")) {
+                this.getElement(e.getSlot()).addTempLore(this, "&cYou do not have access to this!", 60);
+                MenuManager.instance.invalidateElementsInInvForMenu(this, e.getSlot());
+            } else {
+                (new MenuPermissionEditor("Permissions for " + this.user.getName(), 4, new MenuPermissionEditor.PermissionEditorHandler() {
+                    public CompletableFuture<Void> addPermission(PPermission p) {
+                        return MenuUser.this.user.addOwnPermission(p);
+                    }
 
-        this.setElement(4, backElement);
+                    public CompletableFuture<Void> addPermissions(ArrayList<PPermission> permissions) {
+                        return MenuUser.this.user.addOwnPermissions(permissions);
+                    }
+
+                    public CompletableFuture<Void> removePermission(PPermission p) {
+                        return MenuUser.this.user.removeOwnPermission(p);
+                    }
+
+                    public ImmutablePermissionList getPermissions() {
+                        return MenuUser.this.user.getOwnPermissions();
+                    }
+                }, Menu.getBackButton(this))).open(p, new Object[0]);
+            }
+        });
+        this.setElement(4, this.backElement);
         this.setElement(20, permissionsEditor);
         this.setElement(22, groupsEditor);
+        this.setElement(24, deleteButton);
         MenuManager.instance.invalidateInvsForMenu(this);
     }
 }

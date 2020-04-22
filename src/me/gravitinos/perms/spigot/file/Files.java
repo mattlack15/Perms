@@ -16,6 +16,11 @@ public class Files {
 	@PluginFile
 	public static final File USERS_FILE = new File(SpigotPerms.instance.getDataFolder() + File.separator + "users.yml");
 
+	@PluginFile
+	public static final File LOG_FILE = new File(SpigotPerms.instance.getDataFolder() + File.separator + "log.txt");
+
+	@PluginFile
+	public static final File PERMISSION_INDEX_FILE = new File(SpigotPerms.instance.getDataFolder() + File.separator + "permission_index.yml");
 
 	
 	public Files() {

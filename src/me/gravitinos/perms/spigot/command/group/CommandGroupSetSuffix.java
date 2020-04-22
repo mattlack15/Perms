@@ -53,6 +53,8 @@ public class CommandGroupSetSuffix extends GravSubCommand {
 
         Group group = (Group)passedArgs[0];
 
+        suffix = suffix.replace("\'", "").replace("\"", "");
+
         group.setSuffix(suffix);
 
         this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + group.getName() + "&7's suffix was set to " + suffix);

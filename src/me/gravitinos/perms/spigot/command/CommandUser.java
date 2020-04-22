@@ -1,22 +1,18 @@
 package me.gravitinos.perms.spigot.command;
 
 import me.gravitinos.perms.core.PermsManager;
-import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupData;
-import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.subject.Inheritance;
 import me.gravitinos.perms.core.user.User;
 import me.gravitinos.perms.core.user.UserManager;
 import me.gravitinos.perms.spigot.SpigotPerms;
 import me.gravitinos.perms.spigot.command.user.*;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 
 public class CommandUser extends GravSubCommand {
@@ -132,9 +128,9 @@ public class CommandUser extends GravSubCommand {
 
                 sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fInheritances (Groups) &6>");
                 for (Inheritance inheritance : user.getInheritances()) {
-                    boolean applies = inheritance.getContext().getServerName().equals(GroupData.SERVER_GLOBAL) || inheritance.getContext().getServerName().equals(GroupData.SERVER_LOCAL);
-                    sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&7- &e" + PermsManager.removeServerFromIdentifier(inheritance.getParent().getIdentifier()) + (applies ? "" : " &cDoes not apply here &7(&f" + inheritance.getContext().getServerName() + "&7)"));
-                }
+                    boolean global = inheritance.getContext().getServer().equals(GroupData.SERVER_GLOBAL);
+                    boolean applies = global || inheritance.getContext().getServer().equals(GroupData.SERVER_LOCAL);
+                    sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&7- &e" + inheritance.getParent().getName() + (applies ? (global ? "&c&lGLOBAL" : "&a&lLOCAL") : " &cDoes not apply here &7(&f" + inheritance.getContext().getNameOfServer() + "&7)"));                }
 
             }
         });

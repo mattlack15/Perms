@@ -10,6 +10,7 @@ import me.gravitinos.perms.core.util.SubjectSupplier;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 public class Group extends Subject<GroupData> {
@@ -20,28 +21,9 @@ public class Group extends Subject<GroupData> {
     }
 
     public Group(@NotNull CachedSubject cachedSubject, @NotNull SubjectSupplier inheritanceSupplier, GroupManager manager) {
-        super(cachedSubject.getIdentifier(), Subject.GROUP, new GroupData(cachedSubject.getData()));
+        super(cachedSubject.getSubjectId(), Subject.GROUP, new GroupData(cachedSubject.getData()));
         this.dataManager = manager != null ? manager.getDataManager() : null;
         this.updateFromCachedSubject(cachedSubject, inheritanceSupplier, false);
-
-        this.getData().addUpdateListener("MAIN_LISTENER", (k, v) -> {
-            String oldIdentifier = this.getIdentifier();
-            if (k.equals(GroupData.SERVER_CONTEXT_KEY)) {
-                this.setIdentifier(PermsManager.addServerToIdentifier(this.getName(), v));
-            }
-            String newIdentifier = this.getIdentifier();
-            if(dataManager != null) {
-                if (k.equals(GroupData.SERVER_CONTEXT_KEY)) {
-                    dataManager.performOrderedOpAsync(() -> {
-                        dataManager.renameSubject(this, oldIdentifier, newIdentifier);
-                        dataManager.updateSubjectData(this);
-                        return null;
-                    });
-                } else {
-                    dataManager.updateSubjectData(this);
-                }
-            }
-        });
     }
 
     public Group(@NotNull GroupBuilder builder, @NotNull SubjectSupplier inheritanceSupplier, GroupManager manager) {
@@ -50,6 +32,8 @@ public class Group extends Subject<GroupData> {
 
     /**
      * Updates this group with a cachedSubject's values with what is compatible (everything, if this cachedSubject's type is Subject.GROUP)
+     * By default, this does not save to the backend
+     * @see #updateFromCachedSubject(CachedSubject, SubjectSupplier, boolean)
      *
      * @param subject             The cachedSubject to copy from
      * @param inheritanceSupplier Inheritance supplier to handle getting inherited subject objects usually just groupManager::getGroup
@@ -67,26 +51,13 @@ public class Group extends Subject<GroupData> {
      */
     public void updateFromCachedSubject(@NotNull CachedSubject subject, @NotNull SubjectSupplier inheritanceSupplier, boolean save) {
 
-        this.setIdentifier(subject.getIdentifier());
+        this.setSubjectId(subject.getSubjectId());
 
         this.setData(new GroupData(subject.getData()));
 
         this.getData().addUpdateListener("MAIN_LISTENER", (k, v) -> {
-            String oldIdentifier = this.getIdentifier();
-            if (k.equals(GroupData.SERVER_CONTEXT_KEY)) {
-                this.setIdentifier(PermsManager.addServerToIdentifier(this.getName(), v));
-            }
-            String newIdentifier = this.getIdentifier();
-            if(dataManager != null) {
-                if (k.equals(GroupData.SERVER_CONTEXT_KEY)) {
-                    dataManager.performOrderedOpAsync(() -> {
-                        dataManager.renameSubject(this, oldIdentifier, newIdentifier);
-                        dataManager.updateSubjectData(this);
-                        return null;
-                    });
-                } else {
+            if (dataManager != null) {
                     dataManager.updateSubjectData(this);
-                }
             }
         });
 
@@ -96,7 +67,7 @@ public class Group extends Subject<GroupData> {
         inheritances.forEach(i -> super.removeOwnSubjectInheritance(i.getParent()));
         subject.getInheritances().forEach(i -> super.addOwnSubjectInheritance(inheritanceSupplier.getSubject(i.getParent()), i.getContext()));
 
-        if(save && dataManager != null){
+        if (save && dataManager != null) {
             dataManager.updateSubject(this);
         }
     }
@@ -240,6 +211,28 @@ public class Group extends Subject<GroupData> {
     }
 
     /**
+     * Adds a lot of permissions in bulk, please use this for large amounts of permissions as Transfers to SQL can be a lot quicker
+     */
+    public CompletableFuture<Void> addInheritances(@NotNull ArrayList<Inheritance> inheritances) {
+        ArrayList<Inheritance> ps = Lists.newArrayList(inheritances);
+        inheritances.forEach(p -> {
+            if (!this.getInheritances().contains(p)) {
+                super.addOwnInheritance(p);
+            } else {
+                ps.remove(p);
+            }
+        });
+
+        //Update backend
+        if (dataManager != null) {
+            return dataManager.addInheritances(ps);
+        }
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        future.complete(null);
+        return future;
+    }
+
+    /**
      * Gets if this group is applicable to this server
      *
      * @return true or false
@@ -273,13 +266,30 @@ public class Group extends Subject<GroupData> {
     }
 
     /**
+     * removes a lot of permissions in bulk, please use this for large amounts of permissions as Transfers to SQL can be a lot quicker
+     */
+    public CompletableFuture<Void> removeOwnPermissionsStr(@NotNull ArrayList<String> permissions) {
+        ArrayList<PPermission> permissions1 = new ArrayList<>();
+
+        permissions.forEach(p1 -> this.getOwnPermissions().forEach(p -> {
+                    if (p.getPermission().equalsIgnoreCase(p1)) {
+                        permissions1.add(p);
+                    }
+                })
+        );
+
+        return this.removeOwnPermissions(permissions1);
+    }
+
+
+    /**
      * Checks whether this has the parent/inheritance specified
      *
      * @param subject The parent/inheritance to check for
      * @return true if this user has the specified inheritance
      */
     public boolean hasInheritance(@NotNull Subject subject) {
-        if(this.equals(subject)){
+        if (this.equals(subject)) {
             return true;
         }
         for (Inheritance inheritance : super.getInheritances()) {
@@ -322,7 +332,7 @@ public class Group extends Subject<GroupData> {
         super.removeOwnSubjectInheritance(subject);
 
         if (dataManager != null) {
-            return dataManager.removeInheritance(this, subject.getIdentifier());
+            return dataManager.removeInheritance(this, subject.getSubjectId());
         }
         CompletableFuture<Void> future = new CompletableFuture<>();
         future.complete(null);
@@ -333,11 +343,11 @@ public class Group extends Subject<GroupData> {
      * Clears all inheritances from this group
      */
     public CompletableFuture<Void> clearInheritances() {
-        ArrayList<String> parents = new ArrayList<>();
+        ArrayList<UUID> parents = new ArrayList<>();
 
         for (Inheritance i : super.getInheritances()) {
             super.removeOwnSubjectInheritance(i.getParent());
-            parents.add(i.getParent().getIdentifier());
+            parents.add(i.getParent().getSubjectId());
         }
 
         if (dataManager != null) {
@@ -351,24 +361,24 @@ public class Group extends Subject<GroupData> {
     /**
      * Gets all permissions, including inherited
      */
-    public ArrayList<PPermission> getAllPermissions(){
+    public ArrayList<PPermission> getAllPermissions() {
         return super.getAllPermissions();
     }
 
     /**
      * Gets all permissions, including inherited
      */
-    public ArrayList<PPermission> getAllPermissions(Context context){
+    public ArrayList<PPermission> getAllPermissions(Context context) {
         return super.getAllPermissions(context);
     }
 
     /**
      * Checks if this group has a permission of its own or inherits a permission
      */
-    public boolean hasPermission(String permission, Context context){
+    public boolean hasPermission(String permission, Context context) {
         ArrayList<PPermission> permissions = this.getAllPermissions(context);
-        for(PPermission perms : permissions){
-            if(perms.getPermission().equalsIgnoreCase(permission) && perms.getContext().applies(context)){
+        for (PPermission perms : permissions) {
+            if (perms.getPermission().equalsIgnoreCase(permission) && perms.getContext().applies(context)) {
                 return true;
             }
         }
@@ -378,7 +388,7 @@ public class Group extends Subject<GroupData> {
     /**
      * Checks if this group has a permission of its own or inherits a permission
      */
-    public boolean hasPermission(PPermission perm){
+    public boolean hasPermission(PPermission perm) {
         return this.getAllPermissions().contains(perm);
     }
 
@@ -388,7 +398,7 @@ public class Group extends Subject<GroupData> {
      * @return
      */
     public String getName() {
-        return PermsManager.removeServerFromIdentifier(this.getIdentifier());
+        return super.getName();
     }
 
     /**
@@ -397,7 +407,7 @@ public class Group extends Subject<GroupData> {
      * @param name The name to set to
      */
     public void setName(String name) {
-        this.setIdentifier(PermsManager.addServerToIdentifier(name, this.getServerContext())); //Update name with the server context then set identifier to that
+        super.setName(name);
     }
 
     /**
@@ -437,12 +447,21 @@ public class Group extends Subject<GroupData> {
     }
 
     /**
-     * Get the server in which this group applies (Custom or GroupData.SERVER_LOCAL or GroupData.SERVER_GLOBAL)
+     * Get the id of the server in which this group applies (Custom or GroupData.SERVER_LOCAL or GroupData.SERVER_GLOBAL)
      *
-     * @return
+     * @return The ID of the server in which this group applies
      */
     public String getServerContext() {
         return this.getData().getServerContext();
+    }
+
+    /**
+     * Get the name of the server in which this group applies
+     *
+     * @return the NAME of the server
+     */
+    public String getServerNameOfServerContext() {
+        return PermsManager.instance.getServerName(getServerContext());
     }
 
     /**

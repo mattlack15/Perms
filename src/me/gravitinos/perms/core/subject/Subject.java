@@ -7,10 +7,12 @@ import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.user.User;
 import net.md_5.bungee.api.ChatColor;
+import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -24,20 +26,22 @@ public abstract class Subject<T extends SubjectData> {
 
     private String type;
 
-    private String identifier;
+    private UUID subjectId;
 
     private ArrayList<PPermission> ownPermissions = new ArrayList<>();
     private ArrayList<Inheritance> inherited = new ArrayList<>();
-    private T data;
 
-    public Subject(@NotNull String identifier, @NotNull String type, @NotNull T data){
+    @NotNull private T data;
+
+    public Subject(@NotNull UUID subjectId, @NotNull String type, @NotNull T data){
         this.type = type;
-        this.identifier = identifier;
         this.data = data;
+        this.subjectId = subjectId;
     }
 
     public abstract DataManager getDataManager();
 
+    @NotNull
     public T getData(){
         return this.data;
     }
@@ -52,6 +56,18 @@ public abstract class Subject<T extends SubjectData> {
     }
 
     /**
+     * Get the Subject ID
+     * This will always be the same for the same subject no matter what object it is represented by
+     */
+    public UUID getSubjectId(){
+        return this.subjectId;
+    }
+
+    protected void setSubjectId(UUID id){
+        this.subjectId = id;
+    }
+
+    /**
      * Util
      */
     protected void removeExpiredPerms(){
@@ -62,7 +78,7 @@ public abstract class Subject<T extends SubjectData> {
         ArrayList<PPermission> remove = new ArrayList<>();
 
         for(PPermission permissions : list){
-            if(permissions.isExpired(ctm)){
+            if(permissions.getContext().isExpired(ctm)){
                 remove.add(permissions);
             }
         }
@@ -85,8 +101,6 @@ public abstract class Subject<T extends SubjectData> {
         return subject.getPermissions();
     }
 
-    public static void setIdentifier(Subject<?> subject, String identifier) {subject.setIdentifier(identifier); }
-
 
     /**
      * Get an immutable set of the permissions this subject contains
@@ -99,28 +113,59 @@ public abstract class Subject<T extends SubjectData> {
 
     /**
      * Sets the internal data object for this subject
-     * @param data
      */
-    protected void setData(T data){
+    protected void setData(@NotNull T data){
         this.data = data;
     }
 
-    /**
-     * Sets the identifier for this subject
-     * @param identifier
-     */
-    protected void setIdentifier(@NotNull String identifier){
-        this.identifier = identifier;
-    }
 
     /**
      * Get a list of the inherited subjects and the inheritance contexts
      * @return list of inheritances
      */
     protected ArrayList<Inheritance> getInheritances(){
-        this.inherited.removeIf(Objects::isNull);
+        this.removeExpiredInheritances();
         this.inherited.removeIf((i) -> !i.isValid());
         return Lists.newArrayList(this.inherited);
+    }
+
+    public String getName(){
+        return this.data.getName();
+    }
+
+    public void setName(String name){
+        this.data.setName(name);
+    }
+
+    /**
+     * Util
+     */
+    protected void removeExpiredInheritances() {
+
+        long ctm = System.currentTimeMillis();
+
+        ArrayList<Inheritance> remove = new ArrayList<>();
+        ArrayList<UUID> removeParents = new ArrayList<>();
+
+        for(Inheritance in : inherited){
+            if(in.getContext().isExpired(ctm)){
+                remove.add(in);
+                removeParents.add(in.getParent().getSubjectId());
+            }
+        }
+
+        if(remove.size() > 0) {
+            remove.forEach(inherited::remove); //Remove from object
+            if(this.getDataManager() != null) {
+                remove.forEach((s) -> {
+                    Bukkit.getLogger().info("REMOVING INHERITANCE " + s.getParent().getName() + " FROM " + getName() + " BECAUSE OF EXPIRATION " + s.getContext().getBeforeTime());
+                    PermsManager.instance.getImplementation().addToLog("REMOVING INHERITANCE " + s.getParent().getName() + " FROM " + getName() + " BECAUSE OF EXPIRATION " + s.getContext().getBeforeTime());
+                });
+                this.getDataManager().removeInheritances(this, removeParents); //Update backend
+            }
+        }
+
+        this.inherited.removeIf(Objects::isNull);
     }
 
     /**
@@ -128,6 +173,7 @@ public abstract class Subject<T extends SubjectData> {
      * @param parent The specified parent to remove inheritances to
      */
     protected void removeOwnSubjectInheritance(Subject<? extends SubjectData> parent){
+        this.removeExpiredInheritances();
         this.inherited.removeIf(i -> !i.isValid() || parent.equals(i.getParent()));
     }
 
@@ -169,6 +215,10 @@ public abstract class Subject<T extends SubjectData> {
      */
     protected void addOwnSubjectInheritance(SubjectRef subject, Context context){
         this.inherited.add(new Inheritance(subject, new SubjectRef(this), context));
+    }
+
+    protected void addOwnInheritance(Inheritance inheritance){
+        this.inherited.add(inheritance);
     }
 
 
@@ -214,10 +264,6 @@ public abstract class Subject<T extends SubjectData> {
         return type;
     }
 
-    public String getIdentifier(){
-        return identifier;
-    }
-
     protected boolean hasOwnOrInheritedPermission(String permission, Context context){
         if(this.hasOwnPermission(permission, context)){
             return true;
@@ -243,6 +289,7 @@ public abstract class Subject<T extends SubjectData> {
      */
     protected ArrayList<PPermission> getAllPermissions(Context inheritanceContext){
         ArrayList<PPermission> perms = new ArrayList<>(this.getPermissions().getPermissions());
+        removeExpiredInheritances();
 
         for(Inheritance inheritances : getInheritances()){
 
@@ -299,7 +346,7 @@ public abstract class Subject<T extends SubjectData> {
                     sub.removeOwnSubjectInheritance(subj);
                 }
                 PermsManager.instance.getImplementation().addToLog(ChatColor.RED + "Mistake in inheritances, removed inheritance \"" +
-                        subj.getIdentifier() + "\" from subject \"" + i.getChild().getIdentifier() + "\"");
+                        subj.getName() + "\" from subject \"" + i.getChild().getName() + "\"");
             } else {
                 treeSearchThing(subj, subs);
             }

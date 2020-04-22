@@ -82,15 +82,15 @@ import org.jetbrains.annotations.NotNull;
          */
         public static boolean openBook(ItemStack i, Player p) {
             if (!initialised) return false;
-            ItemStack held = p.getInventory().getItemInMainHand();
+            ItemStack held = p.getItemInHand();
             try {
-                p.getInventory().setItemInMainHand(i);
+                p.setItemInHand(i);
                 sendPacket(i, p);
             } catch (ReflectiveOperationException e) {
                 e.printStackTrace();
                 initialised = false;
             }
-            p.getInventory().setItemInMainHand(held);
+            p.setItemInHand(held);
             return initialised;
         }
 

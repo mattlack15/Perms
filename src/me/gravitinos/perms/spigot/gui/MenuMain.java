@@ -25,10 +25,12 @@ public class MenuMain extends Menu {
 
     public static final Sound OPEN_USER_LIST_SOUND = Sound.UI_BUTTON_CLICK;
     public static final Sound OPEN_GROUP_LIST_SOUND = Sound.UI_BUTTON_CLICK;
+    public static final Sound DING_SOUND = Sound.ENTITY_EXPERIENCE_ORB_PICKUP;
+    public static final Sound ITEM_BREAK_SOUND = Sound.ENTITY_ITEM_BREAK;
 
 
     public MenuMain(Player player) {
-        super(SpigotPerms.instance.getName() + " by Gravitinos", 6);
+        super(SpigotPerms.instance.getName() + " by Gravitinos", 5);
         this.setup(player);
     }
     private void setup(Player player){

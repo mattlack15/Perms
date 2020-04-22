@@ -64,7 +64,12 @@ public class BungeePerms extends Plugin implements Listener {
 
 
         SQLHandler handler = new SQLHandler();
-        manager = new PermsManager(new BungeeImpl(), handler);
+        BungeeImpl bi = new BungeeImpl();
+        if(!bi.getConfigSettings().isUsingSQL()){
+            handler = null;
+            getLogger().severe("PERMS > SQL must be set to true and configured in config.yml");
+        }
+        manager = new PermsManager(bi, handler);
 
         getProxy().getPluginManager().registerListener(this, this);
         getProxy().getPluginManager().registerCommand(this, new CommandReloadGroups());
@@ -88,14 +93,25 @@ public class BungeePerms extends Plugin implements Listener {
         UUID id = event.getConnection().getUniqueId();
 
         try {
-            UserManager.instance.loadUser(id, name).get();
+            if(!UserManager.instance.loadUser(id, name).get()){
+                getLogger().info("There was an error while loading userdata for " + name);
+                return;
+            }
             User user = UserManager.instance.getUser(id);
-            getLogger().info("Userdata loaded for " + user.getName() + " (" + user.getUniqueID() + ")");
+            if(!UserManager.instance.isUserLoaded(id)){
+                getLogger().info("There was an error while loading userdata for " + name + ", could not find user in UserManager!");
+            } else {
+                if(user.getData().getFirstJoined() == -1){
+                    user.getData().setFirstJoined(System.currentTimeMillis());
+                }
+                getLogger().info("Userdata loaded for " + user.getName() + " (" + user.getUniqueID() + ")");
+            }
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }
     }
 
+    @EventHandler
     public void onSwitchServers(ServerConnectEvent event){
         UserManager.instance.loadUser(event.getPlayer().getUniqueId(), event.getPlayer().getName()); //reload the user again (the load operation is async since .get() is not called)
     }

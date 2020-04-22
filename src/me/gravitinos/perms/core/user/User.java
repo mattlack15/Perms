@@ -1,6 +1,5 @@
 package me.gravitinos.perms.core.user;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.cache.CachedSubject;
@@ -10,12 +9,10 @@ import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.subject.*;
 import me.gravitinos.perms.core.util.SubjectSupplier;
-import me.gravitinos.perms.spigot.SpigotPerms;
-import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.jetbrains.annotations.NotNull;
 
-import java.nio.file.attribute.UserDefinedFileAttributeView;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -30,7 +27,7 @@ public class User extends Subject<UserData> {
     }
 
     public User(CachedSubject subject, SubjectSupplier inheritanceSupplier, UserManager userManager){
-        super(subject.getIdentifier(), Subject.USER, new UserData(subject.getData()));
+        super(subject.getSubjectId(), Subject.USER, new UserData(subject.getData()));
         this.updateFromCachedSubject(subject, inheritanceSupplier, false);
 
         this.dataManager = userManager != null ? userManager.getDataManager() : null;
@@ -58,7 +55,8 @@ public class User extends Subject<UserData> {
      * @param save Whether or not to save this change to the backend (files or sql)
      */
     public void updateFromCachedSubject(CachedSubject subject, SubjectSupplier inheritanceSupplier, boolean save){
-        this.setIdentifier(subject.getIdentifier());
+
+        this.setSubjectId(subject.getSubjectId());
 
         this.setData(new UserData(subject.getData()));
         if(dataManager != null){
@@ -74,9 +72,6 @@ public class User extends Subject<UserData> {
             dataManager.updateSubject(this);
         }
 
-        if(save && dataManager != null){
-            dataManager.updateSubject(this);
-        }
     }
 
     /**
@@ -95,7 +90,7 @@ public class User extends Subject<UserData> {
      * @return UUID
      */
     public UUID getUniqueID(){
-        return UUID.fromString(this.getIdentifier());
+        return this.getSubjectId();
     }
 
     /**
@@ -103,7 +98,7 @@ public class User extends Subject<UserData> {
      * @param server The server context
      * @return The name of the display-group of this user
      */
-    public String getDisplayGroup(String server){
+    public UUID getDisplayGroup(String server){
         return this.getData().getDisplayGroup(server);
     }
 
@@ -111,10 +106,10 @@ public class User extends Subject<UserData> {
      * Gets the name of the display-group of this user, defaults to the local server's display group
      * @return The name of the display-group of this user
      */
-    public String getDisplayGroup(){
+    public UUID getDisplayGroup(){
         ArrayList<Subject<?>> subjects = new ArrayList<>();
         this.getInheritances().forEach(i -> {
-            if(i.getContext().getServerName().equals(GroupData.SERVER_GLOBAL) || i.getContext().getServerName().equals(GroupData.SERVER_LOCAL)) {
+            if(i.getContext().getServer().equals(GroupData.SERVER_GLOBAL) || i.getContext().getServer().equals(GroupData.SERVER_LOCAL)) {
                 subjects.add(i.getParent());
             }
         });
@@ -132,11 +127,25 @@ public class User extends Subject<UserData> {
             highest = GroupManager.instance.getDefaultGroup();
         }
 
-        if(!highest.getName().equals(this.getDisplayGroup(UserData.SERVER_LOCAL))) {
+        if(!highest.getSubjectId().equals(this.getDisplayGroup(UserData.SERVER_LOCAL))) {
             this.setDisplayGroup(highest);
         }
 
         return this.getData().getDisplayGroup(UserData.SERVER_LOCAL);
+    }
+
+    /**
+     * Gets the groups in the inheritance of this user in the order of highest priority
+     */
+    public ArrayList<Group> getGroupsInOrderOfPriority(){
+        ArrayList<Group> groups = new ArrayList<>();
+        for(Inheritance inheritance : getInheritances()){
+            if(inheritance.getParent() instanceof Group){
+                groups.add((Group) inheritance.getParent());
+            }
+        }
+        groups.sort(Comparator.comparingInt(Group::getPriority).reversed());
+        return groups;
     }
 
     /**
@@ -145,7 +154,7 @@ public class User extends Subject<UserData> {
      * @param displayGroup The display group
      */
     protected void setDisplayGroup(String server, Group displayGroup){
-        this.getData().setDisplayGroup(server, displayGroup.getName());
+        this.getData().setDisplayGroup(server, displayGroup.getSubjectId());
     }
     /**
      * Sets the display-group of this user defaults to whatever server context the display group has
@@ -222,6 +231,11 @@ public class User extends Subject<UserData> {
      * @param permission the permission to add
      */
     public CompletableFuture<Void> addOwnPermission(@NotNull PPermission permission) {
+        if(this.hasOwnPermission(permission)){
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            future.complete(null);
+            return future;
+        }
         super.addOwnSubjectPermission(permission);
 
         //Update backend
@@ -366,7 +380,7 @@ public class User extends Subject<UserData> {
         super.removeOwnSubjectInheritance(subject);
 
         if(dataManager != null){
-            return dataManager.removeInheritance(this, subject.getIdentifier());
+            return dataManager.removeInheritance(this, subject.getSubjectId());
         }
         CompletableFuture<Void> future = new CompletableFuture<>();
         future.complete(null);
@@ -386,14 +400,14 @@ public class User extends Subject<UserData> {
      * Clears all local inheritances
      */
     public CompletableFuture<Void> clearInheritancesLocal(){
-        ArrayList<String> parents = new ArrayList<>();
+        ArrayList<UUID> parents = new ArrayList<>();
 
         for(Inheritance i : super.getInheritances()){
-            if(!i.getContext().getServerName().equals(UserData.SERVER_LOCAL)){
+            if(!i.getContext().getServer().equals(UserData.SERVER_LOCAL)){
                 continue;
             }
             super.removeOwnSubjectInheritance(i.getParent());
-            parents.add(i.getParent().getIdentifier());
+            parents.add(i.getParent().getSubjectId());
         }
 
         if(dataManager != null){
@@ -405,17 +419,39 @@ public class User extends Subject<UserData> {
     }
 
     /**
+     * Adds a lot of permissions in bulk, please use this for large amounts of permissions as Transfers to SQL can be a lot quicker
+     */
+    public CompletableFuture<Void> addInheritances(@NotNull ArrayList<Inheritance> inheritances) {
+        ArrayList<Inheritance> ps = Lists.newArrayList(inheritances);
+        inheritances.forEach(p -> {
+            if (!this.getInheritances().contains(p)) {
+                super.addOwnInheritance(p);
+            } else {
+                ps.remove(p);
+            }
+        });
+
+        //Update backend
+        if (dataManager != null) {
+            return dataManager.addInheritances(ps);
+        }
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        future.complete(null);
+        return future;
+    }
+
+    /**
      * Clears all global inheritances
      */
     public CompletableFuture<Void> clearInheritancesGlobal(){
-        ArrayList<String> parents = new ArrayList<>();
+        ArrayList<UUID> parents = new ArrayList<>();
 
         for(Inheritance i : super.getInheritances()){
-            if(!i.getContext().getServerName().equals(UserData.SERVER_GLOBAL)){
+            if(!i.getContext().getServer().equals(UserData.SERVER_GLOBAL)){
                 continue;
             }
             super.removeOwnSubjectInheritance(i.getParent());
-            parents.add(i.getParent().getIdentifier());
+            parents.add(i.getParent().getSubjectId());
         }
 
         if(dataManager != null){
@@ -464,11 +500,11 @@ public class User extends Subject<UserData> {
      * Clears ALL inheritances from this user
      */
     public CompletableFuture<Void> clearInheritances(){
-        ArrayList<String> parents = new ArrayList<>();
+        ArrayList<UUID> parents = new ArrayList<>();
 
         for(Inheritance i : super.getInheritances()){
             super.removeOwnSubjectInheritance(i.getParent());
-            parents.add(i.getParent().getIdentifier());
+            parents.add(i.getParent().getSubjectId());
         }
 
         if(dataManager != null){

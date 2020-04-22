@@ -4,23 +4,30 @@ import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.subject.SubjectData;
 
 import java.util.ArrayList;
+import java.util.UUID;
 
 /**
  * Immutable
  */
 public final class CachedSubject {
     private String type;
-    private String identifier;
+
+    private UUID subjectId;
+
     private SubjectData data;
     private ArrayList<PPermission> permissions;
     private ArrayList<CachedInheritance> inheritances;
 
-    public CachedSubject(String identifier, String type, SubjectData data, ArrayList<PPermission> permissions, ArrayList<CachedInheritance> inheritances) {
-        this.identifier = identifier;
+    public CachedSubject(UUID subjectId, String type, SubjectData data, ArrayList<PPermission> permissions, ArrayList<CachedInheritance> inheritances) {
         this.type = type;
         this.data = data;
         this.permissions = permissions;
         this.inheritances = inheritances;
+        this.subjectId = subjectId;
+    }
+
+    public UUID getSubjectId(){
+        return this.subjectId;
     }
 
     public ArrayList<CachedInheritance> getInheritances() {
@@ -29,10 +36,6 @@ public final class CachedSubject {
 
     public ArrayList<PPermission> getPermissions() {
         return permissions;
-    }
-
-    public String getIdentifier() {
-        return identifier;
     }
 
     public String getType() {
@@ -47,9 +50,6 @@ public final class CachedSubject {
         this.permissions = permissions;
     }
 
-    public void setIdentifier(String identifier) {
-        this.identifier = identifier;
-    }
 
     public void setInheritances(ArrayList<CachedInheritance> inheritances) {
         this.inheritances = inheritances;

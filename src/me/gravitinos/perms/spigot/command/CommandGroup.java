@@ -7,11 +7,8 @@ import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.subject.Inheritance;
 import me.gravitinos.perms.spigot.SpigotPerms;
 import me.gravitinos.perms.spigot.command.group.*;
-import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-
-import java.util.ArrayList;
 
 public class CommandGroup extends GravSubCommand {
     public CommandGroup(GravCommandPermissionable parent, String cmdPath) {
@@ -28,6 +25,7 @@ public class CommandGroup extends GravSubCommand {
         this.addSubCommand(new CommandGroupDelete(this, this.getSubCommandCmdPath()));
         this.addSubCommand(new CommandGroupList(this, this.getSubCommandCmdPath()));
         this.addSubCommand(new CommandGroupSetServer(this, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandLoadPermsFrom(this, this.getSubCommandCmdPath()));
     }
 
     @Override
@@ -101,8 +99,9 @@ public class CommandGroup extends GravSubCommand {
             sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fDefault Group &6> " + (group.equals(GroupManager.instance.getDefaultGroup()) ? "&aTrue" : "&cFalse"));
             sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fInheritances &6>");
             for(Inheritance inheritance : group.getInheritances()){
-                boolean applies = inheritance.getContext().getServerName().equals(GroupData.SERVER_GLOBAL) || inheritance.getContext().getServerName().equals(GroupData.SERVER_LOCAL);
-                sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&7- &e" + PermsManager.removeServerFromIdentifier(inheritance.getParent().getIdentifier()) + (applies ? "" : "&cDoes not apply here"));
+                boolean global = inheritance.getContext().getServer().equals(GroupData.SERVER_GLOBAL);
+                boolean applies = global || inheritance.getContext().getServer().equals(GroupData.SERVER_LOCAL);
+                sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&7- &e" + inheritance.getParent().getName() + (applies ? (global ? "&c&lGLOBAL" : "&a&lLOCAL") : " &cDoes not apply here &7(&f" + inheritance.getContext().getNameOfServer() + "&7)"));
             }
 
         }

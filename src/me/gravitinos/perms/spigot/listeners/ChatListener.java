@@ -5,6 +5,7 @@ import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupManager;
+import me.gravitinos.perms.core.subject.Inheritance;
 import me.gravitinos.perms.core.user.User;
 import me.gravitinos.perms.core.user.UserBuilder;
 import me.gravitinos.perms.core.user.UserData;
@@ -19,7 +20,7 @@ import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.chat.ComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.craftbukkit.v1_12_R1.entity.CraftPlayer;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -33,6 +34,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 
 public class ChatListener implements Listener {
@@ -53,12 +55,8 @@ public class ChatListener implements Listener {
         this.chatInputHandlers.remove(player);
     }
 
-    @EventHandler(priority=EventPriority.LOW)
+    @EventHandler(priority=EventPriority.MONITOR)
     public void onChat(AsyncPlayerChatEvent event){
-
-        if(event.isCancelled()){
-            return;
-        }
 
         if(chatInputHandlers.containsKey(event.getPlayer().getUniqueId())){
             event.setCancelled(true);
@@ -73,24 +71,66 @@ public class ChatListener implements Listener {
             return;
         }
 
+        //Check for setting
+        if(!SpigotPerms.instance.getImpl().getConfigSettings().isUsingBuiltInChat()){
+            return;
+        }
+
+        //If another plugin cancels this event
+        if(event.isCancelled()){
+            return;
+        }
+
         //Get user
         User user = UserManager.instance.getUser(event.getPlayer().getUniqueId());
+
+        if(user == null){
+            try {
+                UserManager.instance.loadUser(event.getPlayer().getUniqueId(), event.getPlayer().getName()).get();
+                user = UserManager.instance.getUser(event.getPlayer().getUniqueId());
+                if(user == null){
+                    SpigotPerms.instance.getImpl().addToLog("Problem occurred while sending chat message for " + event.getPlayer().getName() + ", was unable to load user!");
+                    SpigotPerms.instance.getImpl().consoleLog("Problem occurred while sending chat message for " + event.getPlayer().getName() + ", was unable to load user!");
+                    SpigotPerms.instance.getImpl().sendDebugMessage("Problem occurred while sending chat message for &e" + event.getPlayer().getName() + "&7, was unable to load user!");
+                    return;
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+                return;
+            }
+        }
 
         event.setCancelled(true);
 
         //Get displaygroup
-        String displayGroupName = user.getDisplayGroup();
-        Group displayGroup = GroupManager.instance.getVisibleGroup(displayGroupName);
+        Group displayGroup = GroupManager.instance.getGroupExact(user.getDisplayGroup());
         if(displayGroup == null){
             displayGroup = GroupManager.instance.getDefaultGroup();
             user.addInheritance(displayGroup, Context.CONTEXT_SERVER_LOCAL);
         }
 
-        //Get Chat components
-        ArrayList<String> chatFormat = SpigotConf.instance.getChatFormat();
-        ArrayList<TextComponent> components = new ArrayList<>();
 
-        for(String part : chatFormat){
+        //Get Chat components
+        final ArrayList<String> chatFormat = SpigotConf.instance.getChatFormat();
+
+        Group finalDisplayGroup = displayGroup;
+        User finalUser = user;
+        Bukkit.getOnlinePlayers().forEach(p -> {
+            TextComponent mainComponent = getFormattedChatMessage(event.getPlayer(), event.getMessage(), chatFormat, finalDisplayGroup, finalUser, p);
+            p.spigot().sendMessage(mainComponent);
+        });
+
+        TextComponent mainComponent = getFormattedChatMessage(event.getPlayer(), event.getMessage(), chatFormat, finalDisplayGroup, finalUser, null);
+        SpigotPerms.instance.getImpl().consoleLog("CHAT: " + ChatColor.stripColor(mainComponent.toLegacyText()));
+
+    }
+
+    @NotNull
+    public static TextComponent getFormattedChatMessage(@NotNull Player chattedPlayer, String message, ArrayList<String> chatFormat, Group displayGroup, User user, Player receiver) {
+        boolean rel = receiver != null;
+
+        ArrayList<TextComponent> components = new ArrayList<>();
+        for (String part : chatFormat) {
             part = ChatColor.translateAlternateColorCodes('&', part);
             HoverEvent hoverEvent = null;
             ClickEvent clickEvent = null;
@@ -99,25 +139,66 @@ public class ChatListener implements Listener {
             boolean containsPrefix = part.contains("<prefix>");
 
             //Built-in placeholders
-            part = part.replace("<username>", event.getPlayer().getName());
-            part = part.replace("<uuid>", event.getPlayer().getUniqueId().toString());
-            part = part.replace("<prefix>", toColour(displayGroup.getPrefix()));
-            part = part.replace("<chatcolour>", toColour(displayGroup.getChatColour()));
+            String prefix = displayGroup.getPrefix();
+            if (prefix == null || prefix.equals("")) {
+                ArrayList<Group> groups = user.getGroupsInOrderOfPriority();
+                for (Group group : groups) {
+                    if (!group.serverContextAppliesToThisServer()) {
+                        continue;
+                    }
+                    if (group.equals(displayGroup)) continue;
+                    if (group.getPrefix() != null && !group.getPrefix().equals("")) {
+                        prefix = group.getPrefix();
+                    }
+                }
+            }
 
-            if(event.getPlayer().hasPermission("chat.placeholders")) {
-                part = part.replace("<message>", event.getMessage());
-                if(Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
-                    part = PlaceholderAPI.setPlaceholders(event.getPlayer(), part);
+            String suffix = displayGroup.getSuffix();
+            if (suffix == null || suffix.equals("")) {
+                ArrayList<Group> groups = user.getGroupsInOrderOfPriority();
+                for (Group group : groups) {
+                    if (!group.serverContextAppliesToThisServer()) {
+                        continue;
+                    }
+                    if (group.equals(displayGroup)) continue;
+                    if (group.getSuffix() != null && !group.getSuffix().equals("")) {
+                        suffix = group.getSuffix();
+                    }
+                }
+            }
+
+            prefix = toColour(prefix);
+            suffix = toColour(suffix);
+
+            part = part.replace("<username>", chattedPlayer.getName());
+            part = part.replace("<uuid>", chattedPlayer.getUniqueId().toString());
+            part = part.replace("<prefix>", prefix);
+            part = part.replace("<suffix>", suffix);
+            part = part.replace("<chatcolour>", toColour(displayGroup.getChatColour()));
+            if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+                part = PlaceholderAPI.setPlaceholders(chattedPlayer, part);
+                if(rel)
+                    part = PlaceholderAPI.setRelationalPlaceholders(chattedPlayer, receiver, part);
+            }
+
+            if (chattedPlayer.hasPermission("chat.placeholders")) {
+                part = part.replace("<message>", chattedPlayer.hasPermission("chat.colour") ? message : toColour(message));
+                if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+                    part = PlaceholderAPI.setPlaceholders(chattedPlayer, part);
+                    if(rel)
+                        part = PlaceholderAPI.setRelationalPlaceholders(chattedPlayer, receiver, part);
                 }
             } else {
-                if(Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
-                    part = PlaceholderAPI.setPlaceholders(event.getPlayer(), part);
+                if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+                    part = PlaceholderAPI.setPlaceholders(chattedPlayer, part);
+                    if(rel)
+                        part = PlaceholderAPI.setRelationalPlaceholders(chattedPlayer, receiver, part);
                 }
-                part = part.replace("<message>", event.getMessage());
+                part = part.replace("<message>", chattedPlayer.hasPermission("chat.colour") ? message : toColour(message));
             }
 
             //Rank description
-            if(containsPrefix){
+            if (containsPrefix) {
                 String[] description = displayGroup.getDescription().split("\\\\n");
 
                 TextComponent newLine = new TextComponent(ComponentSerializer.parse("{text: \"\n\"}"));
@@ -141,7 +222,7 @@ public class ChatListener implements Listener {
             //Hover Events
             //TODO
 
-            TextComponent comp = new TextComponent(part);
+            TextComponent comp = new TextComponent(TextComponent.fromLegacyText(part));
             comp.setHoverEvent(hoverEvent);
             comp.setClickEvent(clickEvent);
             components.add(comp);
@@ -150,16 +231,13 @@ public class ChatListener implements Listener {
 
         TextComponent mainComponent = new TextComponent("");
 
-        for(TextComponent comps : components){
-            mainComponent.addExtra(comps);
+        String lastColors = "";
+
+        for (TextComponent comps : components) {
+            mainComponent.addExtra(lastColors + comps);
+            lastColors = ChatColor.getLastColors(comps.toLegacyText());
         }
-
-        Bukkit.getOnlinePlayers().forEach(p -> {
-            p.spigot().sendMessage(mainComponent);
-        });
-
-        SpigotPerms.instance.getImpl().consoleLog("CHAT: " + ChatColor.stripColor(mainComponent.toLegacyText()));
-
+        return mainComponent;
     }
 
     private static String toColour(String text){

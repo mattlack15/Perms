@@ -53,8 +53,7 @@ public abstract class Menu {
         return title;
     }
 
-    //private
-    private Inventory buildInventory(){
+    public Inventory buildInventory(){
         Inventory inv = Bukkit.createInventory(null, this.getSize(), title);
         for(int i = 0; i < this.getSize(); i++){
             MenuElement e = this.getElement(i);

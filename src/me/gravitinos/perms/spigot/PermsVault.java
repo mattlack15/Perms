@@ -184,7 +184,7 @@ public class PermsVault extends Permission {
             if(user == null){
                 return null;
             } else {
-                return user.getDisplayGroup();
+                return GroupManager.instance.getGroupExact(user.getDisplayGroup()).getName();
             }
         }
         return null;

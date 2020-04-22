@@ -1,6 +1,5 @@
 package me.gravitinos.perms.spigot.command.user;
 
-import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupData;
@@ -75,7 +74,7 @@ public class CommandUserGroupSet extends GravSubCommand {
 
         Context finalContext = context;
         UserManager.instance.getDataManager().performOrderedOpAsync(() -> {
-            if(finalContext.getServerName().equals(GroupData.SERVER_GLOBAL)){
+            if(finalContext.getServer().equals(GroupData.SERVER_GLOBAL)){
                 user.clearInheritancesGlobal();
             } else {
                 user.clearInheritancesLocal();

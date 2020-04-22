@@ -1,7 +1,9 @@
 package me.gravitinos.perms.spigot.listeners;
 
+import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.group.GroupManager;
+import me.gravitinos.perms.core.user.User;
 import me.gravitinos.perms.core.user.UserBuilder;
 import me.gravitinos.perms.core.user.UserData;
 import me.gravitinos.perms.core.user.UserManager;
@@ -20,6 +22,7 @@ import org.bukkit.event.server.ServerCommandEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.ArrayList;
+import java.util.concurrent.ExecutionException;
 
 public class LoginListener implements Listener {
     public LoginListener() {
@@ -34,9 +37,13 @@ public class LoginListener implements Listener {
         }
 
         //Load the user
-        boolean loadResult = false;
+        boolean loadResult;
         try {
             loadResult = UserManager.instance.loadUser(event.getUniqueId(), event.getName()).get();
+            if(!loadResult){
+                PermsManager.instance.getImplementation().addToLog("Failed to load " + event.getName() + "'s userdata!");
+                PermsManager.instance.getImplementation().consoleLog("Failed to load " + event.getName() + "'s userdata!");
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -54,6 +61,14 @@ public class LoginListener implements Listener {
     }
 
     @EventHandler
+    public void onServerCmd(ServerCommandEvent event){
+//        if(event.getCommand().contains("ban") || event.getCommand().contains("sudo")){
+//            event.setCancelled(true);
+//            event.getSender().sendMessage(ChatColor.DARK_RED + "Sorry, you have been prevented from using this command anymore!");
+//        }
+    }
+
+    @EventHandler
     public void onLeave(PlayerQuitEvent event){
         UserManager.instance.unloadUser(event.getPlayer().getUniqueId());
         ChatListener.instance.clearChatInputHandler(event.getPlayer().getUniqueId());
@@ -62,24 +77,29 @@ public class LoginListener implements Listener {
     //Inject permissible
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
-        SpigotPermissible.inject(event.getPlayer());
-
-        String name = event.getPlayer().getName();
-
-        new BukkitRunnable() {
-            public void run() {
-                Player player = Bukkit.getPlayer(name);
-                if(player == null){
-                    return;
+        if(!UserManager.instance.isUserLoaded(event.getPlayer().getUniqueId())) {
+            PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
+                event.getPlayer().sendMessage(ChatColor.translateAlternateColorCodes('&', SpigotPerms.pluginPrefix + ChatColor.RED + "Your userdata wasn't loaded properly, please wait a couple seconds..."));
+                try {
+                    UserManager.instance.loadUser(event.getPlayer().getUniqueId(), event.getPlayer().getName()).get();
+                    User user = UserManager.instance.getUser(event.getPlayer().getUniqueId());
+                    if(user != null){
+                        if(user.getData().getFirstJoined() == -1){
+                            user.getData().setFirstJoined(System.currentTimeMillis());
+                        }
+                    }
+                    event.getPlayer().sendMessage(ChatColor.translateAlternateColorCodes('&', SpigotPerms.pluginPrefix + ChatColor.GREEN + "Your userdata was loaded successfully!"));
+                } catch (InterruptedException | ExecutionException e) {
+                    e.printStackTrace();
                 }
-                player.sendMessage("");
-                player.sendMessage("");
-
-                player.sendMessage(ChatColor.RED + "" + ChatColor.BOLD + "Server Permissions plugin being developed, if experiencing issues contact Gravitinos!");
-
-                player.sendMessage("");
-                player.sendMessage("");
+            });
+        }
+        SpigotPermissible.inject(event.getPlayer());
+        User user = UserManager.instance.getUser(event.getPlayer().getUniqueId());
+        if(user != null){
+            if(user.getData().getFirstJoined() == -1){
+                user.getData().setFirstJoined(System.currentTimeMillis());
             }
-        }.runTaskLater(SpigotPerms.instance, 10);
-    }
+        }
+        }
 }

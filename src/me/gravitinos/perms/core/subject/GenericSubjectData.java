@@ -2,6 +2,8 @@ package me.gravitinos.perms.core.subject;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.UUID;
+
 public class GenericSubjectData extends SubjectData {
 
     public String type = "GENERIC";
@@ -18,8 +20,7 @@ public class GenericSubjectData extends SubjectData {
         return this.type;
     }
 
-    public GenericSubjectData() {
-    }
+    public GenericSubjectData() { }
 
     public void setData(String key, String value) {
         super.setData(key, value);

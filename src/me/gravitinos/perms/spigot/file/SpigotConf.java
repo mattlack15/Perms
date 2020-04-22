@@ -6,6 +6,7 @@ import me.gravitinos.perms.spigot.SpigotPerms;
 import org.bukkit.configuration.file.FileConfiguration;
 
 import java.util.ArrayList;
+import java.util.Random;
 
 public class SpigotConf implements PermsConfiguration {
     private static final String PLUGIN_PREFIX = "plugin_prefix";
@@ -23,6 +24,8 @@ public class SpigotConf implements PermsConfiguration {
     private static final String HELP_HEADER = "help_header";
     private static final String HELP_FOOTER = "help_footer";
     private static final String HELP_FORMAT = "help_format";
+    private static final String USING_BUILTIN_CHAT = "using_this_chat_format";
+    private static final String SERVER_ID = "DO_NOT_CHANGE_server_id_DO_NOT_CHANGE";
 
 
     public static SpigotConf instance;
@@ -103,6 +106,20 @@ public class SpigotConf implements PermsConfiguration {
     @Override
     public String getDefaultGroup() {
         return getConfig().getString(DEFAULT_GROUP);
+    }
+
+    @Override
+    public boolean isUsingBuiltInChat() {
+        return getConfig().getBoolean(USING_BUILTIN_CHAT);
+    }
+
+    @Override
+    public int getServerId() {
+        if(getConfig().getInt(SERVER_ID, -1) == -1){
+            getConfig().set(SERVER_ID, new Random(System.currentTimeMillis() + Math.round(Math.random() * 1000)).nextInt(10000000));
+            saveConfig();
+        }
+        return getConfig().getInt(SERVER_ID);
     }
 
     @Override
