@@ -3,7 +3,6 @@ package me.gravitinos.perms.core.config;
 import java.util.ArrayList;
 
 public interface PermsConfiguration {
-
     //Getters
     String getHelpFormat();
     String getHelpHeader();
@@ -21,6 +20,7 @@ public interface PermsConfiguration {
     String getDefaultGroup();
     boolean isUsingBuiltInChat();
     int getServerId();
+    String getLocalDefaultGroup();
 
     //Setters
     void setServerName(String name);
@@ -31,7 +31,5 @@ public interface PermsConfiguration {
     void setSQLHost(String sqlHost);
     void setUsingSQL(boolean usingSQL);
     void setDefaultGroup(String groupName);
-
-
-
+    void setLocalDefaultGroup(String groupName);
 }

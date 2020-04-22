@@ -30,3 +30,5 @@ chat_format:
 help_format: "/&e<cmd_name> &6- &7<cmd_description>"
 help_header: "Permissions Help v1.0 Gravitinos"
 help_footer: "&7&lPage &f<page>"
+
+local_default_group: "localdefault"

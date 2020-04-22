@@ -26,7 +26,7 @@ public class SpigotConf implements PermsConfiguration {
     private static final String HELP_FORMAT = "help_format";
     private static final String USING_BUILTIN_CHAT = "using_this_chat_format";
     private static final String SERVER_ID = "DO_NOT_CHANGE_server_id_DO_NOT_CHANGE";
-
+    private static final String LOCAL_DEFAULT_GROUP = "local_default_group";
 
     public static SpigotConf instance;
 
@@ -109,6 +109,11 @@ public class SpigotConf implements PermsConfiguration {
     }
 
     @Override
+    public String getLocalDefaultGroup() {
+        return getConfig().getString(LOCAL_DEFAULT_GROUP);
+    }
+
+    @Override
     public boolean isUsingBuiltInChat() {
         return getConfig().getBoolean(USING_BUILTIN_CHAT);
     }
@@ -175,6 +180,12 @@ public class SpigotConf implements PermsConfiguration {
     @Override
     public void setDefaultGroup(String groupName) {
         getConfig().set(DEFAULT_GROUP, groupName);
+        saveConfig();
+    }
+
+    @Override
+    public void setLocalDefaultGroup(String groupName) {
+        getConfig().set(LOCAL_DEFAULT_GROUP, groupName);
         saveConfig();
     }
 }
