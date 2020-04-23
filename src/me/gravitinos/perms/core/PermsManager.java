@@ -9,7 +9,6 @@ import me.gravitinos.perms.core.converter.Converter;
 import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.user.UserManager;
-import me.gravitinos.perms.spigot.util.ReflectionUtils2;
 import net.md_5.bungee.api.ChatColor;
 import org.jetbrains.annotations.NotNull;
 
@@ -32,7 +31,7 @@ public class PermsManager {
 
     private Map<Integer, String> cachedServerIndex = new HashMap<>();
 
-    public PermsManager(PermsImplementation implementation, @NotNull DataManager dataManager){
+    public PermsManager(PermsImplementation implementation, @NotNull DataManager dataManager) {
         instance = this;
         this.implementation = implementation;
 
@@ -42,11 +41,11 @@ public class PermsManager {
         this.userManager = new UserManager(dataManager);
 
         //Config checks
-        if(implementation.getConfigSettings().getServerName().equals("")){
+        if (implementation.getConfigSettings().getServerName().equals("")) {
             implementation.getConfigSettings().setServerName("server_" + Math.round(Math.random() * 1000));
         }
 
-        if(dataManager instanceof SQLHandler) {
+        if (dataManager instanceof SQLHandler) {
             if (this.connectSQL((SQLHandler) dataManager, implementation.getConfigSettings())) {
                 this.implementation.consoleLog(ChatColor.GREEN + "Connected to SQL successfully!");
             } else {
@@ -65,17 +64,17 @@ public class PermsManager {
     }
 
     private void runConverters(Converter... converters) {
-        for(Converter converter : converters){
-            if(converter.test()){
+        for (Converter converter : converters) {
+            if (converter.test()) {
                 getImplementation().addToLog("Running converter: " + converter.getName());
                 getImplementation().consoleLog(getImplementation().getPluginName() + " Running converter: " + converter.getName());
                 boolean success = false;
-                try{
+                try {
                     success = converter.convert();
-                } catch (Exception e){
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
-                if(!success){
+                if (!success) {
                     getImplementation().addToLog("Converting failed for: " + converter.getName());
                     getImplementation().consoleLog(getImplementation().getPluginName() + " Converting failed for: " + converter.getName());
                 } else {
@@ -86,7 +85,7 @@ public class PermsManager {
         }
     }
 
-    public CompletableFuture<Void> copyTo(DataManager manager){
+    public CompletableFuture<Void> copyTo(DataManager manager) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         this.getImplementation().getAsyncExecutor().execute(() -> {
             try {
@@ -96,7 +95,7 @@ public class PermsManager {
                 future1.get();
                 future2.get();
                 future.complete(null);
-            }catch(Exception e){
+            } catch (Exception e) {
                 future.complete(null);
                 e.printStackTrace();
             }
@@ -110,21 +109,21 @@ public class PermsManager {
         config.setDriverClassName(DriverManager.getDriver(url).getClass().getCanonicalName());
         config.setUsername(configuration.getSQLUsername());
         config.setPassword(configuration.getSQLPassword());
-        config.setMaximumPoolSize(Runtime.getRuntime().availableProcessors()*2 + 1);
+        config.setMaximumPoolSize(Runtime.getRuntime().availableProcessors() * 2 + 1);
 
         return new HikariDataSource(config);
     }
 
-    public boolean connectSQL(SQLHandler dataManager, PermsConfiguration config){
+    public boolean connectSQL(SQLHandler dataManager, PermsConfiguration config) {
         try {
             dataManager.setDataSource(getHikariDataSource("jdbc:mysql://" + config.getSQLHost() + ":" + config.getSQLPort() + "/" + config.getSQLDatabase() + "?rewriteBatchedStatements=true", config));
-            if(dataManager.getConnection() == null){
+            if (dataManager.getConnection() == null) {
                 this.implementation.addToLog(ChatColor.RED + "Unable to connect to SQL!");
                 this.implementation.consoleLog(ChatColor.RED + "Unable to connect to SQL!");
                 this.implementation.sendDebugMessage(ChatColor.RED + "Unable to connect to SQL!");
                 return false;
             }
-        } catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
             this.implementation.addToLog(ChatColor.RED + "Unable to connect to SQL!");
             this.implementation.consoleLog(ChatColor.RED + "Unable to connect to SQL!");
@@ -164,14 +163,15 @@ public class PermsManager {
 
     /**
      * Gets the server name from a server id
-     * @param serverId Usually a number between 0 and 9999999, except for global which is usually blank
+     *
+     * @param serverId Usually a number between 0 and 9999999, except for global which is -1
      * @return The server name
      */
-    public String getServerName(String serverId){
+    public String getServerName(int serverId) {
         try {
-            return this.cachedServerIndex.get(Integer.parseInt(serverId));
-        } catch (Exception e){
-            if(serverId.equals(GroupData.SERVER_GLOBAL)){
+            return this.cachedServerIndex.get(serverId);
+        } catch (Exception e) {
+            if (serverId == GroupData.SERVER_GLOBAL) {
                 return "";
             } else {
                 return null;
@@ -179,7 +179,7 @@ public class PermsManager {
         }
     }
 
-    public void removeServerFromIndex(int id){
+    public void removeServerFromIndex(int id) {
         this.cachedServerIndex.remove(id);
         dataManager.removeServerIndex(id);
     }
@@ -187,17 +187,17 @@ public class PermsManager {
     /**
      * Get server Id from Server name
      */
-    public int getServerId(String serverName){
+    public int getServerId(String serverName) {
         AtomicInteger id = new AtomicInteger(-1);
         this.cachedServerIndex.forEach((m, p) -> {
-            if(p.equals(serverName)){
+            if (p.equals(serverName)) {
                 id.set(m);
             }
         });
         return id.get();
     }
 
-    public Map<Integer, String> getCachedServerIndex(){
+    public Map<Integer, String> getCachedServerIndex() {
         return this.cachedServerIndex;
     }
 

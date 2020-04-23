@@ -238,7 +238,7 @@ public class Group extends Subject<GroupData> {
      * @return true or false
      */
     public boolean serverContextAppliesToThisServer() {
-        return this.getServerContext().equals(GroupData.SERVER_GLOBAL) || this.getServerContext().equals(GroupData.SERVER_LOCAL);
+        return this.getServerContext() == GroupData.SERVER_GLOBAL || this.getServerContext() ==GroupData.SERVER_LOCAL;
     }
 
     /**
@@ -451,7 +451,7 @@ public class Group extends Subject<GroupData> {
      *
      * @return The ID of the server in which this group applies
      */
-    public String getServerContext() {
+    public int getServerContext() {
         return this.getData().getServerContext();
     }
 

@@ -32,12 +32,12 @@ public final class PPermission {
      * Check if this permission can apply to a certain situation
      *
      * @param worldName     the world name of the situation
-     * @param serverName    the server name of the situation
+     * @param serverId      the server id of the situation
      * @param currentTimeMs the current time in milliseconds (System.currentTimeMillis())
      * @return Whether this permission can apply to the situation
      */
-    public boolean applies(String worldName, String serverName, long currentTimeMs) {
-        return !this.isExpired(currentTimeMs) && this.context.applies(worldName, serverName);
+    public boolean applies(String worldName, int serverId, long currentTimeMs) {
+        return !this.isExpired(currentTimeMs) && this.context.applies(serverId, worldName);
     }
 
     public UUID getPermissionIdentifier() {

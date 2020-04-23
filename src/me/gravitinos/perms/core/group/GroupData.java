@@ -4,80 +4,86 @@ import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.subject.SubjectData;
 import org.jetbrains.annotations.NotNull;
-import sun.font.CoreMetrics;
 
 public class GroupData extends SubjectData {
+    public static final int SERVER_LOCAL = PermsManager.instance.getImplementation().getConfigSettings().getServerId();
+    public static final int SERVER_GLOBAL = Context.SERVER_ALL;
     private static final String PREFIX = "prefix";
     private static final String SUFFIX = "suffix";
     private static final String CHAT_COLOUR = "chat_colour";
     private static final String DESCRIPTION = "description";
     private static final String SERVER_CONTEXT = "server_context";
-    private static final String PRIORITY = "priority";
     public static final String SERVER_CONTEXT_KEY = SERVER_CONTEXT;
+    private static final String PRIORITY = "priority";
 
-    public static final String SERVER_LOCAL = Integer.toString(PermsManager.instance.getImplementation().getConfigSettings().getServerId());
-    public static final String SERVER_GLOBAL = Context.VAL_ALL;
-
-    public GroupData(){
-        this.checkForServerContext();
+    public GroupData() {
     }
 
-    public GroupData(SubjectData data){
+    public GroupData(SubjectData data) {
         super(data);
-        this.checkForServerContext();
     }
 
-    public void setExtraData(String key, String value){
+    public void setExtraData(String key, String value) {
         this.setData("EXTRA_" + key, value);
     }
 
-    public String getExtraData(String key){
+    public String getExtraData(String key) {
         return this.getData("EXTRA_" + key);
     }
 
-
-    public void setDescription(String description){
-        this.setData(DESCRIPTION, description);
-    }
-
-    public String getDescription(){
+    public String getDescription() {
         return this.getData(DESCRIPTION, "");
     }
 
-    public void setPrefix(String prefix){
-        this.setData(PREFIX, prefix);
-    }
-    public void setSuffix(String suffix){
-        this.setData(SUFFIX, suffix);
-    }
-    public void setChatColour(String colour){
-        this.setData(CHAT_COLOUR, colour);
+    public void setDescription(String description) {
+        this.setData(DESCRIPTION, description);
     }
 
-    public String getPrefix(){
+    public String getPrefix() {
         return this.getData(PREFIX, "");
     }
 
-    public String getSuffix(){
+    public void setPrefix(String prefix) {
+        this.setData(PREFIX, prefix);
+    }
+
+    public String getSuffix() {
         return this.getData(SUFFIX, "");
     }
-    public String getChatColour(){
+
+    public void setSuffix(String suffix) {
+        this.setData(SUFFIX, suffix);
+    }
+
+    public String getChatColour() {
         return this.getData(CHAT_COLOUR, "");
     }
 
-    public String getServerContext(){
-        return this.getData(SERVER_CONTEXT);
+    public void setChatColour(String colour) {
+        this.setData(CHAT_COLOUR, colour);
+    }
+
+    public int getServerContext() {
+        String cont = this.getData(SERVER_CONTEXT);
+        if (cont == null) {
+            return SERVER_LOCAL;
+        }
+        return Integer.parseInt(cont);
+    }
+
+    public void setServerContext(@NotNull String context) {
+        this.setData(SERVER_CONTEXT, context);
     }
 
     public int getPriority() {
         String priority = this.getData(PRIORITY);
-        if(priority == null){
+        if (priority == null) {
             this.setPriority(0);
             return 0;
         }
-        try{
+        try {
             return Integer.parseInt(priority);
-        } catch(Exception e){
+        } catch (Exception e) {
             this.setPriority(0);
             return 0;
         }
@@ -85,16 +91,5 @@ public class GroupData extends SubjectData {
 
     public void setPriority(int i) {
         this.setData(PRIORITY, Integer.toString(i));
-    }
-
-    public void setServerContext(@NotNull String context){
-        this.setData(SERVER_CONTEXT, context);
-        this.checkForServerContext();
-    }
-
-    private void checkForServerContext(){
-        if(this.getServerContext() == null){
-            this.setServerContext(SERVER_LOCAL);
-        }
     }
 }

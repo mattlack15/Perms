@@ -67,8 +67,8 @@ public class GroupManager {
                 });
 
                 //Get rid of groups that aren't supposed to be loaded
-                for(Group group : Lists.newArrayList(getLoadedGroups())){
-                    if(!successfullyLoaded.contains(group.getSubjectId())){
+                for (Group group : Lists.newArrayList(getLoadedGroups())) {
+                    if (!successfullyLoaded.contains(group.getSubjectId())) {
                         this.unloadGroup(group);
                     }
                 }
@@ -168,11 +168,11 @@ public class GroupManager {
      * @param server The server of the group to look in
      * @return The group or null if the group is not contained within this group manager
      */
-    public Group getGroup(String name, String server) {
+    public Group getGroup(String name, int server) {
         boolean caseSensitive = PermsManager.instance.getImplementation().getConfigSettings().isCaseSensitiveGroups();
         for (Group g : loadedGroups) {
             if (caseSensitive && g.getName().equals(name) || !caseSensitive && g.getName().equalsIgnoreCase(name)) {
-                if (!g.getServerContext().equals(server)) { //Does about the same thing as using getIdentifier() and adding the server instead of getName()
+                if (g.getServerContext() != server) { //Does about the same thing as using getIdentifier() and adding the server instead of getName()
                     continue;
                 }
                 return g;
@@ -295,7 +295,7 @@ public class GroupManager {
     /**
      * Loads a group
      *
-     * @param groupId The group's Subject Id
+     * @param groupId  The group's Subject Id
      * @param supplier The inheritance supplier (Usually it is (s) -> GroupManager.instance.getGroupExact(s))
      * @return a Future
      */

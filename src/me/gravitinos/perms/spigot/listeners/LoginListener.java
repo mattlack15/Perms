@@ -4,14 +4,11 @@ import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.user.User;
-import me.gravitinos.perms.core.user.UserBuilder;
-import me.gravitinos.perms.core.user.UserData;
 import me.gravitinos.perms.core.user.UserManager;
 import me.gravitinos.perms.spigot.SpigotPermissible;
 import me.gravitinos.perms.spigot.SpigotPerms;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
@@ -19,9 +16,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.server.ServerCommandEvent;
-import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 
 public class LoginListener implements Listener {
@@ -40,7 +35,7 @@ public class LoginListener implements Listener {
         boolean loadResult;
         try {
             loadResult = UserManager.instance.loadUser(event.getUniqueId(), event.getName()).get();
-            if(!loadResult){
+            if (!loadResult) {
                 PermsManager.instance.getImplementation().addToLog("Failed to load " + event.getName() + "'s userdata!");
                 PermsManager.instance.getImplementation().consoleLog("Failed to load " + event.getName() + "'s userdata!");
             }
@@ -61,7 +56,7 @@ public class LoginListener implements Listener {
     }
 
     @EventHandler
-    public void onServerCmd(ServerCommandEvent event){
+    public void onServerCmd(ServerCommandEvent event) {
 //        if(event.getCommand().contains("ban") || event.getCommand().contains("sudo")){
 //            event.setCancelled(true);
 //            event.getSender().sendMessage(ChatColor.DARK_RED + "Sorry, you have been prevented from using this command anymore!");
@@ -69,7 +64,7 @@ public class LoginListener implements Listener {
     }
 
     @EventHandler
-    public void onLeave(PlayerQuitEvent event){
+    public void onLeave(PlayerQuitEvent event) {
         UserManager.instance.unloadUser(event.getPlayer().getUniqueId());
         ChatListener.instance.clearChatInputHandler(event.getPlayer().getUniqueId());
     }
@@ -77,15 +72,22 @@ public class LoginListener implements Listener {
     //Inject permissible
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
-        if(!UserManager.instance.isUserLoaded(event.getPlayer().getUniqueId())) {
+        if (!UserManager.instance.isUserLoaded(event.getPlayer().getUniqueId())) {
             PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
                 event.getPlayer().sendMessage(ChatColor.translateAlternateColorCodes('&', SpigotPerms.pluginPrefix + ChatColor.RED + "Your userdata wasn't loaded properly, please wait a couple seconds..."));
                 try {
                     UserManager.instance.loadUser(event.getPlayer().getUniqueId(), event.getPlayer().getName()).get();
                     User user = UserManager.instance.getUser(event.getPlayer().getUniqueId());
-                    if(user != null){
-                        if(user.getData().getFirstJoined() == -1){
+                    if (user != null) {
+                        if (user.getData().getFirstJoined() == -1) {
                             user.getData().setFirstJoined(System.currentTimeMillis());
+                            user.addInheritance(
+                                    GroupManager.instance.getGroup(
+                                            PermsManager.instance.getImplementation().getConfigSettings().getLocalDefaultGroup(),
+                                            PermsManager.instance.getImplementation().getConfigSettings().getServerId()
+                                    ),
+                                    Context.CONTEXT_SERVER_LOCAL
+                            );
                         }
                     }
                     event.getPlayer().sendMessage(ChatColor.translateAlternateColorCodes('&', SpigotPerms.pluginPrefix + ChatColor.GREEN + "Your userdata was loaded successfully!"));
@@ -96,10 +98,10 @@ public class LoginListener implements Listener {
         }
         SpigotPermissible.inject(event.getPlayer());
         User user = UserManager.instance.getUser(event.getPlayer().getUniqueId());
-        if(user != null){
-            if(user.getData().getFirstJoined() == -1){
+        if (user != null) {
+            if (user.getData().getFirstJoined() == -1) {
                 user.getData().setFirstJoined(System.currentTimeMillis());
             }
         }
-        }
+    }
 }
