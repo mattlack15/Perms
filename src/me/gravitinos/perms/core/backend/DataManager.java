@@ -5,6 +5,7 @@ import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.subject.*;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -50,7 +51,7 @@ public abstract class DataManager {
 
     public abstract CompletableFuture<Void> updateInheritances(Subject subject);
 
-    public abstract CompletableFuture<Void> addInheritance(Subject subject, Subject inheritance, Context context);
+    public abstract CompletableFuture<Void> addInheritance(@NotNull Subject subject, @NotNull Subject inheritance, Context context);
 
     public abstract CompletableFuture<Void> removeInheritance(Subject subject, UUID parent);
 

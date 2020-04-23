@@ -92,4 +92,16 @@ public class GroupData extends SubjectData {
     public void setPriority(int i) {
         this.setData(PRIORITY, Integer.toString(i));
     }
+
+    protected boolean setServerContext(@NotNull String context, boolean force){
+        if(!force && GroupManager.instance.getGroup(this.getName(), context) != null){
+            return false;
+        }
+        this.setData(SERVER_CONTEXT, context);
+        return true;
+    }
+
+    public boolean setServerContext(@NotNull String context){
+        return this.setServerContext(context, false);
+    }
 }

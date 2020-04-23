@@ -3,6 +3,7 @@ package me.gravitinos.perms.spigot.command.group;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupData;
+import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.spigot.SpigotPerms;
 import me.gravitinos.perms.spigot.command.GravCommandPermissionable;
@@ -68,17 +69,24 @@ public class CommandGroupSetServer extends GravSubCommand {
 
         String finalServer = server;
 
+        if (GroupManager.instance.isGroupLoaded(group.getName(), finalServer)) {
+            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "ERROR: A group already exists with that server context and this group's name");
+            return true;
+        }
+
         group.getDataManager().performOrderedOpAsync(() -> {
-            group.setServerContext(finalServer);
+            if(!group.setServerContext(finalServer)) {
+                this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "ERROR: could not change group server context!");
+                return null;
+            }
             ArrayList<PPermission> perms = group.getOwnPermissions().getPermissions();
             group.removeOwnPermissions(perms);
             ArrayList<PPermission> newPerms = new ArrayList<>();
             perms.forEach(p -> newPerms.add(new PPermission(p.getPermission(), new Context(finalServer, p.getContext().getWorldName(), p.getExpiry()), p.getPermissionIdentifier())));
             group.addOwnPermissions(newPerms);
+            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + group.getName() + "&7's server context was set to &e" + finalServer);
             return null;
         });
-
-        this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + group.getName() + "&7's server context was set to &e" + server);
 
         return true;
     }

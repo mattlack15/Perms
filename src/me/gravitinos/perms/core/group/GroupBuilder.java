@@ -14,7 +14,6 @@ import java.util.UUID;
 
 public class GroupBuilder {
     private GroupData data = new GroupData();
-    private String name = "";
     private UUID groupId = UUID.randomUUID();
     private ArrayList<CachedInheritance> inherited = new ArrayList<>();
     private ArrayList<PPermission> permissions = new ArrayList<>();
@@ -23,15 +22,15 @@ public class GroupBuilder {
         return this.data;
     }
     public String getName(){
-        return this.name;
+        return this.data.getName();
     }
 
     public GroupBuilder(String name){
-        this.name = name;
+        this.data.setName(name);
     }
 
     public GroupBuilder setName(String name){
-        this.name = name;
+        this.data.setName(name);
         inherited.forEach(i -> i.setChild(groupId)); // Update the cached Inheritances
         return this;
     }

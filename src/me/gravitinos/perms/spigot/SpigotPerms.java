@@ -5,15 +5,16 @@ import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.backend.sql.SQLHandler;
 import me.gravitinos.perms.core.user.UserManager;
+import me.gravitinos.perms.spigot.channel.ProxyComm;
 import me.gravitinos.perms.spigot.command.CommandPerms;
 import me.gravitinos.perms.spigot.command.GravCommand;
 import me.gravitinos.perms.spigot.file.Files;
 import me.gravitinos.perms.spigot.file.SpigotFileDataManager;
 import me.gravitinos.perms.spigot.listeners.ChatListener;
 import me.gravitinos.perms.spigot.listeners.LoginListener;
+import me.gravitinos.perms.spigot.messaging.MessageManager;
 import me.gravitinos.perms.spigot.verbose.VerboseController;
 import net.milkbowl.vault.permission.Permission;
-import net.minecraft.server.v1_12_R1.ChunkSection;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -67,6 +68,10 @@ public class SpigotPerms extends JavaPlugin {
         //Listeners
         new ChatListener();
         new LoginListener();
+
+        //Message Broking
+        new ProxyComm();
+        new MessageManager();
 
         //For all online players
         for (Player p : Bukkit.getOnlinePlayers()) {

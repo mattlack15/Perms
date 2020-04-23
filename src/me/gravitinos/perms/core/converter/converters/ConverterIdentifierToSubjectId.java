@@ -42,14 +42,15 @@ public class ConverterIdentifierToSubjectId extends Converter {
             //Using SQL
             SQLHandler sqlHandler = (SQLHandler) dataManager;
             try {
-                return sqlHandler.getDao().checkConverterIdentifierToSubjectId();
+                return sqlHandler.getDao().convertIdentifierToSubjectId();
             } catch (SQLException e) {
+                e.printStackTrace();
                 return false;
             }
         } else if(dataManager instanceof SpigotFileDataManager){
             //Using files
             SpigotFileDataManager fileHandler = (SpigotFileDataManager) dataManager;
-            return fileHandler.checkConverterIdentifierToSubjectId();
+            return fileHandler.convertIdentifierToSubjectId();
         }
         return false;
     }

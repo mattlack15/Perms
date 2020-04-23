@@ -67,7 +67,7 @@ public class MenuPermissionEditor extends UtilMenuActionableList {
 
             final String server = servers.get(index);
 
-            MenuElement element = new MenuElement(new ItemBuilder(Material.MAP, 1).setName("&a" + (server.equals(GroupData.SERVER_GLOBAL) ? "GLOBAL" : server))
+            MenuElement element = new MenuElement(new ItemBuilder(Material.COMMAND, 1).setName("&a" + (server.equals(GroupData.SERVER_GLOBAL) ? "GLOBAL" : server))
                     .addLore("&7Click to see permissions that apply to this server")
                     .addLore("&7Press Q&7 if this server doesn't exist to &cremove").addGlow().build());
             element.setClickHandler((e, i) -> {

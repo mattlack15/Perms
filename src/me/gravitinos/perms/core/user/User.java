@@ -9,6 +9,8 @@ import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.subject.*;
 import me.gravitinos.perms.core.util.SubjectSupplier;
+import me.gravitinos.perms.spigot.messaging.MessageManager;
+import me.gravitinos.perms.spigot.messaging.MessageReloadSubject;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -33,18 +35,22 @@ public class User extends Subject<UserData> {
         this.dataManager = userManager != null ? userManager.getDataManager() : null;
 
         if(dataManager != null){
-            this.getData().addUpdateListener("MAIN_LISTENER", (k, v) -> dataManager.updateSubjectData(this));
+            this.getData().addUpdateListener("MAIN_LISTENER", (k, v) -> {
+                dataManager.updateSubjectData(this);
+                MessageManager.instance.queueMessage(new MessageReloadSubject(this.getSubjectId()));
+            });
         }
     }
 
     /**
      * Updates this user with a cachedSubject's values with what is compatible (everything, if this cachedSubject's type is Subject.USER)
-     *
+     * This does not save the user to the backend
+     * @see #updateFromCachedSubject(CachedSubject, SubjectSupplier, boolean)
      * @param subject The cachedSubject to update with
      * @param inheritanceSupplier Inheritance supplier to handle getting inherited subject objects usually just groupManager::getGroup
      */
     public void updateFromCachedSubject(CachedSubject subject, SubjectSupplier inheritanceSupplier){
-        this.updateFromCachedSubject(subject, inheritanceSupplier, true);
+        this.updateFromCachedSubject(subject, inheritanceSupplier, false);
     }
 
     /**
@@ -60,7 +66,10 @@ public class User extends Subject<UserData> {
 
         this.setData(new UserData(subject.getData()));
         if(dataManager != null){
-            this.getData().addUpdateListener("MAIN_LISTENER", (k, v) -> dataManager.updateSubjectData(this));
+            this.getData().addUpdateListener("MAIN_LISTENER", (k, v) -> {
+                dataManager.updateSubjectData(this);
+                MessageManager.instance.queueMessage(new MessageReloadSubject(this.getSubjectId()));
+            });
         }
 
         super.setOwnPermissions(subject.getPermissions());
@@ -240,7 +249,9 @@ public class User extends Subject<UserData> {
 
         //Update backend
         if (dataManager != null) {
-            return dataManager.addPermission(this, permission);
+            CompletableFuture<Void> future = dataManager.addPermission(this, permission);
+            MessageManager.instance.queueMessage(new MessageReloadSubject(this.getSubjectId()));
+            return future;
         }
         CompletableFuture<Void> future = new CompletableFuture<>();
         future.complete(null);
@@ -257,7 +268,9 @@ public class User extends Subject<UserData> {
 
         //Update backend
         if (dataManager != null) {
-            return dataManager.removePermissionExact(this, p.getPermission(), p.getPermissionIdentifier());
+            CompletableFuture<Void> future = dataManager.removePermissionExact(this, p.getPermission(), p.getPermissionIdentifier());
+            MessageManager.instance.queueMessage(new MessageReloadSubject(this.getSubjectId()));
+            return future;
         }
         CompletableFuture<Void> future = new CompletableFuture<>();
         future.complete(null);
@@ -365,7 +378,9 @@ public class User extends Subject<UserData> {
         super.addOwnSubjectInheritance(new SubjectRef(subject), context);
 
         if(dataManager != null){
-            return dataManager.addInheritance(this, subject, context);
+            CompletableFuture<Void> future = dataManager.addInheritance(this, subject, context);
+            MessageManager.instance.queueMessage(new MessageReloadSubject(this.getSubjectId()));
+            return future;
         }
         CompletableFuture<Void> future = new CompletableFuture<>();
         future.complete(null);
@@ -380,7 +395,9 @@ public class User extends Subject<UserData> {
         super.removeOwnSubjectInheritance(subject);
 
         if(dataManager != null){
-            return dataManager.removeInheritance(this, subject.getSubjectId());
+            CompletableFuture<Void> future = dataManager.removeInheritance(this, subject.getSubjectId());
+            MessageManager.instance.queueMessage(new MessageReloadSubject(this.getSubjectId()));
+            return future;
         }
         CompletableFuture<Void> future = new CompletableFuture<>();
         future.complete(null);

@@ -10,10 +10,12 @@ import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.subject.Subject;
 import me.gravitinos.perms.core.subject.SubjectRef;
 import me.gravitinos.perms.core.util.SubjectSupplier;
+import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 public class GroupManager {
 
@@ -40,116 +42,118 @@ public class GroupManager {
         CompletableFuture<Boolean> out = new CompletableFuture<>();
         ArrayList<UUID> successfullyLoaded = new ArrayList<>();
         PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
-            try {
-                ArrayList<CachedSubject> groups = dataManager.getAllSubjectsOfType(Subject.GROUP).get();
-                Map<UUID, SubjectRef> references = new HashMap<>();
+            synchronized (GroupManager.class) {
+                try {
+                    ArrayList<CachedSubject> groups = dataManager.getAllSubjectsOfType(Subject.GROUP).get();
+                    Map<UUID, SubjectRef> references = new HashMap<>();
 
-                //Create references
-                groups.forEach(cs -> references.put(cs.getSubjectId(), new SubjectRef(null)));
+                    //Create references
+                    groups.forEach(cs -> references.put(cs.getSubjectId(), new SubjectRef(null)));
 
-                //Load and set references
-                groups.forEach(cs -> {
-                    Group g;
+                    //Load and set references
+                    groups.forEach(cs -> {
+                        Group g;
 
-                    boolean exists = this.isGroupExactLoaded(cs.getSubjectId());
+                        boolean exists = this.isGroupExactLoaded(cs.getSubjectId());
 
-                    if (exists) {
-                        g = this.getGroupExact(cs.getSubjectId());
-                        g.updateFromCachedSubject(cs, references::get, false);
-                    } else {
-                        g = new Group(cs, references::get, this);
-                    }
-                    references.get(cs.getSubjectId()).setReference(g);
-                    if (exists) {
-                        this.loadedGroups.add(g); //Add groups to loadedGroups
+                        if (exists) {
+                            g = this.getGroupExact(cs.getSubjectId());
+                            g.updateFromCachedSubject(cs, references::get, false);
+                        } else {
+                            g = new Group(cs, references::get, this);
+                        }
+                        references.get(cs.getSubjectId()).setReference(g);
+                        if (!exists) {
+                            this.loadedGroups.add(g); //Add groups to loadedGroups
+                        }
                         successfullyLoaded.add(g.getSubjectId());
-                    }
-                });
+                    });
 
-                //Get rid of groups that aren't supposed to be loaded
-                for (Group group : Lists.newArrayList(getLoadedGroups())) {
-                    if (!successfullyLoaded.contains(group.getSubjectId())) {
-                        this.unloadGroup(group);
+                    //Get rid of groups that aren't supposed to be loaded
+                    for (Group group : Lists.newArrayList(getLoadedGroups())) {
+                        if (!successfullyLoaded.contains(group.getSubjectId())) {
+                            this.unloadGroup(group);
+                        }
                     }
+
+                    //Check for inheritance mistakes
+                    this.eliminateInheritanceMistakes();
+
+                } catch (Exception e) {
+                    out.complete(false);
+                    e.printStackTrace();
                 }
 
-                //Check for inheritance mistakes
-                this.eliminateInheritanceMistakes();
+                // Convert (Probably remove later)
 
-            } catch (Exception e) {
-                out.complete(false);
-                e.printStackTrace();
-            }
+                for (Group group : this.loadedGroups) {
+                    Map<Integer, String> index = PermsManager.instance.getCachedServerIndex();
 
-            // Convert (Probably remove later)
+                    group.getDataManager().performOrderedOpAsync(() -> {
+                        for (int ints : index.keySet()) {
+                            String name = index.get(ints);
+                            String finalServer = Integer.toString(ints);
 
-            for (Group group : this.loadedGroups) {
-                Map<Integer, String> index = PermsManager.instance.getCachedServerIndex();
+                            if (group.getServerContext().equals(name)) {
+                                group.setServerContext(finalServer);
+                                PermsManager.instance.getImplementation().sendDebugMessage("Found old-formatted group &e" + group.getName() + "&7 changing to new identifier-serverName format!");
+                            }
 
-                group.getDataManager().performOrderedOpAsync(() -> {
-                    for (int ints : index.keySet()) {
-                        String name = index.get(ints);
-                        String finalServer = Integer.toString(ints);
+                            //inheritance
+                            boolean a = false;
+                            for (Inheritance inheritances : group.getInheritances()) {
+                                if (inheritances.getContext().getServer().equals(name)) {
+                                    a = true;
+                                }
+                            }
+                            if (a) {
+                                PermsManager.instance.getImplementation().sendDebugMessage("Found old-formatted subject inheritances in &e" + group.getName() + "&7 changing to new identifier-serverName format!");
+                                ArrayList<Inheritance> inheritances = group.getInheritances();
+                                group.clearInheritances();
+                                inheritances.forEach(i -> {
+                                    if (i.getContext().getServer().equals(name)) {
+                                        Context.setContextServer(i.getContext(), finalServer);
+                                    }
+                                });
+                                group.addInheritances(inheritances);
+                            }
 
-                        if (group.getServerContext().equals(name)) {
-                            group.setServerContext(finalServer);
-                            PermsManager.instance.getImplementation().sendDebugMessage("Found old-formatted group &e" + group.getName() + "&7 changing to new identifier-serverName format!");
-                        }
 
-                        //inheritance
-                        boolean a = false;
-                        for (Inheritance inheritances : group.getInheritances()) {
-                            if (inheritances.getContext().getServer().equals(name)) {
-                                a = true;
+                            //perms
+                            a = false;
+                            for (PPermission perms : group.getOwnPermissions()) {
+                                if (perms.getContext().getServer().equals(name)) {
+                                    a = true;
+                                }
+                            }
+                            if (a) {
+                                PermsManager.instance.getImplementation().sendDebugMessage("Found old-formatted permissions in &e" + group.getName() + "&7 changing to new identifier-serverName format!");
+                                ArrayList<PPermission> perms = group.getOwnPermissions().getPermissions();
+                                group.removeOwnPermissions(perms);
+                                ArrayList<PPermission> newPerms = new ArrayList<>();
+                                perms.forEach(p -> {
+                                    if (p.getContext().getServer().equals(name)) {
+                                        newPerms.add(new PPermission(p.getPermission(), new Context(finalServer, p.getContext().getWorldName(), p.getExpiry()), p.getPermissionIdentifier()));
+                                    } else {
+                                        newPerms.add(p);
+                                    }
+                                });
+                                group.addOwnPermissions(newPerms);
                             }
                         }
-                        if (a) {
-                            PermsManager.instance.getImplementation().sendDebugMessage("Found old-formatted subject inheritances in &e" + group.getName() + "&7 changing to new identifier-serverName format!");
-                            ArrayList<Inheritance> inheritances = group.getInheritances();
-                            group.clearInheritances();
-                            inheritances.forEach(i -> {
-                                if (i.getContext().getServer().equals(name)) {
-                                    Context.setContextServer(i.getContext(), finalServer);
-                                }
-                            });
-                            group.addInheritances(inheritances);
-                        }
+                        return null;
+                    });
 
-
-                        //perms
-                        a = false;
-                        for (PPermission perms : group.getOwnPermissions()) {
-                            if (perms.getContext().getServer().equals(name)) {
-                                a = true;
-                            }
-                        }
-                        if (a) {
-                            PermsManager.instance.getImplementation().sendDebugMessage("Found old-formatted permissions in &e" + group.getName() + "&7 changing to new identifier-serverName format!");
-                            ArrayList<PPermission> perms = group.getOwnPermissions().getPermissions();
-                            group.removeOwnPermissions(perms);
-                            ArrayList<PPermission> newPerms = new ArrayList<>();
-                            perms.forEach(p -> {
-                                if (p.getContext().getServer().equals(name)) {
-                                    newPerms.add(new PPermission(p.getPermission(), new Context(finalServer, p.getContext().getWorldName(), p.getExpiry()), p.getPermissionIdentifier()));
-                                } else {
-                                    newPerms.add(p);
-                                }
-                            });
-                            group.addOwnPermissions(newPerms);
-                        }
-                    }
-                    return null;
-                });
-
+                }
+                //
+                out.complete(true);
             }
-            //
-            out.complete(true);
         });
 
         return out;
     }
 
-    private void eliminateInheritanceMistakes() {
+    private synchronized void eliminateInheritanceMistakes() {
         ArrayList<Subject> grps = new ArrayList<>(this.loadedGroups);
         Subject.checkForAndRemoveInheritanceMistakes(grps);
         this.loadedGroups.clear();
@@ -222,7 +226,6 @@ public class GroupManager {
      * @return The group
      */
     public Group getGroupExact(UUID groupId) {
-        boolean caseSensitive = PermsManager.instance.getImplementation().getConfigSettings().isCaseSensitiveGroups();
         if (!this.isGroupExactLoaded(groupId)) {
             try {
                 this.loadGroup(groupId, (id) -> new SubjectRef(this.getGroupExact(id)));
@@ -231,7 +234,7 @@ public class GroupManager {
             }
         }
         for (Group g : loadedGroups) {
-            if (caseSensitive && g.getSubjectId().equals(groupId)) {
+            if (g.getSubjectId().equals(groupId)) {
                 return g;
             }
         }
@@ -243,7 +246,7 @@ public class GroupManager {
      *
      * @return all loaded groups
      */
-    public ArrayList<Group> getLoadedGroups() {
+    public synchronized ArrayList<Group> getLoadedGroups() {
         this.loadedGroups.sort(Comparator.comparingInt(Group::getPriority));
         return Lists.newArrayList(this.loadedGroups);
     }
@@ -253,7 +256,7 @@ public class GroupManager {
      *
      * @return A future
      */
-    public CompletableFuture<Boolean> reloadGroups() {
+    public synchronized CompletableFuture<Boolean> reloadGroups() {
         return this.loadGroups();
     }
 
@@ -262,7 +265,7 @@ public class GroupManager {
      *
      * @param group The group to delete
      */
-    public CompletableFuture<Void> removeGroup(Group group) {
+    public synchronized CompletableFuture<Void> removeGroup(Group group) {
         if (group == null) {
             CompletableFuture<Void> f = new CompletableFuture<>();
             f.complete(null);
@@ -278,7 +281,7 @@ public class GroupManager {
      * @param group The group to add
      * @return True if the operation was successful and the group was added, or false if the group is already contained within this group manager
      */
-    public boolean addGroup(Group group) {
+    public synchronized boolean addGroup(Group group) {
         if (this.isGroupLoaded(group.getName(), group.getServerContext()) || this.isGlobalGroupLoaded(group.getName())
                 || this.isGroupExactLoaded(group.getSubjectId())) {
             return false;
@@ -292,6 +295,8 @@ public class GroupManager {
         return true;
     }
 
+    private static final Map<UUID, CompletableFuture<Boolean>> beingLoaded = new HashMap<>();
+
     /**
      * Loads a group
      *
@@ -299,27 +304,41 @@ public class GroupManager {
      * @param supplier The inheritance supplier (Usually it is (s) -> GroupManager.instance.getGroupExact(s))
      * @return a Future
      */
-    public CompletableFuture<Boolean> loadGroup(@NotNull UUID groupId, @NotNull SubjectSupplier supplier) {
+    public synchronized CompletableFuture<Boolean> loadGroup(@NotNull UUID groupId, @NotNull SubjectSupplier supplier) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
-        if (this.isGroupExactLoaded(groupId)) {
-            future.complete(false);
-            return future;
+
+        synchronized (beingLoaded) {
+            if (beingLoaded.containsKey(groupId) && !beingLoaded.get(groupId).isDone()) {
+                return beingLoaded.get(groupId);
+            } else {
+                beingLoaded.remove(groupId);
+                beingLoaded.put(groupId, future);
+            }
         }
 
         PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
             try {
+
+                boolean exists = this.isGroupExactLoaded(groupId);
+
                 CachedSubject cachedSubject = dataManager.getSubject(groupId).get();
                 if (cachedSubject == null || cachedSubject.getSubjectId() == null) {
                     future.complete(false);
                     return;
                 }
-                Group g = new Group(cachedSubject, supplier, this);
-                this.loadedGroups.add(g);
+                if(!exists) {
+                    Group g = new Group(cachedSubject, supplier, this);
+                    this.loadedGroups.add(g);
+                } else {
+                    this.getGroupExact(groupId).updateFromCachedSubject(cachedSubject, supplier);
+                }
                 this.eliminateInheritanceMistakes();
                 future.complete(true);
+                beingLoaded.remove(groupId);
             } catch (Exception e) {
                 e.printStackTrace();
                 future.complete(false);
+                beingLoaded.remove(groupId);
             }
         });
 
@@ -346,10 +365,9 @@ public class GroupManager {
         boolean caseSensitive = PermsManager.instance.getImplementation().getConfigSettings().isCaseSensitiveGroups();
         for (Group g : loadedGroups) {
             if (caseSensitive && g.getName().equals(name) || !caseSensitive && g.getName().equalsIgnoreCase(name)) {
-                if (!g.getServerContext().equals(server)) {
-                    continue;
+                if (g.getServerContext().equals(server)) {
+                    return true;
                 }
-                return true;
             }
         }
         return false;
@@ -386,9 +404,8 @@ public class GroupManager {
     }
 
     public boolean isGroupExactLoaded(UUID groupId) {
-        boolean caseSensitive = PermsManager.instance.getImplementation().getConfigSettings().isCaseSensitiveGroups();
         for (Group g : loadedGroups) {
-            if (caseSensitive && g.getSubjectId().equals(groupId)) {
+            if (g.getSubjectId().equals(groupId)) {
                 return true;
             }
         }
@@ -407,7 +424,10 @@ public class GroupManager {
 
     public Group getDefaultGroup() {
         String groupName = PermsManager.instance.getImplementation().getConfigSettings().getDefaultGroup();
+        Bukkit.getLogger().info("Searching for default group: " + groupName);
         Group g = this.getVisibleGroup(groupName);
+        Group finalG = g;
+        Bukkit.getLogger().info("Found: " + (finalG != null));
         if (g == null) {
             g = this.getNewDefaultGroup();
             this.addGroup(g);

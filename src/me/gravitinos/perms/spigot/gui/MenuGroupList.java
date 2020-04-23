@@ -95,6 +95,7 @@ public class MenuGroupList extends UtilMenuActionableList {
             builder.addLore("&fSuffix: " + group.getSuffix());
             builder.addLore("&fChat Colour: " + group.getChatColour() + "this");
             builder.addLore("&fDescription: ");
+            builder.addLore("&fGroup Id: &7" + group.getSubjectId());
             for(String line : group.getDescription().split("\\\\n")){
                 builder.addLore(" &f" + line);
             }

@@ -6,7 +6,9 @@ import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.cache.OwnerPermissionPair;
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.subject.*;
+import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.Connection;
@@ -222,6 +224,16 @@ public class SQLDao implements AutoCloseable{
         return "DELETE FROM " + TABLE_INHERITANCE;
     }
 
+    protected String dropTablePermissions(){
+        return "DROP TABLE " + TABLE_PERMISSIONS;
+    }
+    protected String dropTableInheritance(){
+        return "DROP TABLE " + TABLE_INHERITANCE;
+    }
+    protected String dropTableSubjectData(){
+        return "DROP TABLE " + TABLE_SUBJECTDATA;
+    }
+
     /**
      * Gets the statement to clear permissions table
      * @return
@@ -266,11 +278,11 @@ public class SQLDao implements AutoCloseable{
     }
 
     protected String getPermissionsFromTypeJoinSubjectData(){
-        return "SELECT * FROM " + TABLE_SUBJECTDATA + " LEFT JOIN " + TABLE_PERMISSIONS + " ON SubjectId=OwnerSubjectId WHERE Type=?";
+        return "SELECT * FROM " + TABLE_SUBJECTDATA + " INNER JOIN " + TABLE_PERMISSIONS + " ON SubjectId=OwnerSubjectId WHERE Type=?";
     }
 
     protected String getInheritancesFromTypeJoinSubjectData(){
-        return "SELECT * FROM " + TABLE_SUBJECTDATA + " LEFT JOIN " + TABLE_INHERITANCE + " ON SubjectId=Child WHERE Type=?";
+        return "SELECT * FROM " + TABLE_SUBJECTDATA + " INNER JOIN " + TABLE_INHERITANCE + " ON SubjectId=Child WHERE Type=?";
     }
 
     //OUTDATED -> No longer using identifiers, so no need to rename
@@ -290,13 +302,13 @@ public class SQLDao implements AutoCloseable{
         return "SELECT * FROM " + TABLE_SERVER_INDEX;
     }
 
-    protected String getDeleteServerIndexQuery(){
-        return "DELETE FROM " + TABLE_SERVER_INDEX + " WHERE ServerId=?";
-    }
-
 
     protected String getPutServerIndexUpdate(){
         return "INSERT INTO " + TABLE_SERVER_INDEX + " (ServerId, ServerName) VALUES (?, ?)";
+    }
+
+    protected String getDeleteServerIndexUpdate(){
+        return "DELETE FROM " + TABLE_SERVER_INDEX + " WHERE ServerId=?";
     }
 
     //
@@ -319,18 +331,17 @@ public class SQLDao implements AutoCloseable{
 
         SQLException e = executeInTransaction(() -> {
             try {
-                prepareStatement(this.getClearInheritanceTableUpdate()).executeUpdate();
-                prepareStatement(this.getClearPermissionsTableUpdate()).executeUpdate();
-                prepareStatement(this.getClearSubjectDataTableUpdate()).executeUpdate();
+                prepareStatement(this.dropTableInheritance()).executeUpdate();
+                prepareStatement(this.dropTablePermissions()).executeUpdate();
+                prepareStatement(this.dropTableSubjectData()).executeUpdate();
+                this.initializeTables();
                 return null;
             }catch(SQLException ex){
                 ex.printStackTrace();
                 return ex;
             }
         });
-        if(e == null){
-            return;
-        } else {
+        if (e != null) {
             throw e;
         }
 
@@ -375,8 +386,11 @@ public class SQLDao implements AutoCloseable{
         s.setString(1, subjectId.toString());
         s.executeUpdate();
 
-        s = prepareStatement(deleteInheritanceToChildren ? this.getDeleteInheritanceByChildOrParentUpdate() : this.getDeleteInheritanceByChildTypeUpdate());
+        s = prepareStatement(deleteInheritanceToChildren ? this.getDeleteInheritanceByChildOrParentUpdate() : this.getDeleteInheritanceByChildUpdate());
         s.setString(1, subjectId.toString());
+        if(deleteInheritanceToChildren){
+            s.setString(2, subjectId.toString());
+        }
         s.executeUpdate();
 
     }
@@ -401,12 +415,24 @@ public class SQLDao implements AutoCloseable{
         s.executeBatch();
     }
 
-    public ArrayList<CachedSubject> getAllSubjectsOfType(String type) throws SQLException{
-        PreparedStatement s = prepareStatement(this.getPermissionsFromTypeJoinSubjectData());
-        s.setString(1, type);
-        ResultSet results = s.executeQuery();
+    public ArrayList<CachedSubject> getAllSubjectsOfType(String type) throws SQLException {
 
         Map<UUID, CachedSubject> subjectMap = new HashMap<>();
+
+        PreparedStatement s = prepareStatement(this.getSubjectDataFromTypeQuery());
+        s.setString(1, type);
+        ResultSet results = s.executeQuery();
+        while(results.next()){
+            String idStr = results.getString("SubjectId");
+            if(idStr != null){
+                UUID id = UUID.fromString(idStr);
+                subjectMap.put(id, new CachedSubject(id, type, SubjectData.fromString(results.getString("Data")), new ArrayList<>(), new ArrayList<>()));
+            }
+        }
+
+        s = prepareStatement(this.getPermissionsFromTypeJoinSubjectData());
+        s.setString(1, type);
+        results = s.executeQuery();
 
         while(results.next()){
             String subIdStr = results.getString("SubjectId");
@@ -416,8 +442,7 @@ public class SQLDao implements AutoCloseable{
             UUID subjectId = UUID.fromString(results.getString("SubjectId"));
             CachedSubject sub = subjectMap.get(subjectId);
             if(sub == null){
-                sub = new CachedSubject(subjectId, type, SubjectData.fromString(results.getString("Data")), new ArrayList<>(), new ArrayList<>());
-                subjectMap.put(subjectId, sub);
+                continue;
             }
             if(results.getString("Permission") == null){
                 continue;
@@ -437,8 +462,7 @@ public class SQLDao implements AutoCloseable{
             UUID subjectId = UUID.fromString(results.getString("SubjectId"));
             CachedSubject sub = subjectMap.get(subjectId);
             if(sub == null){
-                sub = new CachedSubject(subjectId, type, SubjectData.fromString(results.getString("Data")), new ArrayList<>(), new ArrayList<>());
-                subjectMap.put(subjectId, sub);
+                continue;
             }
             sub.getInheritances().add(new CachedInheritance(UUID.fromString(results.getString("Child")), UUID.fromString(results.getString("Parent")), results.getString("ChildType"), results.getString("ParentType"), Context.fromString(results.getString("Context"))));
         }
@@ -464,7 +488,7 @@ public class SQLDao implements AutoCloseable{
     }
 
     public void removeServerIndex(int serverId) throws SQLException {
-        PreparedStatement s = prepareStatement(this.getDeleteServerIndexQuery());
+        PreparedStatement s = prepareStatement(this.getDeleteServerIndexUpdate());
         s.setInt(1, serverId);
         s.executeUpdate();
     }
@@ -489,6 +513,7 @@ public class SQLDao implements AutoCloseable{
                         if(inheritances == null){
                             continue;
                         }
+                        Bukkit.broadcastMessage("Adding inheritance (in bulk add subjects) " + inheritances.getParent().getSubjectId() + " to " + subject.getSubjectId().toString());
                         sInheritances.setString(1, subject.getSubjectId().toString());
                         sInheritances.setString(2, inheritances.getParent().getSubjectId().toString());
                         sInheritances.setString(3, inheritances.getChild().getType());
@@ -824,37 +849,42 @@ public class SQLDao implements AutoCloseable{
         ResultSet set = statement.executeQuery();
         if(set.next()){
             try{
-                set.getRef("Identifier");
+                set.getString("Identifier");
             } catch(SQLException e){
-                return true;
+                return false;
             }
         }
-        return false;
+        return true;
     }
 
     public boolean convertIdentifierToSubjectId() throws SQLException {
 
         //Table modifications
-        PreparedStatement changeIdentifierSD = prepareStatement("ALTER TABLE " + TABLE_SUBJECTDATA + " CHANGE Identifier SubjectId varchar(48)");
-        PreparedStatement changeTypeSD = prepareStatement("ALTER TABLE " + TABLE_SUBJECTDATA + " MODIFY Type varchar(32)");
-        PreparedStatement changeDataSD = prepareStatement("ALTER TABLE " + TABLE_SUBJECTDATA + " MODIFY Data varchar(1024)");
+        try {
+            PreparedStatement changeIdentifierSD = prepareStatement("ALTER TABLE " + TABLE_SUBJECTDATA + " CHANGE Identifier SubjectId varchar(48)");
+            PreparedStatement changeTypeSD = prepareStatement("ALTER TABLE " + TABLE_SUBJECTDATA + " MODIFY Type varchar(32)");
+            PreparedStatement changeDataSD = prepareStatement("ALTER TABLE " + TABLE_SUBJECTDATA + " MODIFY Data varchar(1024)");
 
 
-        PreparedStatement changePermIdentifierP = prepareStatement("ALTER TABLE " + TABLE_PERMISSIONS + " MODIFY PermissionIdentifier varchar(48)");
-        PreparedStatement changeOwnerIdentifierP = prepareStatement("ALTER TABLE " + TABLE_PERMISSIONS + " CHANGE OwnerIdentifier OwnerSubjectId varchar(48)");
+            PreparedStatement changePermIdentifierP = prepareStatement("ALTER TABLE " + TABLE_PERMISSIONS + " MODIFY PermissionIdentifier varchar(48)");
+            PreparedStatement changeOwnerIdentifierP = prepareStatement("ALTER TABLE " + TABLE_PERMISSIONS + " CHANGE OwnerIdentifier OwnerSubjectId varchar(48)");
 
-        PreparedStatement changeChildI = prepareStatement("ALTER TABLE " + TABLE_INHERITANCE + " MODIFY Child varchar(48)");
-        PreparedStatement changeParentI = prepareStatement("ALTER TABLE " + TABLE_INHERITANCE + " MODIFY Parent varchar(48)");
+            PreparedStatement changeChildI = prepareStatement("ALTER TABLE " + TABLE_INHERITANCE + " MODIFY Child varchar(48)");
+            PreparedStatement changeParentI = prepareStatement("ALTER TABLE " + TABLE_INHERITANCE + " MODIFY Parent varchar(48)");
 
-        changeIdentifierSD.executeUpdate();
-        changeTypeSD.executeUpdate();
-        changeDataSD.executeUpdate();
+            changeIdentifierSD.executeUpdate();
+            changeTypeSD.executeUpdate();
+            changeDataSD.executeUpdate();
 
-        changePermIdentifierP.executeUpdate();
-        changeOwnerIdentifierP.executeUpdate();
+            changePermIdentifierP.executeUpdate();
+            changeOwnerIdentifierP.executeUpdate();
 
-        changeChildI.executeUpdate();
-        changeParentI.executeUpdate();
+            changeChildI.executeUpdate();
+            changeParentI.executeUpdate();
+
+        } catch (Exception e){
+            e.printStackTrace();
+        }
 
         //Changing identifiers to subject ids in inheritances and permissions
         Map<String, UUID> mapIdentifierSubjectId = new HashMap<>();
@@ -862,7 +892,8 @@ public class SQLDao implements AutoCloseable{
         //Get and change all GROUP data, permissions, and inheritances, no need for user data, because their identifiers just become their subject ids
         PreparedStatement getAllGroupData = prepareStatement(this.getSubjectDataFromTypeQuery());
 
-        PreparedStatement changeGroupData = prepareStatement("UPDATE " + TABLE_SUBJECTDATA + " SET SubjectId=? WHERE SubjectId=?");
+        PreparedStatement changeGroupData1 = prepareStatement("UPDATE " + TABLE_SUBJECTDATA + " SET SubjectId=? WHERE SubjectId=?");
+        PreparedStatement changeGroupData2 = prepareStatement("UPDATE " + TABLE_SUBJECTDATA + " SET Data=? WHERE SubjectId=?");
         PreparedStatement changeInheritanceData1 = prepareStatement("UPDATE " + TABLE_INHERITANCE + " SET Child=? WHERE Child=?");
         PreparedStatement changeInheritanceData2 = prepareStatement("UPDATE " + TABLE_INHERITANCE + " SET Parent=? WHERE Parent=?");
         PreparedStatement changePermissionData = prepareStatement("UPDATE " + TABLE_PERMISSIONS + " SET OwnerSubjectId=? WHERE OwnerSubjectId=?");
@@ -877,9 +908,19 @@ public class SQLDao implements AutoCloseable{
                 UUID id = UUID.randomUUID(); //Create new group id
                 mapIdentifierSubjectId.put(identifier, id);
 
-                changeGroupData.setString(1, id.toString());
-                changeGroupData.setString(2, identifier);
-                changeGroupData.addBatch();
+                String groupName = removeServerFromIdentifier(identifier);
+
+                GroupData groupData = new GroupData(SubjectData.fromString(set.getString(3)));
+                groupData.setName(groupName);
+
+                changeGroupData1.setString(1, id.toString());
+                changeGroupData1.setString(2, identifier);
+                changeGroupData1.addBatch();
+
+                //Identifier is changed by now, because 1 will be executed before 2
+                changeGroupData2.setString(1, groupData.toString());
+                changeGroupData2.setString(2, id.toString()); //So use id.toString() instead of identifier
+                changeGroupData2.addBatch();
 
                 changeInheritanceData1.setString(1, id.toString());
                 changeInheritanceData1.setString(2, identifier);
@@ -895,7 +936,26 @@ public class SQLDao implements AutoCloseable{
             }
         }
 
+        changeGroupData1.executeBatch();
+        changeGroupData2.executeBatch();
+        changeInheritanceData1.executeBatch();
+        changeInheritanceData2.executeBatch();
+        changePermissionData.executeBatch();
+
         return !checkConverterIdentifierToSubjectId();
+    }
+
+    private static final String SERVER_NAME_SEPERATOR = "~~";
+
+    private static String removeServerFromIdentifier(String identifier){
+        int index = identifier.indexOf(SERVER_NAME_SEPERATOR);
+        if(index == -1){
+            return identifier;
+        }
+        if(index == identifier.length() - SERVER_NAME_SEPERATOR.length()){
+            return "";
+        }
+        return identifier.substring(index + SERVER_NAME_SEPERATOR.length());
     }
 
     public void initializeTables() throws SQLException {
