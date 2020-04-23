@@ -23,10 +23,10 @@ import java.util.ArrayList;
 
 public class MenuMain extends Menu {
 
-    public static final Sound OPEN_USER_LIST_SOUND = Sound.UI_BUTTON_CLICK;
-    public static final Sound OPEN_GROUP_LIST_SOUND = Sound.UI_BUTTON_CLICK;
-    public static final Sound DING_SOUND = Sound.ENTITY_EXPERIENCE_ORB_PICKUP;
-    public static final Sound ITEM_BREAK_SOUND = Sound.ENTITY_ITEM_BREAK;
+    public static final Sound OPEN_USER_LIST_SOUND = Sound.CLICK;
+    public static final Sound OPEN_GROUP_LIST_SOUND = OPEN_USER_LIST_SOUND;
+    public static final Sound DING_SOUND = Sound.ORB_PICKUP;
+    public static final Sound ITEM_BREAK_SOUND = Sound.ITEM_BREAK;
 
 
     public MenuMain(Player player) {
@@ -58,8 +58,15 @@ public class MenuMain extends Menu {
             }
         });
 
+        MenuElement clearAllData = new MenuElement(new ItemBuilder(Material.REDSTONE_BLOCK, 1).setName("&4&lClear All Data").addLore("&7Clears all groups, users, and inheritances").build())
+                .setClickHandler((e, i) -> {
+                    GroupManager.instance.getDataManager().clearAllData();
+                    this.getElement(e.getSlot()).addTempLore(this, "&aDone!", 60);
+                });
+
         this.setElement(20, users);
         this.setElement(24, groups);
+        this.setElement(4, clearAllData);
 
     }
 

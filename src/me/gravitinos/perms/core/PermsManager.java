@@ -6,6 +6,7 @@ import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.backend.sql.SQLHandler;
 import me.gravitinos.perms.core.config.PermsConfiguration;
 import me.gravitinos.perms.core.converter.Converter;
+import me.gravitinos.perms.core.converter.converters.ConverterIdentifierToSubjectId;
 import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.user.UserManager;
@@ -55,7 +56,8 @@ public class PermsManager {
         }
 
         //Converters (things that change formats from old versions to new formats of newer versions)
-        runConverters();
+        //Please put them in order of oldest version to newest version
+        runConverters(new ConverterIdentifierToSubjectId());
 
         try {
             this.groupManager.loadGroups().get(); //Load groups
@@ -80,7 +82,7 @@ public class PermsManager {
                     getImplementation().consoleLog(getImplementation().getPluginName() + " Converting failed for: " + converter.getName());
                 } else {
                     getImplementation().addToLog("Successfully converted");
-                    getImplementation().consoleLog(getImplementation().getPluginName() + " Running converter: " + converter.getName());
+                    getImplementation().consoleLog(getImplementation().getPluginName() + " Successfully converted");
                 }
             }
         }
@@ -133,8 +135,14 @@ public class PermsManager {
         }
         try {
             dataManager.setup().get();
-            dataManager.putServerIndex(config.getServerId(), config.getServerName()).get();
             cachedServerIndex = dataManager.getServerIndex().get();
+            if(cachedServerIndex.containsKey(config.getServerId())){
+                if(!cachedServerIndex.get(config.getServerId()).equals(config.getServerName())){
+                    removeServerFromIndex(config.getServerId());
+                    dataManager.putServerIndex(config.getServerId(), config.getServerName()).get();
+                    cachedServerIndex = dataManager.getServerIndex().get();
+                }
+            }
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
             this.implementation.addToLog(ChatColor.RED + "Unable to setup SQL Database!");
@@ -145,18 +153,6 @@ public class PermsManager {
         return true;
     }
 
-//    public static final String SERVER_NAME_SEPERATOR = "~~";
-
-//    public static String removeServerFromIdentifier(String identifier){
-//        int index = identifier.indexOf(SERVER_NAME_SEPERATOR);
-//        if(index == -1){
-//            return identifier;
-//        }
-//        if(index == identifier.length() - SERVER_NAME_SEPERATOR.length()){
-//            return "";
-//        }
-//        return identifier.substring(index + SERVER_NAME_SEPERATOR.length());
-//    }
 
 //    public static String addServerToIdentifier(String identifier, String server){
 //        return server + SERVER_NAME_SEPERATOR + identifier;

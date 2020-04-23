@@ -85,4 +85,9 @@ public class BungeeImpl implements PermsImplementation {
     public void sendDebugMessage(String message) {
 
     }
+
+    @Override
+    public String getPluginName() {
+        return "Perms";
+    }
 }

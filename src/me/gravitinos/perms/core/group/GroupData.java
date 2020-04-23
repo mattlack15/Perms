@@ -87,14 +87,26 @@ public class GroupData extends SubjectData {
         this.setData(PRIORITY, Integer.toString(i));
     }
 
-    public void setServerContext(@NotNull String context){
+    protected boolean setServerContext(@NotNull String context, boolean force){
+        if(!force && GroupManager.instance.getGroup(this.getName(), context) != null){
+            return false;
+        }
         this.setData(SERVER_CONTEXT, context);
         this.checkForServerContext();
+        return true;
+    }
+
+    public boolean setServerContext(@NotNull String context){
+        return this.setServerContext(context, false);
     }
 
     private void checkForServerContext(){
         if(this.getServerContext() == null){
-            this.setServerContext(SERVER_LOCAL);
+            if(GroupManager.instance.getGroup(this.getName(), SERVER_LOCAL) != null){
+                this.setServerContext(SERVER_GLOBAL, true);
+            } else {
+                this.setServerContext(SERVER_LOCAL, true);
+            }
         }
     }
 }

@@ -468,9 +468,10 @@ public class Group extends Subject<GroupData> {
      * Set the server in which this group applies (Custom or GroupData.SERVER_LOCAL or GroupData.SERVER_GLOBAL)
      *
      * @param context
+     * @return Whether it was successful, it could be unsuccessful if a group already exists with that server context and this group name
      */
-    public void setServerContext(String context) {
-        this.getData().setServerContext(context);
+    public boolean setServerContext(String context) {
+        return this.getData().setServerContext(context);
     } //Automatically saved to data-manager
 
     /**

@@ -16,9 +16,11 @@ import me.gravitinos.perms.core.user.UserData;
 import me.gravitinos.perms.core.user.UserManager;
 import me.gravitinos.perms.core.util.MapUtil;
 import me.gravitinos.perms.spigot.SpigotPerms;
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -145,7 +147,6 @@ public class SpigotFileDataManager extends DataManager {
                 UserData data = new UserData(subject.getData());
                 ConfigurationSection section = usersConfig.createSection(USER_SECTION + "." + subject.getSubjectId());
                 section.set(USER_DATA_USERNAME, data.getName());
-                section.set(USER_DATA_DISPLAYGROUP, data.getDisplayGroup(SpigotPerms.instance.getImpl().getConfigSettings().getServerName()));
                 section.set(USER_DATA_NOTES, data.getNotes());
                 section.set(USER_DATA_PREFIX, data.getPrefix());
                 section.set(USER_DATA_SUFFIX, data.getSuffix());
@@ -158,13 +159,13 @@ public class SpigotFileDataManager extends DataManager {
             } else if (subject.getType().equals(Subject.GROUP)) {
                 //Group Data
                 GroupData data = new GroupData(subject.getData());
-                ConfigurationSection section = groupsConfig.createSection(GROUP_SECTION + "." + subject.getSubjectId());
+                ConfigurationSection section = groupsConfig.createSection(GROUP_SECTION + "." + subject.getName());
                 section.set(GROUP_DATA_PREFIX, data.getPrefix());
                 section.set(GROUP_DATA_SUFFIX, data.getSuffix());
                 section.set(GROUP_DATA_CHATCOLOUR, data.getChatColour());
                 section.set(GROUP_DATA_DESCRIPTION, data.getDescription());
                 section.set(GROUP_DATA_PRIORITY, data.getPriority());
-                section.set(GROUP_DATA_ID, subject.getSubjectId());
+                section.set(GROUP_DATA_ID, subject.getSubjectId().toString());
 
                 //Other Data
                 saveGroupsConfig();
@@ -180,7 +181,7 @@ public class SpigotFileDataManager extends DataManager {
     }
 
     private boolean subjectExists(UUID subjectId) {
-        return getGroupName(subjectId) != null;
+        return getGroupName(subjectId) != null || usersConfig.isConfigurationSection(USER_SECTION + "." + subjectId);
     }
 
     public ConfigurationSection getGroupConfigSection(UUID subjectId){
@@ -216,6 +217,15 @@ public class SpigotFileDataManager extends DataManager {
         return false;
     }
 
+    public boolean convertIdentifierToSubjectId() {
+        for(String keys : groupsConfig.getConfigurationSection(GROUP_SECTION).getKeys(false)){
+            if(!groupsConfig.isString(GROUP_SECTION + "." + keys + "." + GROUP_DATA_ID)){
+                groupsConfig.set(GROUP_SECTION + "." + keys + "." + GROUP_DATA_ID, UUID.randomUUID().toString());
+            }
+        }
+        return !checkConverterIdentifierToSubjectId();
+    }
+
     @Override
     public CompletableFuture<GenericSubjectData> getSubjectData(UUID subjectId) {
         CompletableFuture<GenericSubjectData> future = new CompletableFuture<>();
@@ -232,6 +242,7 @@ public class SpigotFileDataManager extends DataManager {
                 data.setPrefix(section.getString(GROUP_DATA_PREFIX));
                 data.setSuffix(section.getString(GROUP_DATA_SUFFIX));
                 data.setPriority(section.getInt(GROUP_DATA_PRIORITY));
+                data.setName(getGroupName(subjectId));
 
                 future.complete(new GenericSubjectData(data));
             } else {
@@ -241,7 +252,6 @@ public class SpigotFileDataManager extends DataManager {
                     future.complete(null);
                     return null;
                 }
-                data.setDisplayGroup(SpigotPerms.instance.getImpl().getConfigSettings().getServerName(), GroupManager.instance.getVisibleGroup(section.getString(USER_DATA_DISPLAYGROUP)).getSubjectId());
                 data.setName(section.getString(USER_DATA_USERNAME));
                 data.setNotes(section.getString(USER_DATA_NOTES));
                 data.setPrefix(section.getString(USER_DATA_PREFIX));
@@ -275,6 +285,7 @@ public class SpigotFileDataManager extends DataManager {
                 }
                 CachedSubject subject = new CachedSubject(name, this.getSubjectType(name), this.getSubjectData(name).get(), this.getPermissions(name).get().getPermissions(), this.getInheritances(name).get());
 
+
                 if (subject.getData() == null) {
                     future.complete(null);
                     return null;
@@ -282,6 +293,7 @@ public class SpigotFileDataManager extends DataManager {
                 future.complete(subject);
                 return null;
             } catch (Exception e) {
+                e.printStackTrace();
                 future.complete(null);
                 return null;
             }
@@ -531,7 +543,7 @@ public class SpigotFileDataManager extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> addInheritance(Subject subject, Subject inheritance, Context context) {
+    public CompletableFuture<Void> addInheritance(@NotNull Subject subject, @NotNull Subject inheritance, Context context) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
             ConfigurationSection section = getSection(subject.getSubjectId());
@@ -852,6 +864,8 @@ public class SpigotFileDataManager extends DataManager {
 
     @Override
     public CompletableFuture<Boolean> testBackendConnection() {
-        return new CompletableFuture<>(true);
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        future.complete(true);
+        return future;
     }
 }

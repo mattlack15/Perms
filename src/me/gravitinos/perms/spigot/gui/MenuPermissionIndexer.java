@@ -111,6 +111,11 @@ public class MenuPermissionIndexer extends UtilMenuActionableList {
             element.setClickHandler((e, i) -> {
                 if(!alreadyHasPermission[0]) {
                     supplier.addPermission(permission);
+
+                    //Reload current permissions (bug fix)
+                    currentPermissions.clear();
+                    currentPermissions.addAll(supplier.getCurrentPermissions());
+
                     alreadyHasPermission[0] = true;
                     element.getItem().setType(Material.EMERALD_BLOCK);
                     element.setItem(new ItemBuilder(element.getItem()).setName("&a" + permission)

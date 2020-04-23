@@ -234,7 +234,10 @@ public class ChatListener implements Listener {
         String lastColors = "";
 
         for (TextComponent comps : components) {
-            mainComponent.addExtra(lastColors + comps);
+            TextComponent component = new TextComponent(TextComponent.fromLegacyText(lastColors + comps.toLegacyText()));
+            component.setClickEvent(comps.getClickEvent());
+            component.setHoverEvent(comps.getHoverEvent());
+            mainComponent.addExtra(comps);
             lastColors = ChatColor.getLastColors(comps.toLegacyText());
         }
         return mainComponent;

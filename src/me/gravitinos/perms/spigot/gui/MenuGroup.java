@@ -44,6 +44,7 @@ public class MenuGroup extends Menu {
                 MenuManager.instance.invalidateElementsInInvForMenu(this, e.getSlot());
             } else {
                 if(!new ItemBuilder(getElement(e.getSlot()).getItem()).getLore().contains(confirmationMessage)){
+                    this.getElement(e.getSlot()).addTempLore(this, "&e", 60);
                     this.getElement(e.getSlot()).addTempLore(this, "&eAre you sure you want to do this?", 60);
                     this.getElement(e.getSlot()).addTempLore(this, confirmationMessage, 60);
                 } else {
@@ -67,25 +68,31 @@ public class MenuGroup extends Menu {
             }
         });
         MenuElement serverChanger = (new MenuElement((new ItemBuilder(Material.ENDER_PORTAL_FRAME, 1)).setName("&eServer").addLore("&6" + (this.group.getServerContext().equals("") ? "&cGLOBAL" : (this.group.getServerContext().equals(GroupData.SERVER_LOCAL) ? "&aLOCAL" : this.group.getServerNameOfServerContext()))).addLore("&7Click to change").build())).setClickHandler((e, i) -> {
+            String finalServer = this.group.getServerContext().equals(GroupData.SERVER_LOCAL) ? "" : GroupData.SERVER_LOCAL;
             if (!e.getWhoClicked().hasPermission("ranks.group.manageoptions")) {
                 this.getElement(e.getSlot()).addTempLore(this, "&cYou do not have access to this!", 60);
                 MenuManager.instance.invalidateElementsInInvForMenu(this, e.getSlot());
             } else if (!this.group.getServerContext().equals(GroupData.SERVER_LOCAL) && !this.group.getServerContext().equals("")) {
                 this.getElement(e.getSlot()).addTempLore(this, "&cCannot change foreign server context", 60);
+            } else if (GroupManager.instance.isGroupLoaded(this.group.getName(), finalServer)) {
+                this.getElement(e.getSlot()).addTempLore(this, "&cA group already exists with that server context and this group's name", 100);
             } else {
                 this.getElement(e.getSlot()).setItem((new ItemBuilder(this.getElement(e.getSlot()).getItem())).setLore(1, "&7Working...").build());
                 this.getElement(e.getSlot()).setClickHandler((e1, i1) -> {
                 });
                 MenuManager.instance.invalidateElementsInInvForMenu(this, e.getSlot());
-                String finalServer = this.group.getServerContext().equals(GroupData.SERVER_LOCAL) ? "" : GroupData.SERVER_LOCAL;
                 this.group.getDataManager().performOrderedOpAsync(() -> {
-                    this.group.setServerContext(finalServer);
+
+                    if(!this.group.setServerContext(finalServer)){
+                        MenuManager.instance.invalidateElementsInInvForMenu(this, e.getSlot());
+                        this.getElement(e.getSlot()).addTempLore(this, "&cUnable to change server context!", 60);
+                        return null;
+                    }
+
                     ArrayList<PPermission> perms = this.group.getOwnPermissions().getPermissions();
                     this.group.removeOwnPermissions(perms);
-                    ArrayList<PPermission> newPerms = new ArrayList();
-                    perms.forEach((p) -> {
-                        newPerms.add(new PPermission(p.getPermission(), new Context(finalServer, p.getContext().getWorldName(), p.getExpiry()), p.getPermissionIdentifier()));
-                    });
+                    ArrayList<PPermission> newPerms = new ArrayList<>();
+                    perms.forEach((p) -> newPerms.add(new PPermission(p.getPermission(), new Context(finalServer, p.getContext().getWorldName(), p.getExpiry()), p.getPermissionIdentifier())));
                     this.group.addOwnPermissions(newPerms);
                     this.setup();
                     return null;

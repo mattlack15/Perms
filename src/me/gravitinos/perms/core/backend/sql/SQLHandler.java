@@ -5,6 +5,8 @@ import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.subject.*;
+import org.bukkit.Bukkit;
+import org.jetbrains.annotations.NotNull;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -184,6 +186,7 @@ public class SQLHandler extends DataManager {
                 dao.removeAllInheritances(subject.getSubjectId());
                 ArrayList<CachedInheritance> inheritances = new ArrayList<>();
                 Subject.getInheritances(subject).forEach((i -> inheritances.add(new CachedInheritance(i.getChild().getSubjectId(), i.getParent().getSubjectId(), i.getChild().getType(), i.getParent().getType(), i.getContext()))));
+                new UnsupportedOperationException().printStackTrace();
                 dao.addInheritances(inheritances);
                 future.complete(null);
             } catch(Exception e){
@@ -195,7 +198,7 @@ public class SQLHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> addInheritance(Subject subject, Subject parent, Context context) {
+    public CompletableFuture<Void> addInheritance(@NotNull Subject subject, @NotNull Subject parent, Context context) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
             try (SQLDao dao = getDao()){

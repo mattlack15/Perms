@@ -47,7 +47,7 @@ public class UserManager {
      * @param username The username of the user -> in case the user is not in the data manager and userdata has to be created
      * @return A future containing whether the operation was successful (true) or not (false)
      */
-    public CompletableFuture<Boolean> loadUser(@NotNull UUID id, @NotNull String username) {
+    public synchronized CompletableFuture<Boolean> loadUser(@NotNull UUID id, @NotNull String username) {
         CompletableFuture<Boolean> result = new CompletableFuture<>();
 
         synchronized (beingLoaded) {
@@ -71,8 +71,11 @@ public class UserManager {
                     this.addUser(user); //This will also save the user to the backend
                 } else {
                     user = new User(cachedSubject, (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s)), this);
-                    this.unloadUser(id); //In case they are already loaded
-                    this.loadedUsers.add(user); //This will NOT save the user to the backend (Purposefully)
+                    if (this.isUserLoaded(user.getUniqueID())) {
+                        this.getUser(user.getUniqueID()).updateFromCachedSubject(cachedSubject, (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s))); //Will not save user to the backend (Purposefully)
+                    } else {
+                        this.loadedUsers.add(user); //This will NOT save the user to the backend (Purposefully)
+                    }
                 }
 
                 //TODO remove later
