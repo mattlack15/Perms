@@ -1,6 +1,9 @@
 package me.gravitinos.perms.core.subject;
 
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.ContextSet;
+import me.gravitinos.perms.core.context.ImmutableContextSet;
+import me.gravitinos.perms.core.context.MutableContextSet;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
@@ -10,34 +13,22 @@ import java.util.UUID;
  */
 public final class PPermission {
     private final String permission;
-    private final Context context;
+    private final ContextSet contextSet;
     private UUID permissionIdentifier = UUID.randomUUID();
 
-    public PPermission(@NotNull String permission, @NotNull Context context) {
-        this.context = context;
+    public PPermission(@NotNull String permission, @NotNull ContextSet contextSet) {
+        this.contextSet = contextSet;
         this.permission = permission.toLowerCase();
     }
 
-    public PPermission(@NotNull String permission, @NotNull Context context, @NotNull UUID permissionIdentifier) {
-        this(permission, context);
+    public PPermission(@NotNull String permission, @NotNull ContextSet contextSet, @NotNull UUID permissionIdentifier) {
+        this(permission, contextSet);
         this.permissionIdentifier = permissionIdentifier;
     }
 
 
     public PPermission(@NotNull String permission) {
-        this(permission, Context.CONTEXT_SERVER_LOCAL);
-    }
-
-    /**
-     * Check if this permission can apply to a certain situation
-     *
-     * @param worldName     the world name of the situation
-     * @param serverId      the server id of the situation
-     * @param currentTimeMs the current time in milliseconds (System.currentTimeMillis())
-     * @return Whether this permission can apply to the situation
-     */
-    public boolean applies(String worldName, int serverId, long currentTimeMs) {
-        return !this.isExpired(currentTimeMs) && this.context.applies(serverId, worldName);
+        this(permission, new MutableContextSet(Context.CONTEXT_SERVER_LOCAL));
     }
 
     public UUID getPermissionIdentifier() {
@@ -60,7 +51,7 @@ public final class PPermission {
      * @return Whether this permission is expired
      */
     public boolean isExpired(long currentTimeMs) {
-        return getContext().isExpired(currentTimeMs);
+        return this.contextSet.isExpired(currentTimeMs);
     }
 
     /**
@@ -69,16 +60,16 @@ public final class PPermission {
      * @return The expiration in ms since epoch
      */
     public long getExpiry() {
-        return this.getContext().getBeforeTime();
+        return this.contextSet.getExpiration();
     }
 
     /**
-     * Get the context where this permission applies
+     * Get the contexts where this permission applies
      *
-     * @return The context
+     * @return The contextSet
      */
-    public Context getContext() {
-        return this.context;
+    public ImmutableContextSet getContext() {
+        return new ImmutableContextSet(this.contextSet);
     }
 
     @Override

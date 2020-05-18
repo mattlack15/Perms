@@ -3,16 +3,14 @@ package me.gravitinos.perms.core.backend.sql;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
-import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.subject.*;
-import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -28,6 +26,10 @@ public class SQLHandler extends DataManager {
         } else {
             return new SQLDao(this);
         }
+    }
+
+    public DataSource getDataSource(){
+        return this.dataSource;
     }
 
     @Override
@@ -150,11 +152,11 @@ public class SQLHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> removePermissionExact(Subject subject, String permission, UUID permIdentifier) {
+    public CompletableFuture<Void> removePermissionExact(Subject subject, PPermission permission) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
             try (SQLDao dao = getDao()){
-                dao.removePermission(permIdentifier);
+                dao.removePermission(permission.getPermissionIdentifier());
                 future.complete(null);
             }catch(Exception e){
                 e.printStackTrace();
@@ -198,11 +200,11 @@ public class SQLHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> addInheritance(@NotNull Subject subject, @NotNull Subject parent, Context context) {
+    public CompletableFuture<Void> addInheritance(@NotNull CachedInheritance inheritance) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
             try (SQLDao dao = getDao()){
-                dao.addInheritance(subject.getSubjectId(), parent.getSubjectId(), subject.getType(), parent.getType(), context);
+                dao.addInheritance(inheritance.getChild(), inheritance.getParent(), inheritance.getChildType(), inheritance.getParentType(), inheritance.getContext());
                 future.complete(null);
             }catch(Exception e){
                 e.printStackTrace();
@@ -338,7 +340,7 @@ public class SQLHandler extends DataManager {
         runAsync(() -> {
             try (SQLDao dao = getDao()){
                 ArrayList<CachedInheritance> inheritances = new ArrayList<>();
-                parents.forEach(p -> inheritances.add(new CachedInheritance(subject.getSubjectId(), p, "GENERIC", "GENERIC", Context.CONTEXT_ALL)));
+                parents.forEach(p -> inheritances.add(new CachedInheritance(subject.getSubjectId(), p, "GENERIC", "GENERIC", new MutableContextSet())));
                 dao.removeInheritances(inheritances);
             }catch(Exception e){
                 e.printStackTrace();
@@ -395,7 +397,7 @@ public class SQLHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> clearSubjectOfType(String type) {
+    public CompletableFuture<Void> clearSubjectsOfType(String type) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
             try (SQLDao dao = getDao()){

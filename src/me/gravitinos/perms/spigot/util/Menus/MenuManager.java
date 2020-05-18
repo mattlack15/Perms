@@ -7,6 +7,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.server.PluginDisableEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -130,6 +131,17 @@ public class MenuManager implements Listener {
     @EventHandler
     public void onClose(InventoryCloseEvent e) {
         this.callClose(e.getPlayer().getUniqueId(), e.getInventory());
+    }
+
+    @EventHandler
+    public void onPluginDisable(PluginDisableEvent event){
+        if(event.getPlugin().equals(SpigotPerms.instance)){
+            for(UUID id : infos.keySet()){
+                if(Bukkit.getPlayer(id) != null){
+                    Bukkit.getPlayer(id).closeInventory();
+                }
+            }
+        }
     }
 
     @EventHandler

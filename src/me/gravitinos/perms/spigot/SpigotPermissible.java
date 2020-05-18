@@ -2,11 +2,15 @@ package me.gravitinos.perms.spigot;
 
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.ContextSet;
+import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.user.User;
 import me.gravitinos.perms.core.user.UserManager;
 import me.gravitinos.perms.spigot.util.Injector;
 import me.gravitinos.perms.spigot.verbose.VerboseController;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.entity.Player;
 import org.bukkit.permissions.Permissible;
 import org.bukkit.permissions.PermissibleBase;
@@ -44,52 +48,55 @@ public class SpigotPermissible extends PermissibleBase {
     @Override
     public boolean hasPermission(String requ) {
 
-        //Verbose
-        StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
-        if(stackTraceElements.length > 1) {
-            VerboseController.instance.handlePermissionCheck(player, stackTraceElements[3], requ);
-        }
+        try {
 
-        //Permission Index
-        PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> SpigotPerms.instance.addPermissionToIndex(requ));
+            //Verbose
+            StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
+            if (stackTraceElements.length > 1) {
+                VerboseController.instance.handlePermissionCheck(player, stackTraceElements[3], requ);
+            }
 
-        User user = UserManager.instance.getUser(player.getUniqueId());
+            //Permission Index
+            PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> SpigotPerms.instance.addPermissionToIndex(requ));
 
-        if(SpigotPerms.instance.getManager().getImplementation().getConfigSettings().getGodUsers().contains(player.getName())) {
-            return true;
-        }
-        if(user == null){
-            return false;
-        }
+            User user = UserManager.instance.getUser(player.getUniqueId());
 
-        Context context = new Context(GroupData.SERVER_LOCAL, player.getWorld().getName());
+            if(PermsManager.instance.getGodUsers().contains(player.getName())) {
+                return true;
+            }
+            if (user == null) {
+                return false;
+            }
+
+            ContextSet context = new MutableContextSet(Context.CONTEXT_SERVER_LOCAL, new Context(Context.WORLD_IDENTIFIER, player.getWorld().getName()));
 
 //        if(player.isOp()) {
 //            return !user.hasPermission("-op", context);
 //        }
-        ArrayList<String> perms = new ArrayList<>();
-        user.getAllPermissions(context).forEach(p -> {
-            if(p.getContext().applies(context)) { //Check context
-                perms.add(p.getPermission());
+            long nano = System.nanoTime();
+            ArrayList<String> perms = new ArrayList<>();
+            user.getAllPermissions(context).forEach(p -> perms.add(p.getPermission()));
+            player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(TextComponent.fromLegacyText("&chasPermission: &f" + ((System.nanoTime() - nano) / 1000000f) + "ms")));
+
+            if (perms.contains("-" + requ)) {
+                return false;
             }
-        });
-        if(perms.contains("-" + requ)) {
+            for (String perm : perms) {
+                boolean value = true;
+                if (perm.startsWith("-")) {
+                    perm = perm.substring(1);
+                    value = false;
+                }
+                if (perm.equals("*") || perm.equalsIgnoreCase(requ)) {
+                    return value;
+                }
+                if (perm.endsWith("*") && requ.startsWith(perm.substring(0, perm.length() - 1))) {
+                    return value;
+                }
+            }
             return false;
+        } finally {
         }
-        for (String perm : perms) {
-            boolean value = true;
-            if (perm.startsWith("-")) {
-                perm = perm.substring(1);
-                value = false;
-            }
-            if (perm.equals("*") || perm.equalsIgnoreCase(requ)) {
-                return value;
-            }
-            if (perm.endsWith("*") && requ.startsWith(perm.substring(0, perm.length() - 1))) {
-                return value;
-            }
-        }
-        return false;
     }
     @Override
     public boolean hasPermission(Permission requ) {

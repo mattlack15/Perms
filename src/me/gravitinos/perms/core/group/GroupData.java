@@ -2,19 +2,24 @@ package me.gravitinos.perms.core.group;
 
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.ContextSet;
+import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.subject.SubjectData;
-import org.jetbrains.annotations.NotNull;
 
 public class GroupData extends SubjectData {
     public static final int SERVER_LOCAL = PermsManager.instance.getImplementation().getConfigSettings().getServerId();
-    public static final int SERVER_GLOBAL = Context.SERVER_ALL;
     private static final String PREFIX = "prefix";
     private static final String SUFFIX = "suffix";
     private static final String CHAT_COLOUR = "chat_colour";
     private static final String DESCRIPTION = "description";
-    private static final String SERVER_CONTEXT = "server_context";
-    public static final String SERVER_CONTEXT_KEY = SERVER_CONTEXT;
+    private static final String CONTEXT = "context";
     private static final String PRIORITY = "priority";
+    private static final String GOD_LOCK_INHERITANCE = "god_lock_inheritances";
+    private static final String GOD_LOCK_PERMISSION = "god_lock_permissions";
+    private static final String GOD_LOCK_DELETE = "god_lock_deletion";
+    private static final String GOD_LOCK_OPTIONS = "god_lock_options";
+
+    private ContextSet cachedContext = null;
 
     public GroupData() {
     }
@@ -63,16 +68,48 @@ public class GroupData extends SubjectData {
         this.setData(CHAT_COLOUR, colour);
     }
 
-    public int getServerContext() {
-        String cont = this.getData(SERVER_CONTEXT);
-        if (cont == null) {
-            return SERVER_LOCAL;
-        }
-        return Integer.parseInt(cont);
+    public void setGodLockPermission(boolean val) {
+        this.setData(GOD_LOCK_PERMISSION, Boolean.toString(val));
     }
 
-    public void setServerContext(@NotNull String context) {
-        this.setData(SERVER_CONTEXT, context);
+    public void setGodLockInheritance(boolean val){
+        this.setData(GOD_LOCK_INHERITANCE, Boolean.toString(val));
+    }
+
+    public void setGodLockDelete(boolean val){
+        this.setData(GOD_LOCK_DELETE, Boolean.toString(val));
+    }
+
+    public void setGodLockOptions(boolean val){
+        this.setData(GOD_LOCK_OPTIONS, Boolean.toString(val));
+    }
+
+    public boolean isGodLockPermission(){
+        return Boolean.valueOf(this.getData(GOD_LOCK_PERMISSION));
+    }
+
+    public boolean isGodLockInheritance(){
+        return Boolean.valueOf(this.getData(GOD_LOCK_INHERITANCE));
+    }
+
+    public boolean isGodLockDelete(){
+        return Boolean.valueOf(this.getData(GOD_LOCK_DELETE));
+    }
+
+    public boolean isGodLockOptions(){
+        return Boolean.valueOf(this.getData(GOD_LOCK_OPTIONS));
+    }
+
+    public ContextSet getContext() {
+        if(cachedContext == null) {
+            String data = getData(CONTEXT);
+            if (data == null) {
+                this.setContext(new MutableContextSet(Context.CONTEXT_SERVER_LOCAL), true);
+            } else {
+                cachedContext = ContextSet.fromString(getData(CONTEXT));
+            }
+        }
+        return cachedContext;
     }
 
     public int getPriority() {
@@ -93,15 +130,12 @@ public class GroupData extends SubjectData {
         this.setData(PRIORITY, Integer.toString(i));
     }
 
-    protected boolean setServerContext(@NotNull String context, boolean force){
-        if(!force && GroupManager.instance.getGroup(this.getName(), context) != null){
+    public boolean setContext(ContextSet context, boolean force){
+        if(!force && GroupManager.instance.canGroupContextCollideWithAnyLoaded(this.getName(), context, this.getContext())){
             return false;
         }
-        this.setData(SERVER_CONTEXT, context);
+        this.setData(CONTEXT, context.toString());
+        cachedContext = context.clone();
         return true;
-    }
-
-    public boolean setServerContext(@NotNull String context){
-        return this.setServerContext(context, false);
     }
 }

@@ -5,7 +5,7 @@ import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.cache.OwnerPermissionPair;
-import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.ContextSet;
 import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.subject.*;
 import org.bukkit.Bukkit;
@@ -447,7 +447,7 @@ public class SQLDao implements AutoCloseable{
             if(results.getString("Permission") == null){
                 continue;
             }
-            sub.getPermissions().add(new PPermission(results.getString("Permission"), Context.fromString(results.getString("Context")), UUID.fromString(results.getString("PermissionIdentifier") != null ? results.getString("PermissionIdentifier") : UUID.randomUUID().toString())));
+            sub.getPermissions().add(new PPermission(results.getString("Permission"), ContextSet.fromString(results.getString("Context")), UUID.fromString(results.getString("PermissionIdentifier") != null ? results.getString("PermissionIdentifier") : UUID.randomUUID().toString())));
         }
 
         s = prepareStatement(this.getInheritancesFromTypeJoinSubjectData());
@@ -464,7 +464,7 @@ public class SQLDao implements AutoCloseable{
             if(sub == null){
                 continue;
             }
-            sub.getInheritances().add(new CachedInheritance(UUID.fromString(results.getString("Child")), UUID.fromString(results.getString("Parent")), results.getString("ChildType"), results.getString("ParentType"), Context.fromString(results.getString("Context"))));
+            sub.getInheritances().add(new CachedInheritance(UUID.fromString(results.getString("Child")), UUID.fromString(results.getString("Parent")), results.getString("ChildType"), results.getString("ParentType"), ContextSet.fromString(results.getString("Context"))));
         }
 
         return Lists.newArrayList(subjectMap.values());
@@ -654,6 +654,7 @@ public class SQLDao implements AutoCloseable{
 
     public void setSubjectData(@NotNull UUID subjectId, @NotNull SubjectData data, @NotNull String type) throws SQLException {
         this.removeSubjectData(subjectId);
+        PermsManager.instance.getImplementation().consoleLog("Setting subjectdata for " + data.getName());
 
         PreparedStatement s = prepareStatement(this.getInsertSubjectDataUpdate());
 
@@ -721,7 +722,7 @@ public class SQLDao implements AutoCloseable{
         s.executeUpdate();
     }
 
-    public void addInheritance(@NotNull UUID child, @NotNull UUID parent, @NotNull String childType, @NotNull String parentType, @NotNull Context context) throws SQLException {
+    public void addInheritance(@NotNull UUID child, @NotNull UUID parent, @NotNull String childType, @NotNull String parentType, @NotNull ContextSet context) throws SQLException {
         PreparedStatement s = prepareStatement(this.getInsertInheritanceUpdate());
 
         s.setString(1, child.toString());
@@ -743,7 +744,7 @@ public class SQLDao implements AutoCloseable{
         ResultSet results = s.executeQuery();
 
         while(results.next()){
-            out.add(new CachedInheritance(child, UUID.fromString(results.getString("Parent")), results.getString("ChildType"), results.getString("ParentType"), Context.fromString(results.getString("Context"))));
+            out.add(new CachedInheritance(child, UUID.fromString(results.getString("Parent")), results.getString("ChildType"), results.getString("ParentType"), ContextSet.fromString(results.getString("Context"))));
         }
 
         return out;
@@ -762,7 +763,7 @@ public class SQLDao implements AutoCloseable{
         ResultSet r = s.executeQuery();
 
         while(r.next()){
-            PPermission perm = new PPermission(r.getString("Permission"), Context.fromString(r.getString("Context")), UUID.fromString(r.getString("PermissionIdentifier") != null ? r.getString("PermissionIdentifier") : UUID.randomUUID().toString()));
+            PPermission perm = new PPermission(r.getString("Permission"), ContextSet.fromString(r.getString("Context")), UUID.fromString(r.getString("PermissionIdentifier") != null ? r.getString("PermissionIdentifier") : UUID.randomUUID().toString()));
             perms.add(perm);
         }
 
@@ -853,6 +854,8 @@ public class SQLDao implements AutoCloseable{
             } catch(SQLException e){
                 return false;
             }
+        } else {
+            return false;
         }
         return true;
     }

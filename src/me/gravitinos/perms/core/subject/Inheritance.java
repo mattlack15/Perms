@@ -1,18 +1,14 @@
 package me.gravitinos.perms.core.subject;
 
-import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.cache.CachedInheritance;
-import me.gravitinos.perms.core.context.Context;
-import me.gravitinos.perms.core.subject.Subject;
-
-import java.lang.ref.WeakReference;
+import me.gravitinos.perms.core.context.ContextSet;
 
 public class Inheritance {
     private SubjectRef parent;
     private SubjectRef child;
-    private Context context;
+    private ContextSet context;
 
-    public Inheritance(SubjectRef parent, SubjectRef child, Context context){
+    public Inheritance(SubjectRef parent, SubjectRef child, ContextSet context){
         this.parent = parent;
         this.child = child;
         this.context = context;
@@ -42,10 +38,10 @@ public class Inheritance {
     }
 
     /**
-     * Gets context
+     * Gets contexts in which this inheritance should apply
      * @return the context
      */
-    public Context getContext(){
+    public ContextSet getContext(){
         return this.context;
     }
 

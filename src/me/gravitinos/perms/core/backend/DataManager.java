@@ -3,7 +3,6 @@ package me.gravitinos.perms.core.backend;
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
-import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.subject.*;
 import org.jetbrains.annotations.NotNull;
 
@@ -45,19 +44,20 @@ public abstract class DataManager {
 
     public abstract CompletableFuture<Void> removePermission(Subject subject, String permission);
 
-    public abstract CompletableFuture<Void> removePermissionExact(Subject subject, String permission, UUID permIdentifier);
+    public abstract CompletableFuture<Void> removePermissionExact(Subject subject, PPermission permission);
 
     public abstract CompletableFuture<ArrayList<CachedInheritance>> getInheritances(UUID subjectId);
 
     public abstract CompletableFuture<Void> updateInheritances(Subject subject);
 
-    public abstract CompletableFuture<Void> addInheritance(@NotNull Subject subject, @NotNull Subject inheritance, Context context);
+    public abstract CompletableFuture<Void> addInheritance(CachedInheritance inheritance);
 
     public abstract CompletableFuture<Void> removeInheritance(Subject subject, UUID parent);
 
     public abstract CompletableFuture<Void> updateSubjectData(Subject subject);
 
     public abstract CompletableFuture<GenericSubjectData> getSubjectData(UUID subjectId);
+
 
     //Large Operations
     public abstract CompletableFuture<Void> addPermissions(Subject subject, ImmutablePermissionList list);
@@ -78,7 +78,7 @@ public abstract class DataManager {
 
     public abstract CompletableFuture<Void> clearAllData();
 
-    public abstract CompletableFuture<Void> clearSubjectOfType(String type);
+    public abstract CompletableFuture<Void> clearSubjectsOfType(String type);
 
     public abstract CompletableFuture<Map<Integer, String>> getServerIndex();
 
@@ -87,6 +87,9 @@ public abstract class DataManager {
     public abstract CompletableFuture<Void> removeServerIndex(int serverId);
 
     public abstract CompletableFuture<Boolean> testBackendConnection();
+
+    //Shutdown
+    public void shutdown(){};
 
     //Async execution
 
@@ -99,7 +102,12 @@ public abstract class DataManager {
         } else {
             PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
                 try {
-                    future.complete(supplier.get());
+                    try {
+                        future.complete(supplier.get());
+                    } catch(Throwable throwable){
+                        future.complete(null);
+                        throwable.printStackTrace();
+                    }
                 } catch(Exception e){
                     e.printStackTrace();
                 }

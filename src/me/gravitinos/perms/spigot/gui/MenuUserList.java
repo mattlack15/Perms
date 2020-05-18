@@ -1,7 +1,10 @@
 package me.gravitinos.perms.spigot.gui;
 
 import me.gravitinos.perms.core.PermsManager;
+import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.ServerContextType;
 import me.gravitinos.perms.core.group.Group;
+import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.subject.Inheritance;
 import me.gravitinos.perms.core.subject.Subject;
@@ -24,7 +27,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 
-public class MenuUserList extends UtilMenuActionableList{
+public class MenuUserList extends UtilMenuActionableList {
 
     private Player p;
 
@@ -42,16 +45,17 @@ public class MenuUserList extends UtilMenuActionableList{
         this.setBackButton(backButton);
         this.setup();
     }
-    public MenuUserList(Player p, int listRows, @NotNull Menu back, String... filters){
+
+    public MenuUserList(Player p, int listRows, @NotNull Menu back, String... filters) {
         this(p, listRows, Menu.getBackButton(back), filters);
     }
 
-    private void setup(){
+    private void setup() {
 
         this.setMargin(1);
 
         loadedUsers.removeIf((u) -> {
-            if(filters.length == 0){
+            if (filters.length == 0) {
                 return false;
             }
             for (String filter : filters) {
@@ -65,17 +69,17 @@ public class MenuUserList extends UtilMenuActionableList{
         this.setElementSupplier((num) -> {
 
             //Create user element/item
-            if(num >= loadedUsers.size()){
+            if (num >= loadedUsers.size()) {
                 return null;
             }
             User indexedUser = loadedUsers.get(num);
-            if(indexedUser == null){
+            if (indexedUser == null) {
                 return null;
             }
             String name = indexedUser.getName();
-            for(String filter : filters){
+            for (String filter : filters) {
                 int index = StringUtil.indexOfIgnoreCase(name, filter);
-                if(index == -1){
+                if (index == -1) {
                     continue;
                 }
                 String matched = name.substring(index, index + filter.length());
@@ -83,16 +87,17 @@ public class MenuUserList extends UtilMenuActionableList{
             }
             MenuElement userElement = new MenuElement(new ItemBuilder(Material.SKULL_ITEM, 1).setupAsSkull(indexedUser.getName()).setName("&e" + name).build());
             ItemBuilder builder = new ItemBuilder(userElement.getItem());
-            builder.addLore("&fDisplay Group: &7" + indexedUser.getDisplayGroup());
+            if (GroupManager.instance.isGroupExactLoaded(indexedUser.getDisplayGroup()))
+                builder.addLore("&fDisplay Group: &7" + GroupManager.instance.getGroupExact(indexedUser.getDisplayGroup()).getName());
             builder.addLore("&fPrefix: " + indexedUser.getPrefix());
             builder.addLore("&fSuffix: " + indexedUser.getSuffix());
             builder.addLore("&fGod User: " + (SpigotPerms.instance.getImpl().getConfigSettings().getGodUsers().contains(indexedUser.getName()) ? "&atrue" : "&cfalse"));
             builder.addLore("&fPermission Count: &7" + indexedUser.getOwnPermissions().getPermissions().size());
             builder.addLore("&fInheritances: ");
-            for(Inheritance in : indexedUser.getInheritances()){
+            for (Inheritance in : indexedUser.getInheritances()) {
                 Subject<?> sub = in.getParent();
-                if(sub instanceof Group){
-                    builder.addLore("&7 - " + ((Group) sub).getName());
+                if (sub instanceof Group && in.getContext().appliesToAny(Context.CONTEXT_SERVER_LOCAL)) {
+                    builder.addLore("&7 - " + sub.getName() + " &e&l: &f" + ServerContextType.getType(in.getContext()).getDisplay());
                 }
             }
 
@@ -108,17 +113,21 @@ public class MenuUserList extends UtilMenuActionableList{
         MenuElement searchElement = new MenuElement(new ItemBuilder(Material.NAME_TAG, 1).setName("&eSearch").addLore("&7Click to search")
                 .addLore("&aRight click&7 to clear").build())
                 .setClickHandler((e, i) -> {
-                    if(e.getClick().equals(ClickType.RIGHT)){ // If it's a right click, then reopen with no filters
+                    if (e.getClick().equals(ClickType.RIGHT)) { // If it's a right click, then reopen with no filters
                         new MenuUserList(p, listRows, this.getBackButton()).open(p);
                         return;
                     }
-                    ChatListener.instance.addChatInputHandler(p.getUniqueId(), (s) -> doInMainThread(() -> new MenuUserList(p, listRows, this.getBackButton(), s).open(p)));
+                    p.sendTitle("", UtilColour.toColour("&b&lEnter a search query in Chat"),10, 600, 10);
+                    ChatListener.instance.addChatInputHandler(p.getUniqueId(), (s) -> doInMainThread(() -> {
+                        p.sendTitle("", "", 10, 10, 10);
+                        new MenuUserList(p, listRows, this.getBackButton(), s).open(p);
+                    }));
                     p.closeInventory();
                     p.sendMessage(UtilColour.toColour(SpigotPerms.pluginPrefix + "Enter search here:"));
                 });
-        if(filters.length > 0){
+        if (filters.length > 0) {
             ItemBuilder builder = new ItemBuilder(searchElement.getItem()).addLore("&cCurrent Search:");
-            for(String s : filters){
+            for (String s : filters) {
                 builder.addLore("&7 - &f\"" + s + "\"");
             }
             searchElement.setItem(builder.build());
@@ -126,22 +135,24 @@ public class MenuUserList extends UtilMenuActionableList{
         this.setElement(6, searchElement);
 
         this.setElement(2, new MenuElement(new ItemBuilder(Material.EYE_OF_ENDER, 1).setName("&eLoad Offline User").addLore("&7Loads an offline user").build())
-        .setClickHandler((e, i) -> {
-            ChatListener.instance.addChatInputHandler(e.getWhoClicked().getUniqueId(), (s) -> PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
-                OfflinePlayer p = Bukkit.getOfflinePlayer(s);
-                e.getWhoClicked().sendMessage(UtilColour.toColour(SpigotPerms.pluginPrefix + "Loading..."));
-                if(p != null){
-                    try {
-                        UserManager.instance.loadUser(p.getUniqueId(), p.getName()).get();
-                    } catch (InterruptedException | ExecutionException ex) {
-                        ex.printStackTrace();
-                    }
-                }
-                new MenuUserList(this.p, this.listRows, this.getBackButton(), this.filters).open((Player) e.getWhoClicked());
-            }));
-            e.getWhoClicked().closeInventory();
-            e.getWhoClicked().sendMessage(UtilColour.toColour(SpigotPerms.pluginPrefix + "&eEnter player name into chat"));
-        }));
+                .setClickHandler((e, i) -> {
+                    ((Player)e.getWhoClicked()).sendTitle("", UtilColour.toColour("&b&lEnter their full username in Chat"),10, 600, 10);
+                    ChatListener.instance.addChatInputHandler(e.getWhoClicked().getUniqueId(), (s) -> PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
+                        ((Player)e.getWhoClicked()).sendTitle("", "", 10, 10, 10);
+                        OfflinePlayer p = Bukkit.getOfflinePlayer(s);
+                        e.getWhoClicked().sendMessage(UtilColour.toColour(SpigotPerms.pluginPrefix + "Loading..."));
+                        if (p != null) {
+                            try {
+                                UserManager.instance.loadUser(p.getUniqueId(), p.getName()).get();
+                            } catch (InterruptedException | ExecutionException ex) {
+                                ex.printStackTrace();
+                            }
+                        }
+                        new MenuUserList(this.p, this.listRows, this.getBackButton(), this.filters).open((Player) e.getWhoClicked());
+                    }));
+                    e.getWhoClicked().closeInventory();
+                    e.getWhoClicked().sendMessage(UtilColour.toColour(SpigotPerms.pluginPrefix + "&eEnter player name into chat"));
+                }));
 
         this.setupPage(0);
     }

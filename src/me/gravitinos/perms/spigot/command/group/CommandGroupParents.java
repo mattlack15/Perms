@@ -1,5 +1,6 @@
 package me.gravitinos.perms.spigot.command.group;
 
+import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.spigot.SpigotPerms;
 import me.gravitinos.perms.spigot.command.GravCommandPermissionable;
 import me.gravitinos.perms.spigot.command.GravSubCommand;
@@ -47,6 +48,7 @@ public class CommandGroupParents extends GravSubCommand {
             return true;
         }
         this.callSubCommand(subCommand, sender, cmd, label, args, passedArgs); //Call next sub-command
+        GroupManager.instance.eliminateInheritanceMistakes();
         return true;
     }
 }

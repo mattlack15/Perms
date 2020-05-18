@@ -21,30 +21,30 @@ import java.util.List;
 
 public class ItemBuilder {
 
-	private class EnchantGlow extends Enchantment {
-		public EnchantGlow() {
-			super(6969);
-		}
-
-		@Override
-		public String getName() {
-			return "Glow";
-		}
-
-		@Override
-		public int getMaxLevel() {
-			return 1;
-		}
-
-		@Override
-		public int getStartLevel() {
-			return 1;
-		}
-
-		@Override
-		public EnchantmentTarget getItemTarget() {
-			return EnchantmentTarget.ALL;
-		}
+//	private class EnchantGlow extends Enchantment {
+//		public EnchantGlow() {
+//			super(6969);
+//		}
+//
+//		@Override
+//		public String getName() {
+//			return "Glow";
+//		}
+//
+//		@Override
+//		public int getMaxLevel() {
+//			return 1;
+//		}
+//
+//		@Override
+//		public int getStartLevel() {
+//			return 1;
+//		}
+//
+//		@Override
+//		public EnchantmentTarget getItemTarget() {
+//			return EnchantmentTarget.ALL;
+//		}
 //
 //		@Override
 //		public boolean isTreasure() {
@@ -55,17 +55,17 @@ public class ItemBuilder {
 //		public boolean isCursed() {
 //			return false;
 //		}
-
-		@Override
-		public boolean conflictsWith(Enchantment enchantment) {
-			return false;
-		}
-
-		@Override
-		public boolean canEnchantItem(ItemStack itemStack) {
-			return true;
-		}
-	}
+//
+//		@Override
+//		public boolean conflictsWith(Enchantment enchantment) {
+//			return false;
+//		}
+//
+//		@Override
+//		public boolean canEnchantItem(ItemStack itemStack) {
+//			return true;
+//		}
+//	}
 
 	private ItemStack item;
 //
@@ -210,16 +210,19 @@ public class ItemBuilder {
 		return this;
 	}
 
+	/**
+	 * Currently set to not do anything
+	 */
 	public ItemBuilder addGlow(){
-		try{
-			Field field = Enchantment.class.getDeclaredField("acceptingNew");
-			field.setAccessible(true);
-			field.set(null, true);
-			if(Enchantment.getByName(new EnchantGlow().getName()) == null){
-				Enchantment.registerEnchantment(new EnchantGlow());
-			}
-		} catch(Exception ignored){}
-		this.item.addUnsafeEnchantment(new EnchantGlow(), 1);
+//		try{
+//			Field field = Enchantment.class.getDeclaredField("acceptingNew");
+//			field.setAccessible(true);
+//			field.set(null, true);
+//			if(Enchantment.getByName(new EnchantGlow().getName()) == null){
+//				Enchantment.registerEnchantment(new EnchantGlow());
+//			}
+//		} catch(Exception ignored){}
+//		this.item.addUnsafeEnchantment(new EnchantGlow(), 1);
 		return this;
 	}
 

@@ -13,7 +13,7 @@ import java.util.concurrent.ExecutionException;
 public class CommandReloadGroups extends Command {
 
     protected CommandReloadGroups() {
-        super("ranksbung");
+        super("ppbung");
     }
 
     @Override
@@ -30,6 +30,7 @@ public class CommandReloadGroups extends Command {
         if(args[0].equalsIgnoreCase("reloadgroups")){
             CompletableFuture<Boolean> future = GroupManager.instance.reloadGroups();
             commandSender.sendMessage("Reloading groups...");
+            PermsManager.instance.reloadGodUsers();
             PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
                 try {
                     future.get();

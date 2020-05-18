@@ -13,12 +13,12 @@ public final class ImmutablePermissionList implements Iterable<PPermission>{
     }
 
     public ArrayList<PPermission> getPermissions() {
-        return (ArrayList<PPermission>) perms.clone();
+        return new ArrayList<>(perms);
     }
 
     @NotNull
     @Override
     public Iterator<PPermission> iterator() {
-        return perms.iterator();
+        return getPermissions().iterator();
     }
 }

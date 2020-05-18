@@ -2,6 +2,8 @@ package me.gravitinos.perms.spigot.command.group;
 
 import com.google.common.collect.Lists;
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.ContextSet;
+import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.spigot.SpigotPerms;
@@ -60,7 +62,8 @@ public class CommandLoadPermsFrom extends GravSubCommand {
 
         Group group = (Group) passedArgs[0];
 
-        Context context = new Context(group.getServerContext(), Context.VAL_ALL);
+        MutableContextSet contexts = new MutableContextSet(group.getContext());
+        contexts.setExpiration(ContextSet.NO_EXPIRATION);
 
         File file = new File(SpigotPerms.instance.getDataFolder(), fileName);
         if (!file.exists()) {
@@ -77,9 +80,10 @@ public class CommandLoadPermsFrom extends GravSubCommand {
         if (config.isString("context")) {
             String contextF = config.getString("context");
             if (contextF.equalsIgnoreCase("global")) {
-                context = Context.CONTEXT_SERVER_GLOBAL;
+                contexts.removeContexts(Context.SERVER_IDENTIFIER);
             } else if (contextF.equalsIgnoreCase("local")) {
-                context = Context.CONTEXT_SERVER_LOCAL;
+                contexts.removeContexts(Context.SERVER_IDENTIFIER);
+                contexts.addContext(Context.CONTEXT_SERVER_LOCAL);
             } else {
                 noContext = true;
             }
@@ -96,7 +100,7 @@ public class CommandLoadPermsFrom extends GravSubCommand {
 
         ArrayList<PPermission> permsToAdd = new ArrayList<>();
         for (String perm : config.getStringList("permissions")) {
-            permsToAdd.add(new PPermission(perm, context));
+            permsToAdd.add(new PPermission(perm, contexts));
         }
 
         if (permsToAdd.size() == 0) {

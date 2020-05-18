@@ -72,7 +72,11 @@ public class ProxyComm implements PluginMessageListener {
             agent.appendPayload(stream);
 
             //Send
-            agent.getPlayer().sendPluginMessage(SpigotPerms.instance, CHANNEL, b.toByteArray());
+            if(agent.getPlayer() != null) {
+                agent.getPlayer().sendPluginMessage(SpigotPerms.instance, CHANNEL, b.toByteArray());
+            } else {
+                Bukkit.getLogger().info("Could not send plugin message, no one online.");
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }

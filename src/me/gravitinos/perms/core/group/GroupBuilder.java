@@ -5,6 +5,8 @@ import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.ContextSet;
+import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.subject.Subject;
 import me.gravitinos.perms.core.subject.SubjectRef;
@@ -54,10 +56,10 @@ public class GroupBuilder {
     }
 
     public GroupBuilder addInheritance(Subject inheritance){
-        return this.addInheritance(inheritance, Context.CONTEXT_ALL);
+        return this.addInheritance(inheritance, new MutableContextSet());
     }
 
-    public GroupBuilder addInheritance(Subject inheritance, Context context){
+    public GroupBuilder addInheritance(Subject inheritance, ContextSet context){
         this.inherited.add(new CachedInheritance(groupId, inheritance.getSubjectId(), Subject.GROUP, inheritance.getType(), context));
         return this;
     }

@@ -22,6 +22,7 @@ public class BungeeConfigSettings implements PermsConfiguration {
     private static final String SQL_HOST = "sql_host";
     private static final String SQL_PORT = "sql_port";
     private static final String SQL_DATABASE = "sql_database";
+    private static final String SQL_TYPE = "database_type";
     private static final String SQL_USERNAME = "sql_username";
     private static final String SQL_PASSWORD = "sql_password";
     private static final String SERVER_NAME = "server_name";
@@ -92,6 +93,11 @@ public class BungeeConfigSettings implements PermsConfiguration {
     }
 
     @Override
+    public String getDatabaseType() {
+        return getConfig().getString(SQL_TYPE);
+    }
+
+    @Override
     public int getSQLPort() {
         return getConfig().getInt(SQL_PORT);
     }
@@ -112,8 +118,8 @@ public class BungeeConfigSettings implements PermsConfiguration {
     }
 
     @Override
-    public String getLocalDefaultGroup() {
-        return getConfig().getString(LOCAL_DEFAULT_GROUP);
+    public ArrayList<String> getLocalDefaultGroups() {
+        return Lists.newArrayList(getConfig().getStringList(LOCAL_DEFAULT_GROUP));
     }
 
     @Override
@@ -185,13 +191,18 @@ public class BungeeConfigSettings implements PermsConfiguration {
     }
 
     @Override
+    public void setUsingBuiltInChat(boolean chat) {
+
+    }
+
+    @Override
     public void setDefaultGroup(String groupName) {
         getConfig().set(DEFAULT_GROUP, groupName);
         saveConfig();
     }
 
     @Override
-    public void setLocalDefaultGroup(String groupName) {
+    public void setLocalDefaultGroups(ArrayList<String> groupName) {
         getConfig().set(LOCAL_DEFAULT_GROUP, groupName);
         saveConfig();
     }

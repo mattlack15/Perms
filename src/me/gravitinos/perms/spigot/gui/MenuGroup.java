@@ -1,6 +1,8 @@
 package me.gravitinos.perms.spigot.gui;
 
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.ContextSet;
+import me.gravitinos.perms.core.context.ServerContextType;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.group.GroupManager;
@@ -22,7 +24,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MenuGroup extends Menu {
 
@@ -67,38 +68,11 @@ public class MenuGroup extends Menu {
                 this.setup();
             }
         });
-        MenuElement serverChanger = (new MenuElement((new ItemBuilder(Material.ENDER_PORTAL_FRAME, 1)).setName("&eServer").addLore("&6" + (this.group.getServerContext().equals("") ? "&cGLOBAL" : (this.group.getServerContext().equals(GroupData.SERVER_LOCAL) ? "&aLOCAL" : this.group.getServerNameOfServerContext()))).addLore("&7Click to change").build())).setClickHandler((e, i) -> {
-            String finalServer = this.group.getServerContext().equals(GroupData.SERVER_LOCAL) ? "" : GroupData.SERVER_LOCAL;
-            if (!e.getWhoClicked().hasPermission("ranks.group.manageoptions")) {
-                this.getElement(e.getSlot()).addTempLore(this, "&cYou do not have access to this!", 60);
-                MenuManager.instance.invalidateElementsInInvForMenu(this, e.getSlot());
-            } else if (!this.group.getServerContext().equals(GroupData.SERVER_LOCAL) && !this.group.getServerContext().equals("")) {
-                this.getElement(e.getSlot()).addTempLore(this, "&cCannot change foreign server context", 60);
-            } else if (GroupManager.instance.isGroupLoaded(this.group.getName(), finalServer)) {
-                this.getElement(e.getSlot()).addTempLore(this, "&cA group already exists with that server context and this group's name", 100);
-            } else {
-                this.getElement(e.getSlot()).setItem((new ItemBuilder(this.getElement(e.getSlot()).getItem())).setLore(1, "&7Working...").build());
-                this.getElement(e.getSlot()).setClickHandler((e1, i1) -> {
-                });
-                MenuManager.instance.invalidateElementsInInvForMenu(this, e.getSlot());
-                this.group.getDataManager().performOrderedOpAsync(() -> {
-
-                    if(!this.group.setServerContext(finalServer)){
-                        MenuManager.instance.invalidateElementsInInvForMenu(this, e.getSlot());
-                        this.getElement(e.getSlot()).addTempLore(this, "&cUnable to change server context!", 60);
-                        return null;
-                    }
-
-                    ArrayList<PPermission> perms = this.group.getOwnPermissions().getPermissions();
-                    this.group.removeOwnPermissions(perms);
-                    ArrayList<PPermission> newPerms = new ArrayList<>();
-                    perms.forEach((p) -> newPerms.add(new PPermission(p.getPermission(), new Context(finalServer, p.getContext().getWorldName(), p.getExpiry()), p.getPermissionIdentifier())));
-                    this.group.addOwnPermissions(newPerms);
-                    this.setup();
-                    return null;
-                });
-            }
-        });
+        MenuElement serverChanger = new MenuElement(new ItemBuilder(Material.ENDER_PORTAL_FRAME, 1).setName("&eServers")
+                .addLore("&f" + ServerContextType.getType(group.getContext()).getDisplay()).build()).setClickHandler((e, i) -> new MenuContextEditor(group.getContext(), (c) -> group.setContext(c), getBackButton((e1, i1) -> {
+            setup();
+            open((Player)e1.getWhoClicked());
+        }), group.getName()).open((Player)e.getWhoClicked()));
         MenuElement prefixChanger = (new MenuElement((new ItemBuilder(Material.NAME_TAG, 1)).setName("&ePrefix").addLore("&f" + this.group.getPrefix()).addLore(ChatColor.WHITE + "(" + this.group.getPrefix().replace(ChatColor.COLOR_CHAR + "", "&") + ChatColor.WHITE + ")", false).addLore("&7Click to change").addLore("&7Right Click to clear").build())).setClickHandler((e, i) -> {
             if (!e.getWhoClicked().hasPermission("ranks.group.manageoptions")) {
                 this.getElement(e.getSlot()).addTempLore(this, "&cYou do not have access to this!", 60);
@@ -187,7 +161,7 @@ public class MenuGroup extends Menu {
                 MenuManager.instance.invalidateElementsInInvForMenu(this, e.getSlot());
             } else {
                 (new MenuGroupInheritanceEditor(this.group.getName() + " > Groups", new MenuGroupInheritanceEditor.GroupInheritanceEditorHandler() {
-                    public CompletableFuture<Void> addGroup(Group group1, Context context) {
+                    public CompletableFuture<Void> addGroup(Group group1, ContextSet context) {
                         return MenuGroup.this.group.addInheritance(group1, context);
                     }
 
@@ -195,11 +169,11 @@ public class MenuGroup extends Menu {
                         return MenuGroup.this.group.removeInheritance(group1);
                     }
 
-                    public Map<Group, Context> getGroups() {
-                        Map groupContextMap = new HashMap();
+                    public Map<Group, ContextSet> getGroups() {
+                        Map<Group, ContextSet> groupContextMap = new HashMap<>();
                         MenuGroup.this.group.getInheritances().forEach((i) -> {
                             if (i.getParent() instanceof Group) {
-                                groupContextMap.put(i.getParent(), i.getContext());
+                                groupContextMap.put((Group) i.getParent(), i.getContext());
                             }
 
                         });

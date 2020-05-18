@@ -3,6 +3,7 @@ package me.gravitinos.perms.core.user;
 import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.ContextSet;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.subject.ImmutablePermissionList;
@@ -35,7 +36,7 @@ public class UserBuilder {
         return this;
     }
 
-    public UserBuilder addInheritance(Subject subject, Context context){
+    public UserBuilder addInheritance(Subject subject, ContextSet context){
         this.inherited.add(new CachedInheritance(this.getUniqueID(), subject.getSubjectId(), Subject.USER, subject.getType(), context));
         return this;
     }
@@ -65,7 +66,7 @@ public class UserBuilder {
         return this.data;
     }
 
-    public UserBuilder setDisplayGroup(String serverContext, Group group){
+    public UserBuilder setDisplayGroup(int serverContext, Group group){
         this.getData().setDisplayGroup(serverContext, group.getSubjectId());
         return this;
     }

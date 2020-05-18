@@ -3,18 +3,26 @@ package me.gravitinos.perms.core.group;
 import com.google.common.collect.Lists;
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.backend.DataManager;
+import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.ContextSet;
+import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.subject.*;
 import me.gravitinos.perms.core.util.SubjectSupplier;
+import me.gravitinos.perms.spigot.messaging.MessageManager;
+import me.gravitinos.perms.spigot.messaging.MessageReloadSubject;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 public class Group extends Subject<GroupData> {
     private DataManager dataManager;
+
+    private volatile boolean updatingData = false;
 
     public Group(GroupBuilder builder, SubjectSupplier inheritanceSupplier) {
         this(builder, inheritanceSupplier, null);
@@ -33,10 +41,10 @@ public class Group extends Subject<GroupData> {
     /**
      * Updates this group with a cachedSubject's values with what is compatible (everything, if this cachedSubject's type is Subject.GROUP)
      * By default, this does not save to the backend
-     * @see #updateFromCachedSubject(CachedSubject, SubjectSupplier, boolean)
      *
      * @param subject             The cachedSubject to copy from
      * @param inheritanceSupplier Inheritance supplier to handle getting inherited subject objects usually just groupManager::getGroup
+     * @see #updateFromCachedSubject(CachedSubject, SubjectSupplier, boolean)
      */
     public void updateFromCachedSubject(@NotNull CachedSubject subject, @NotNull SubjectSupplier inheritanceSupplier) {
         this.updateFromCachedSubject(subject, inheritanceSupplier, false);
@@ -57,7 +65,23 @@ public class Group extends Subject<GroupData> {
 
         this.getData().addUpdateListener("MAIN_LISTENER", (k, v) -> {
             if (dataManager != null) {
-                    dataManager.updateSubjectData(this);
+                synchronized (this) {
+                    if (!updatingData) {
+                        updatingData = true;
+                        PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
+                            try {
+                                Thread.sleep(2); //Saves on database requests, so that it will update all of the changed subject data (if a thread makes more than one change) in one update
+                                dataManager.updateSubjectData(this).get();
+                                if(MessageManager.instance != null){
+                                    MessageManager.instance.queueMessage(new MessageReloadSubject(this.getSubjectId()));
+                                }
+                            } catch (InterruptedException | ExecutionException e) {
+                                e.printStackTrace();
+                            }
+                            updatingData = false;
+                        });
+                    }
+                }
             }
         });
 
@@ -106,7 +130,7 @@ public class Group extends Subject<GroupData> {
      * @param permission The permission to check for
      * @return Whether this group has that permission
      */
-    public boolean hasOwnPermission(@NotNull String permission, @NotNull Context context) {
+    public boolean hasOwnPermission(@NotNull String permission, @NotNull ContextSet context) {
         return super.hasOwnPermission(permission, context);
     }
 
@@ -136,7 +160,17 @@ public class Group extends Subject<GroupData> {
 
         //Update backend
         if (dataManager != null) {
-            return dataManager.addPermission(this, permission);
+            CompletableFuture<Void> future = dataManager.addPermission(this, permission);
+            if (MessageManager.instance != null)
+                PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
+                    try {
+                        future.get();
+                    } catch (InterruptedException | ExecutionException e) {
+                        e.printStackTrace();
+                    }
+                    MessageManager.instance.queueMessage(new MessageReloadSubject(this.getSubjectId()));
+                });
+            return future;
         }
         CompletableFuture<Void> future = new CompletableFuture<>();
         future.complete(null);
@@ -153,7 +187,17 @@ public class Group extends Subject<GroupData> {
 
         //Update backend
         if (dataManager != null) {
-            return dataManager.removePermissionExact(this, permission.getPermission(), perm.getPermissionIdentifier());
+            CompletableFuture<Void> future = dataManager.removePermissionExact(this, permission);
+            if (MessageManager.instance != null)
+                PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
+                    try {
+                        future.get();
+                    } catch (InterruptedException | ExecutionException e) {
+                        e.printStackTrace();
+                    }
+                    MessageManager.instance.queueMessage(new MessageReloadSubject(this.getSubjectId()));
+                });
+            return future;
         }
         CompletableFuture<Void> future = new CompletableFuture<>();
         future.complete(null);
@@ -170,7 +214,17 @@ public class Group extends Subject<GroupData> {
 
         //Update backend
         if (dataManager != null) {
-            return dataManager.removePermission(this, permission);
+            CompletableFuture<Void> future = dataManager.removePermission(this, permission);
+            if (MessageManager.instance != null)
+                PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
+                    try {
+                        future.get();
+                    } catch (InterruptedException | ExecutionException e) {
+                        e.printStackTrace();
+                    }
+                    MessageManager.instance.queueMessage(new MessageReloadSubject(this.getSubjectId()));
+                });
+            return future;
         }
         CompletableFuture<Void> future = new CompletableFuture<>();
         future.complete(null);
@@ -238,7 +292,7 @@ public class Group extends Subject<GroupData> {
      * @return true or false
      */
     public boolean serverContextAppliesToThisServer() {
-        return this.getServerContext() == GroupData.SERVER_GLOBAL || this.getServerContext() ==GroupData.SERVER_LOCAL;
+        return this.getContext().appliesToAny(Context.CONTEXT_SERVER_LOCAL);
     }
 
     /**
@@ -306,7 +360,7 @@ public class Group extends Subject<GroupData> {
      * @param subject The inheritance to add
      * @param context The context that this will apply in
      */
-    public CompletableFuture<Void> addInheritance(Subject subject, Context context) {
+    public CompletableFuture<Void> addInheritance(Subject<?> subject, ContextSet context) {
         if (this.hasInheritance(subject)) {
             CompletableFuture<Void> future = new CompletableFuture<>();
             future.complete(null);
@@ -316,7 +370,17 @@ public class Group extends Subject<GroupData> {
         super.addOwnSubjectInheritance(new SubjectRef(subject), context);
 
         if (dataManager != null) {
-            return dataManager.addInheritance(this, subject, context);
+            CompletableFuture<Void> future = dataManager.addInheritance(new CachedInheritance(this.getSubjectId(), subject.getSubjectId(), this.getType(), subject.getType(), context));
+            if (MessageManager.instance != null)
+                PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
+                    try {
+                        future.get();
+                    } catch (InterruptedException | ExecutionException e) {
+                        e.printStackTrace();
+                    }
+                    MessageManager.instance.queueMessage(new MessageReloadSubject(this.getSubjectId()));
+                });
+            return future;
         }
         CompletableFuture<Void> future = new CompletableFuture<>();
         future.complete(null);
@@ -328,12 +392,21 @@ public class Group extends Subject<GroupData> {
      *
      * @param subject the parent to remove
      */
-    public CompletableFuture<Void> removeInheritance(Subject subject) {
+    public CompletableFuture<Void> removeInheritance(Subject<?> subject) {
         super.removeOwnSubjectInheritance(subject);
 
         if (dataManager != null) {
-            return dataManager.removeInheritance(this, subject.getSubjectId());
-        }
+            CompletableFuture<Void> future = dataManager.removeInheritance(this, subject.getSubjectId());
+            if (MessageManager.instance != null)
+                PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
+                    try {
+                        future.get();
+                    } catch (InterruptedException | ExecutionException e) {
+                        e.printStackTrace();
+                    }
+                    MessageManager.instance.queueMessage(new MessageReloadSubject(this.getSubjectId()));
+                });
+            return future;        }
         CompletableFuture<Void> future = new CompletableFuture<>();
         future.complete(null);
         return future;
@@ -368,17 +441,17 @@ public class Group extends Subject<GroupData> {
     /**
      * Gets all permissions, including inherited
      */
-    public ArrayList<PPermission> getAllPermissions(Context context) {
-        return super.getAllPermissions(context);
+    public ArrayList<PPermission> getAllPermissions(ContextSet contexts) {
+        return super.getAllPermissions(contexts);
     }
 
     /**
      * Checks if this group has a permission of its own or inherits a permission
      */
-    public boolean hasPermission(String permission, Context context) {
+    public boolean hasPermission(String permission, ContextSet context) {
         ArrayList<PPermission> permissions = this.getAllPermissions(context);
         for (PPermission perms : permissions) {
-            if (perms.getPermission().equalsIgnoreCase(permission) && perms.getContext().applies(context)) {
+            if (perms.getPermission().equalsIgnoreCase(permission) && context.isSatisfiedBy(perms.getContext())) {
                 return true;
             }
         }
@@ -451,27 +524,26 @@ public class Group extends Subject<GroupData> {
      *
      * @return The ID of the server in which this group applies
      */
-    public int getServerContext() {
-        return this.getData().getServerContext();
+    public ContextSet getContext() {
+        return this.getData().getContext();
     }
 
     /**
-     * Get the name of the server in which this group applies
-     *
-     * @return the NAME of the server
+     * Utility function
+     * Returns whether or not this group is a fully global group
      */
-    public String getServerNameOfServerContext() {
-        return PermsManager.instance.getServerName(getServerContext());
+    public boolean isGlobal(){
+        return this.getContext().filterByKey(Context.SERVER_IDENTIFIER).size() == 0;
     }
 
     /**
-     * Set the server in which this group applies (Custom or GroupData.SERVER_LOCAL or GroupData.SERVER_GLOBAL)
+     * Set the context in which this group applies (Custom or new MutableContextSet(Context.CONTEXT_SERVER_LOCAL or Context.CONTEXT_SERVER_GLOBAL))
      *
      * @param context
      * @return Whether it was successful, it could be unsuccessful if a group already exists with that server context and this group name
      */
-    public boolean setServerContext(String context) {
-        return this.getData().setServerContext(context);
+    public boolean setContext(ContextSet context) {
+        return this.getData().setContext(context, false);
     } //Automatically saved to data-manager
 
     /**
