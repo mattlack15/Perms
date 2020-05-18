@@ -1,9 +1,14 @@
 package me.gravitinos.perms.spigot;
 
+import com.google.common.collect.Lists;
+import com.zaxxer.hikari.HikariDataSource;
 import me.clip.placeholderapi.PlaceholderAPI;
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.backend.DataManager;
+import me.gravitinos.perms.core.backend.StorageCredentials;
+import me.gravitinos.perms.core.backend.mongo.MongoHandler;
 import me.gravitinos.perms.core.backend.sql.SQLHandler;
+import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.user.UserManager;
 import me.gravitinos.perms.spigot.channel.ProxyComm;
 import me.gravitinos.perms.spigot.command.CommandPerms;
@@ -13,9 +18,11 @@ import me.gravitinos.perms.spigot.file.SpigotFileDataManager;
 import me.gravitinos.perms.spigot.listeners.ChatListener;
 import me.gravitinos.perms.spigot.listeners.LoginListener;
 import me.gravitinos.perms.spigot.messaging.MessageManager;
+import me.gravitinos.perms.spigot.messaging.listeners.ListenerReloadSubject;
 import me.gravitinos.perms.spigot.verbose.VerboseController;
 import net.milkbowl.vault.permission.Permission;
 import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -33,6 +40,16 @@ import java.util.Map;
 public class SpigotPerms extends JavaPlugin {
     public static SpigotPerms instance;
 
+    public static String pName = "";
+
+    public static SpigotPerms getCurrentInstance(){
+        Plugin pl = Bukkit.getPluginManager().getPlugin(pName);
+        if(pl instanceof SpigotPerms){
+            return (SpigotPerms) pl;
+        }
+        return null;
+    }
+
     public static final String commandName = "ranks";
 
     public static String pluginPrefix;
@@ -45,14 +62,23 @@ public class SpigotPerms extends JavaPlugin {
 
     private SpigotImpl impl;
 
+    private int task1Id = -1;
+
     public void onEnable() {
         instance = this;
+        pName = this.getName();
         this.saveDefaultConfig();
         this.impl = new SpigotImpl();
         new Files();
         DataManager dataManager;
         if (impl.getConfigSettings().isUsingSQL()) {
-            dataManager = new SQLHandler();
+            String type = impl.getConfigSettings().getDatabaseType();
+            if(type.equalsIgnoreCase("mongo")) {
+                dataManager = new MongoHandler(new StorageCredentials(impl.getConfigSettings().getSQLUsername(), impl.getConfigSettings().getSQLPassword(),
+                        impl.getConfigSettings().getSQLHost(), impl.getConfigSettings().getSQLPort()), impl.getConfigSettings().getSQLDatabase());
+            } else {
+                dataManager = new SQLHandler();
+            }
         } else {
             dataManager = new SpigotFileDataManager();
         }
@@ -72,6 +98,16 @@ public class SpigotPerms extends JavaPlugin {
         //Message Broking
         new ProxyComm();
         new MessageManager();
+        ProxyComm.instance.registerListener(new ListenerReloadSubject());
+        task1Id = new BukkitRunnable(){
+            @Override
+            public void run() {
+                if(isEnabled()) {
+                    MessageManager.instance.flushQueue();
+                }
+            }
+        }.runTaskTimerAsynchronously(this, 0, 20).getTaskId();
+
 
         //For all online players
         for (Player p : Bukkit.getOnlinePlayers()) {
@@ -92,15 +128,16 @@ public class SpigotPerms extends JavaPlugin {
 
         //Permission Index
         loadPermissionIndex();
+        clearDuplicatesFromPIndex();
 
-        new BukkitRunnable(){
+        new BukkitRunnable() {
             @Override
             public void run() {
-                for(Plugin plugin : Bukkit.getPluginManager().getPlugins()){
+                for (Plugin plugin : Bukkit.getPluginManager().getPlugins()) {
                     plugin.getDescription().getPermissions().forEach(p -> addPermissionToIndex(plugin.getName(), p.getName()));
                 }
 
-                for(org.bukkit.permissions.Permission permissions : Bukkit.getPluginManager().getPermissions()){
+                for (org.bukkit.permissions.Permission permissions : Bukkit.getPluginManager().getPermissions()) {
                     addPermissionToIndex(permissions.getName());
                 }
             }
@@ -109,6 +146,12 @@ public class SpigotPerms extends JavaPlugin {
 
     public void onDisable() {
         PlaceholderAPI.unregisterPlaceholderHook(this);
+        if(task1Id != -1)
+            Bukkit.getScheduler().cancelTask(task1Id);
+        this.manager.shutdown();
+        if (GroupManager.instance.getDataManager() instanceof SQLHandler)
+            if(((SQLHandler) GroupManager.instance.getDataManager()).getDataSource() != null)
+                ((HikariDataSource) ((SQLHandler) GroupManager.instance.getDataManager()).getDataSource()).close();
     }
 
     public SpigotImpl getImpl() {
@@ -149,11 +192,46 @@ public class SpigotPerms extends JavaPlugin {
         return this.permissionIndex;
     }
 
+    public synchronized void clearDuplicatesFromPIndex(){
+        boolean changed = false;
+        ArrayList<String> alreadyKnown = new ArrayList<>();
+        for (String keys : permissionIndex.keySet()) {
+            for(String perms : Lists.newArrayList(permissionIndex.get(keys))){
+                if(!alreadyKnown.contains(perms)){
+                    alreadyKnown.add(perms);
+                } else {
+                    permissionIndex.get(keys).remove(perms);
+                    changed = true;
+                }
+            }
+        }
+
+        if(!changed)
+            return;
+
+        //Save
+        synchronized (Files.PERMISSION_INDEX_FILE) {
+            for(String keys : permissionIndex.keySet()) {
+                FileConfiguration config = YamlConfiguration.loadConfiguration(Files.PERMISSION_INDEX_FILE);
+
+                config.set(keys, permissionIndex.get(keys));
+                try {
+                    config.save(Files.PERMISSION_INDEX_FILE);
+                } catch (IOException e) {
+                    impl.addToLog("Could not save Permission Index File");
+                    impl.consoleLog("Could not save Permission Index File");
+                    e.printStackTrace();
+                }
+            }
+        }
+
+    }
+
     /**
      * Adds a permission to the permission index, if it doesn't already exist in the permission index
      */
-    public void addPermissionToIndex(String permission){
-        permission = permission.toLowerCase();
+    public synchronized void addPermissionToIndex(String permission) {
+            permission = permission.toLowerCase();
         ArrayList<String> alreadyKnown = new ArrayList<>();
         for (String keys : permissionIndex.keySet()) {
             alreadyKnown.addAll(permissionIndex.get(keys));
@@ -179,7 +257,7 @@ public class SpigotPerms extends JavaPlugin {
     /**
      * Adds a permission to the permission index, if it doesn't already exist in the permission index
      */
-    public void addPermissionToIndex(String plugin, String permission) {
+    public synchronized void addPermissionToIndex(String plugin, String permission) {
 
         permission = permission.toLowerCase();
         ArrayList<String> alreadyKnown = new ArrayList<>();
@@ -197,6 +275,10 @@ public class SpigotPerms extends JavaPlugin {
             List<String> alreadyThere = new ArrayList<>();
             if (config.isList(plugin)) {
                 alreadyThere = config.getStringList(plugin);
+            }
+
+            if(alreadyThere.contains(permission)){
+                return;
             }
 
             alreadyThere.add(permission);

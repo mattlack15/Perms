@@ -1,5 +1,6 @@
 package me.gravitinos.perms.spigot.gui;
 
+import me.gravitinos.perms.core.context.ServerContextType;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupBuilder;
 import me.gravitinos.perms.core.group.GroupData;
@@ -16,6 +17,7 @@ import me.gravitinos.perms.spigot.util.Menus.MenuElement;
 import me.gravitinos.perms.spigot.util.StringUtil;
 import me.gravitinos.perms.spigot.util.UtilColour;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
@@ -88,14 +90,13 @@ public class MenuGroupList extends UtilMenuActionableList {
             }
 
             builder.setName("&e" + name);
-            builder.addLore("&fServer Context: &6" + (group.getServerContext().equals(GroupData.SERVER_GLOBAL) ? "&cGLOBAL" : (group.getServerContext().equals(GroupData.SERVER_LOCAL) ? "&aLOCAL" : group.getServerNameOfServerContext())));
+            builder.addLore("&fServer Context: " + (ServerContextType.getType(group.getContext()).getDisplay()));
             builder.addLore("&fDefault Group: " + (GroupManager.instance.getDefaultGroup().equals(group) ? "&atrue" : "&cfalse"));
             builder.addLore("&fPriority: &a" + group.getPriority());
             builder.addLore("&fPrefix: " + group.getPrefix());
             builder.addLore("&fSuffix: " + group.getSuffix());
             builder.addLore("&fChat Colour: " + group.getChatColour() + "this");
             builder.addLore("&fDescription: ");
-            builder.addLore("&fGroup Id: &7" + group.getSubjectId());
             for(String line : group.getDescription().split("\\\\n")){
                 builder.addLore(" &f" + line);
             }
@@ -103,13 +104,12 @@ public class MenuGroupList extends UtilMenuActionableList {
             for(Inheritance inheritance : group.getInheritances()){
                 Subject parent = inheritance.getParent();
                 if(parent instanceof Group){
-                    builder.addLore("&7 - " + ((Group) parent).getName());
+                    builder.addLore("&7 - " + parent.getName());
                 }
             }
 
             MenuElement element = new MenuElement(builder.build());
             element.setClickHandler((e, i) -> new MenuGroup(group, Menu.getBackButton(this).setClickHandler((e1, i1) -> new MenuGroupList((Player) e1.getWhoClicked(), this.listRows, this.listForeign, this.getBackButton(), this.filters).open((Player) e1.getWhoClicked()))).open((Player) e.getWhoClicked()));
-
 
             return element;
         });
@@ -143,7 +143,14 @@ public class MenuGroupList extends UtilMenuActionableList {
         //Create Group
         MenuElement createGroup = new MenuElement(new ItemBuilder(Material.ANVIL, 1).setName("&a&lCreate New Group").build())
                 .setClickHandler((e, i) -> {
+                    if(!e.getWhoClicked().hasPermission(SpigotPerms.commandName + ".group.create")){
+                        this.getElement(e.getSlot()).addTempLore(this, "&cYou do not have access to this!", 60);
+                        return;
+                    }
+                    e.getWhoClicked().sendMessage(ChatColor.translateAlternateColorCodes('&', SpigotPerms.pluginPrefix + "Enter the group name in chat:"));
+                    p.sendTitle("", UtilColour.toColour("&b&lEnter the group's name in Chat"),10, 600, 10);
                     ChatListener.instance.addChatInputHandler(p.getUniqueId(), (s) -> {
+                        p.sendTitle("", "", 10, 10, 10);
                         Group group = new GroupBuilder(s).build();
                         GroupManager.instance.addGroup(group);
                         doInMainThread(() -> new MenuGroup(group, getBackButton(new MenuGroupList(p, listRows, listForeign, this.getBackButton(), filters))).open(p));

@@ -1,7 +1,8 @@
 package me.gravitinos.perms.spigot.command;
 
-import me.gravitinos.perms.core.PermsManager;
-import me.gravitinos.perms.core.group.GroupData;
+import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.MutableContextSet;
+import me.gravitinos.perms.core.context.ServerContextType;
 import me.gravitinos.perms.core.subject.Inheritance;
 import me.gravitinos.perms.core.user.User;
 import me.gravitinos.perms.core.user.UserManager;
@@ -127,10 +128,8 @@ public class CommandUser extends GravSubCommand {
                 sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fDisplay Group &6> &7" + user.getDisplayGroup());
 
                 sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fInheritances (Groups) &6>");
-                for (Inheritance inheritance : user.getInheritances()) {
-                    boolean global = inheritance.getContext().getServer().equals(GroupData.SERVER_GLOBAL);
-                    boolean applies = global || inheritance.getContext().getServer().equals(GroupData.SERVER_LOCAL);
-                    sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&7- &e" + inheritance.getParent().getName() + (applies ? (global ? "&c&lGLOBAL" : "&a&lLOCAL") : " &cDoes not apply here &7(&f" + inheritance.getContext().getNameOfServer() + "&7)"));                }
+                for (Inheritance inheritance : user.getInheritances())
+                    sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&7- &e" + inheritance.getParent().getName() + ServerContextType.getType(inheritance.getContext()).getDisplay());
 
             }
         });

@@ -12,8 +12,7 @@ public class UserData extends SubjectData {
         super(data);
     }
 
-    public static final String SERVER_LOCAL = Integer.toString(PermsManager.instance.getImplementation().getConfigSettings().getServerId());
-    public static final String SERVER_GLOBAL = Context.VAL_ALL;
+    public static final int SERVER_LOCAL = GroupData.SERVER_LOCAL;
 
     public UserData() {
     }
@@ -26,13 +25,13 @@ public class UserData extends SubjectData {
         return this.getData("EXTRA_" + key);
     }
 
-    public boolean hasExtraData(String key) { return getExtraData("EXTRA_" + key) != null; }
+    public boolean hasExtraData(String key) { return this.hasData("EXTRA_" + key); }
 
     public void setName(String name) {
         this.setData("username", name);
     }
 
-    public void setDisplayGroup(String server, UUID groupId) {
+    public void setDisplayGroup(int server, UUID groupId) {
         this.setData("displaygroup_" + server, groupId.toString());
     }
 
@@ -64,7 +63,7 @@ public class UserData extends SubjectData {
         return this.getData("notes", "");
     }
 
-    public UUID getDisplayGroup(String server) {
+    public UUID getDisplayGroup(int server) {
         String out = this.getData("displaygroup_" + server);
         if(out == null){
             out = this.getData("displaygroup_");

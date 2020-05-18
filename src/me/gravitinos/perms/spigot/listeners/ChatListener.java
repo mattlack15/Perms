@@ -3,6 +3,7 @@ package me.gravitinos.perms.spigot.listeners;
 import me.clip.placeholderapi.PlaceholderAPI;
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.subject.Inheritance;
@@ -55,7 +56,7 @@ public class ChatListener implements Listener {
         this.chatInputHandlers.remove(player);
     }
 
-    @EventHandler(priority=EventPriority.MONITOR)
+    @EventHandler(priority=EventPriority.HIGHEST)
     public void onChat(AsyncPlayerChatEvent event){
 
         if(chatInputHandlers.containsKey(event.getPlayer().getUniqueId())){
@@ -106,7 +107,7 @@ public class ChatListener implements Listener {
         Group displayGroup = GroupManager.instance.getGroupExact(user.getDisplayGroup());
         if(displayGroup == null){
             displayGroup = GroupManager.instance.getDefaultGroup();
-            user.addInheritance(displayGroup, Context.CONTEXT_SERVER_LOCAL);
+            user.addInheritance(displayGroup, new MutableContextSet(Context.CONTEXT_SERVER_LOCAL));
         }
 
 
@@ -128,6 +129,8 @@ public class ChatListener implements Listener {
     @NotNull
     public static TextComponent getFormattedChatMessage(@NotNull Player chattedPlayer, String message, ArrayList<String> chatFormat, Group displayGroup, User user, Player receiver) {
         boolean rel = receiver != null;
+
+        String lastColors = "";
 
         ArrayList<TextComponent> components = new ArrayList<>();
         for (String part : chatFormat) {
@@ -181,6 +184,9 @@ public class ChatListener implements Listener {
                     part = PlaceholderAPI.setRelationalPlaceholders(chattedPlayer, receiver, part);
             }
 
+            //Replacements in chat format
+            part = part.replace(ChatColor.translateAlternateColorCodes('&', "&8[&f&f&7factionless&8] "), "");
+
             if (chattedPlayer.hasPermission("chat.placeholders")) {
                 part = part.replace("<message>", chattedPlayer.hasPermission("chat.colour") ? message : toColour(message));
                 if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
@@ -221,8 +227,9 @@ public class ChatListener implements Listener {
 
             //Hover Events
             //TODO
-
-            TextComponent comp = new TextComponent(TextComponent.fromLegacyText(part));
+            String savedPart = part + "";
+            TextComponent comp = new TextComponent(TextComponent.fromLegacyText(lastColors + part));
+            lastColors = ChatColor.getLastColors(savedPart);
             comp.setHoverEvent(hoverEvent);
             comp.setClickEvent(clickEvent);
             components.add(comp);
@@ -231,14 +238,9 @@ public class ChatListener implements Listener {
 
         TextComponent mainComponent = new TextComponent("");
 
-        String lastColors = "";
 
         for (TextComponent comps : components) {
-            TextComponent component = new TextComponent(TextComponent.fromLegacyText(lastColors + comps.toLegacyText()));
-            component.setClickEvent(comps.getClickEvent());
-            component.setHoverEvent(comps.getHoverEvent());
             mainComponent.addExtra(comps);
-            lastColors = ChatColor.getLastColors(comps.toLegacyText());
         }
         return mainComponent;
     }

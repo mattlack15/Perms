@@ -17,6 +17,7 @@ public class SpigotConf implements PermsConfiguration {
     private static final String SQL_PORT = "sql_port";
     private static final String SQL_DATABASE = "sql_database";
     private static final String SQL_USERNAME = "sql_username";
+    private static final String SQL_TYPE = "database_type";
     private static final String SQL_PASSWORD = "sql_password";
     private static final String SERVER_NAME = "server_name";
     private static final String DEFAULT_GROUP = "default_group";
@@ -89,6 +90,11 @@ public class SpigotConf implements PermsConfiguration {
     }
 
     @Override
+    public String getDatabaseType() {
+        return getConfig().getString(SQL_TYPE);
+    }
+
+    @Override
     public int getSQLPort() {
         return getConfig().getInt(SQL_PORT);
     }
@@ -109,8 +115,8 @@ public class SpigotConf implements PermsConfiguration {
     }
 
     @Override
-    public String getLocalDefaultGroup() {
-        return getConfig().getString(LOCAL_DEFAULT_GROUP);
+    public ArrayList<String> getLocalDefaultGroups() {
+        return Lists.newArrayList(getConfig().getStringList(LOCAL_DEFAULT_GROUP));
     }
 
     @Override
@@ -121,7 +127,7 @@ public class SpigotConf implements PermsConfiguration {
     @Override
     public int getServerId() {
         if(getConfig().getInt(SERVER_ID, -1) == -1){
-            getConfig().set(SERVER_ID, new Random(System.currentTimeMillis() + Math.round(Math.random() * 1000)).nextInt(10000000));
+            getConfig().set(SERVER_ID, new Random(System.currentTimeMillis() + Math.round(Math.random() * 1000)).nextInt(999999999));
             saveConfig();
         }
         return getConfig().getInt(SERVER_ID);
@@ -178,13 +184,19 @@ public class SpigotConf implements PermsConfiguration {
     }
 
     @Override
+    public void setUsingBuiltInChat(boolean chat) {
+        getConfig().set(USING_BUILTIN_CHAT, chat);
+        saveConfig();
+    }
+
+    @Override
     public void setDefaultGroup(String groupName) {
         getConfig().set(DEFAULT_GROUP, groupName);
         saveConfig();
     }
 
     @Override
-    public void setLocalDefaultGroup(String groupName) {
+    public void setLocalDefaultGroups(ArrayList<String> groupName) {
         getConfig().set(LOCAL_DEFAULT_GROUP, groupName);
         saveConfig();
     }

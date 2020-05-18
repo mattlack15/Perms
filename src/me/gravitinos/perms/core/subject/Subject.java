@@ -3,16 +3,14 @@ package me.gravitinos.perms.core.subject;
 import com.google.common.collect.Lists;
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.backend.DataManager;
-import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.ContextSet;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.user.User;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -38,6 +36,8 @@ public abstract class Subject<T extends SubjectData> {
         this.data = data;
         this.subjectId = subjectId;
     }
+
+    public abstract ContextSet getContext();
 
     public abstract DataManager getDataManager();
 
@@ -78,7 +78,7 @@ public abstract class Subject<T extends SubjectData> {
         ArrayList<PPermission> remove = new ArrayList<>();
 
         for(PPermission permissions : list){
-            if(permissions.getContext().isExpired(ctm)){
+            if(permissions.isExpired(ctm)){
                 remove.add(permissions);
             }
         }
@@ -147,6 +147,8 @@ public abstract class Subject<T extends SubjectData> {
         ArrayList<Inheritance> remove = new ArrayList<>();
         ArrayList<UUID> removeParents = new ArrayList<>();
 
+        inherited.removeIf(i -> !i.isValid());
+
         for(Inheritance in : inherited){
             if(in.getContext().isExpired(ctm)){
                 remove.add(in);
@@ -157,10 +159,6 @@ public abstract class Subject<T extends SubjectData> {
         if(remove.size() > 0) {
             remove.forEach(inherited::remove); //Remove from object
             if(this.getDataManager() != null) {
-                remove.forEach((s) -> {
-                    Bukkit.getLogger().info("REMOVING INHERITANCE " + s.getParent().getName() + " FROM " + getName() + " BECAUSE OF EXPIRATION " + s.getContext().getBeforeTime());
-                    PermsManager.instance.getImplementation().addToLog("REMOVING INHERITANCE " + s.getParent().getName() + " FROM " + getName() + " BECAUSE OF EXPIRATION " + s.getContext().getBeforeTime());
-                });
                 this.getDataManager().removeInheritances(this, removeParents); //Update backend
             }
         }
@@ -205,7 +203,7 @@ public abstract class Subject<T extends SubjectData> {
      * Adds an inheritance to this subject
      * @param subject The inheritance to add
      */
-    protected void addOwnSubjectInheritance(Subject<?> subject, Context context){
+    protected void addOwnSubjectInheritance(Subject<?> subject, ContextSet context){
         this.inherited.add(new Inheritance(new SubjectRef(subject), new SubjectRef(this), context));
     }
 
@@ -213,7 +211,7 @@ public abstract class Subject<T extends SubjectData> {
      * Adds an inheritance to this subject
      * @param subject The inheritance to add
      */
-    protected void addOwnSubjectInheritance(SubjectRef subject, Context context){
+    protected void addOwnSubjectInheritance(SubjectRef subject, ContextSet context){
         this.inherited.add(new Inheritance(subject, new SubjectRef(this), context));
     }
 
@@ -227,9 +225,6 @@ public abstract class Subject<T extends SubjectData> {
      * @param permission the permission to add
      */
     protected void addOwnSubjectPermission(@NotNull PPermission permission){
-        if(permission == null){
-            return;
-        }
         this.ownPermissions.add(permission);
     }
 
@@ -247,9 +242,9 @@ public abstract class Subject<T extends SubjectData> {
      * @param permission
      * @return
      */
-    protected boolean hasOwnPermission(String permission, Context context){
+    protected boolean hasOwnPermission(String permission, ContextSet context){
         for(PPermission perms : this.getPermissions()){
-            if(perms.getPermission().equalsIgnoreCase(permission) && perms.getContext().applies(context)){
+            if(perms.getPermission().equalsIgnoreCase(permission) && context.isSatisfiedBy(perms.getContext())){
                 return true;
             }
         }
@@ -264,20 +259,16 @@ public abstract class Subject<T extends SubjectData> {
         return type;
     }
 
-    protected boolean hasOwnOrInheritedPermission(String permission, Context context){
-        if(this.hasOwnPermission(permission, context)){
+    protected boolean hasOwnOrInheritedPermission(String permission, ContextSet contexts){
+        if(this.hasOwnPermission(permission, contexts))
             return true;
-        }
         for(Inheritance inheritances : getInheritances()){
 
-            //Check if the inheritance's context applies to the specified context
-            if(!inheritances.getContext().applies(context)){
+            if(!contexts.isSatisfiedBy(inheritances.getContext()) || !contexts.isSatisfiedBy(inheritances.getParent().getContext()))
                 continue;
-            }
 
-            if(inheritances.getParent().hasOwnOrInheritedPermission(permission, context)){
+            if(inheritances.getParent().hasOwnOrInheritedPermission(permission, contexts))
                 return true;
-            }
         }
 
         return false;
@@ -287,19 +278,22 @@ public abstract class Subject<T extends SubjectData> {
      * Gets all permissions from this subject, including inherited permissions
      * @return
      */
-    protected ArrayList<PPermission> getAllPermissions(Context inheritanceContext){
-        ArrayList<PPermission> perms = new ArrayList<>(this.getPermissions().getPermissions());
+    protected ArrayList<PPermission> getAllPermissions(ContextSet contexts){
+
+        ArrayList<PPermission> perms = new ArrayList<>();
+        this.getPermissions().forEach(p -> {
+            if(contexts.isSatisfiedBy(p.getContext()))
+                perms.add(p);
+        });
         removeExpiredInheritances();
 
         for(Inheritance inheritances : getInheritances()){
 
-            //Check if the inheritance's context applies to the specified context
-            if(!inheritances.getContext().applies(inheritanceContext)){
+            if(!contexts.isSatisfiedBy(inheritances.getContext()) || !contexts.isSatisfiedBy(inheritances.getParent().getContext()))
                 continue;
-            }
 
             //Add all the permissions to the perms array list
-            perms.addAll(inheritances.getParent().getAllPermissions(inheritanceContext));
+            perms.addAll(inheritances.getParent().getAllPermissions(contexts));
         }
 
         return perms;

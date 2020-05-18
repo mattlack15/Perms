@@ -2,6 +2,7 @@ package me.gravitinos.perms.spigot.listeners;
 
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.user.User;
 import me.gravitinos.perms.core.user.UserManager;
@@ -81,13 +82,16 @@ public class LoginListener implements Listener {
                     if (user != null) {
                         if (user.getData().getFirstJoined() == -1) {
                             user.getData().setFirstJoined(System.currentTimeMillis());
-                            user.addInheritance(
-                                    GroupManager.instance.getGroup(
-                                            PermsManager.instance.getImplementation().getConfigSettings().getLocalDefaultGroup(),
-                                            PermsManager.instance.getImplementation().getConfigSettings().getServerId()
-                                    ),
-                                    Context.CONTEXT_SERVER_LOCAL
-                            );
+                        }
+
+                        //Add local default groups
+                        if(!user.getData().hasExtraData(PermsManager.instance.getImplementation().getConfigSettings().getServerId() + "-FJLDG")) {
+                            user.getData().setExtraData(PermsManager.instance.getImplementation().getConfigSettings().getServerId() + "-FJLDG", Long.toString(System.currentTimeMillis()));
+                            for (String localDefGroup : PermsManager.instance.getImplementation().getConfigSettings().getLocalDefaultGroups()) {
+                                if (GroupManager.instance.isVisibleGroupLoaded(localDefGroup)) {
+                                    user.addInheritance(GroupManager.instance.getVisibleGroup(localDefGroup), new MutableContextSet(Context.CONTEXT_SERVER_LOCAL));
+                                }
+                            }
                         }
                     }
                     event.getPlayer().sendMessage(ChatColor.translateAlternateColorCodes('&', SpigotPerms.pluginPrefix + ChatColor.GREEN + "Your userdata was loaded successfully!"));
@@ -99,8 +103,21 @@ public class LoginListener implements Listener {
         SpigotPermissible.inject(event.getPlayer());
         User user = UserManager.instance.getUser(event.getPlayer().getUniqueId());
         if (user != null) {
+
+            if(!user.getName().equals(event.getPlayer().getName()))
+                user.setName(event.getPlayer().getName());
+
             if (user.getData().getFirstJoined() == -1) {
                 user.getData().setFirstJoined(System.currentTimeMillis());
+            }
+            //Add local default groups
+            if(!user.getData().hasExtraData(PermsManager.instance.getImplementation().getConfigSettings().getServerId() + "-FJLDG")) {
+                user.getData().setExtraData(PermsManager.instance.getImplementation().getConfigSettings().getServerId() + "-FJLDG", Long.toString(System.currentTimeMillis()));
+                for (String localDefGroup : PermsManager.instance.getImplementation().getConfigSettings().getLocalDefaultGroups()) {
+                    if (GroupManager.instance.isVisibleGroupLoaded(localDefGroup)) {
+                        user.addInheritance(GroupManager.instance.getVisibleGroup(localDefGroup), new MutableContextSet(Context.CONTEXT_SERVER_LOCAL));
+                    }
+                }
             }
         }
     }

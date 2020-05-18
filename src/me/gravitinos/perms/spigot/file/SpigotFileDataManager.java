@@ -1,17 +1,16 @@
 package me.gravitinos.perms.spigot.file;
 
 import com.google.common.collect.Lists;
-import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.ContextSet;
+import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.subject.*;
-import me.gravitinos.perms.core.user.User;
-import me.gravitinos.perms.core.user.UserBuilder;
 import me.gravitinos.perms.core.user.UserData;
 import me.gravitinos.perms.core.user.UserManager;
 import me.gravitinos.perms.core.util.MapUtil;
@@ -29,7 +28,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.function.Supplier;
 
 /**
  * Spigot data manager
@@ -243,6 +241,7 @@ public class SpigotFileDataManager extends DataManager {
                 data.setSuffix(section.getString(GROUP_DATA_SUFFIX));
                 data.setPriority(section.getInt(GROUP_DATA_PRIORITY));
                 data.setName(getGroupName(subjectId));
+                Bukkit.broadcastMessage("Loaded data for group " + data.getName() + " context expiration: " + data.getContext().getExpiration());
 
                 future.complete(new GenericSubjectData(data));
             } else {
@@ -346,10 +345,10 @@ public class SpigotFileDataManager extends DataManager {
                     continue;
                 }
                 Map<String, String> deserialized = MapUtil.stringToMap(permString.substring(permString.indexOf(" ") + 1));
-                Context context = Context.CONTEXT_ALL;
-                Long expiration = 0L;
+                ContextSet context = new MutableContextSet();
+                long expiration = ContextSet.NO_EXPIRATION;
                 if (deserialized.get("context") != null) {
-                    context = Context.fromString(deserialized.get("context"));
+                    context = ContextSet.fromString(deserialized.get("context"));
                 }
                 if (deserialized.get("expiration") != null) {
                     try {
@@ -357,7 +356,9 @@ public class SpigotFileDataManager extends DataManager {
                     } catch (Exception ignored) {
                     }
                 }
-                Context.setContextTime(context, expiration);
+
+                context.setExpiration(expiration);
+
                 perms.add(new PPermission(permString.substring(0, permString.indexOf(" ")), context));
             }
 
@@ -408,7 +409,7 @@ public class SpigotFileDataManager extends DataManager {
                 return null;
             }
             Map<String, String> contextExpirationMap = new HashMap<>();
-            if (!Context.CONTEXT_ALL.equals(permission.getContext())) {
+            if (permission.getContext().size() != 0) {
                 contextExpirationMap.put("context", permission.getContext().toString());
             }
             if (permission.getExpiry() != 0) {
@@ -467,8 +468,8 @@ public class SpigotFileDataManager extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> removePermissionExact(Subject subject, String permission, UUID permIdentifier) {
-        return this.removePermission(subject, permission);
+    public CompletableFuture<Void> removePermissionExact(Subject subject, PPermission permission) {
+        return this.removePermission(subject, permission.getPermission());
     }
 
 
@@ -498,14 +499,14 @@ public class SpigotFileDataManager extends DataManager {
 
             for (String inheritanceString : section.getStringList(SUBJECT_INHERITANCES)) {
                 String inheritanceName;
-                Context context = Context.CONTEXT_ALL;
+                ContextSet context = new MutableContextSet();
                 if (!inheritanceString.contains(" ")) {
                     inheritanceName = inheritanceString;
                 } else {
                     Map<String, String> deserialized = MapUtil.stringToMap(inheritanceString.substring(inheritanceString.indexOf(" ") + 1));
 
                     if (deserialized.containsKey("context")) {
-                        context = Context.fromString(deserialized.get("context"));
+                        context = ContextSet.fromString(deserialized.get("context"));
                     }
                     inheritanceName = inheritanceString.substring(0, inheritanceString.indexOf(" "));
                 }
@@ -543,10 +544,10 @@ public class SpigotFileDataManager extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> addInheritance(@NotNull Subject subject, @NotNull Subject inheritance, Context context) {
+    public CompletableFuture<Void> addInheritance(@NotNull CachedInheritance inheritance) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
-            ConfigurationSection section = getSection(subject.getSubjectId());
+            ConfigurationSection section = getSection(inheritance.getChild());
 
             if (section == null) {
                 future.complete(null);
@@ -556,12 +557,12 @@ public class SpigotFileDataManager extends DataManager {
             ArrayList<String> current = Lists.newArrayList(section.getStringList(SUBJECT_INHERITANCES));
             Map<String, String> contextMap = new HashMap<>();
 
-            if (!Context.CONTEXT_ALL.equals(context)) {
-                contextMap.put("context", context.toString());
+            if (inheritance.getContext().size() != 0) {
+                contextMap.put("context", inheritance.getContext().toString());
             }
 
             String contextString = contextMap.size() > 0 ? " " + MapUtil.mapToString(contextMap) : "";
-            String inheritanceString = inheritance.getName() + contextString;
+            String inheritanceString = (UserManager.instance.getUser(inheritance.getParent()) != null ? UserManager.instance.getUser(inheritance.getParent()).getName() : GroupManager.instance.getGroupExact(inheritance.getParent()).getName()) + contextString;
             current.add(inheritanceString);
 
             section.set(SUBJECT_INHERITANCES, current);
@@ -622,7 +623,7 @@ public class SpigotFileDataManager extends DataManager {
                 UserData data = new UserData(subject.getData());
 
                 section.set(USER_DATA_USERNAME, data.getName());
-                section.set(USER_DATA_DISPLAYGROUP, data.getDisplayGroup(GroupData.SERVER_LOCAL));
+                section.set(USER_DATA_DISPLAYGROUP, data.getDisplayGroup(GroupData.SERVER_LOCAL).toString());
                 section.set(USER_DATA_NOTES, data.getNotes());
                 section.set(USER_DATA_PREFIX, data.getPrefix());
                 section.set(USER_DATA_SUFFIX, data.getSuffix());
@@ -756,7 +757,7 @@ public class SpigotFileDataManager extends DataManager {
         runAsync(() -> {
             for (Inheritance inheritance : inheritances) {
                 try {
-                    this.addInheritance(inheritance.getChild(), inheritance.getParent(), inheritance.getContext()).get();
+                    this.addInheritance(inheritance.toCachedInheritance()).get();
                 } catch (InterruptedException | ExecutionException ignored) {
                 }
             }
@@ -820,7 +821,7 @@ public class SpigotFileDataManager extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> clearSubjectOfType(String type) {
+    public CompletableFuture<Void> clearSubjectsOfType(String type) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
             if (Subject.USER.equals(type)) {

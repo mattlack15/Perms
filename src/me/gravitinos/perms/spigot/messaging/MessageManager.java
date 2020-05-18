@@ -2,6 +2,7 @@ package me.gravitinos.perms.spigot.messaging;
 
 import me.gravitinos.perms.spigot.channel.MessageAgent;
 import me.gravitinos.perms.spigot.channel.ProxyComm;
+import org.bukkit.Bukkit;
 
 import java.util.ArrayList;
 
@@ -26,10 +27,12 @@ public class MessageManager {
     }
 
     public synchronized void flushQueue(){
-        for(MessageAgent agent : queue){
-            ProxyComm.instance.register(agent);
+        if(!Bukkit.getOnlinePlayers().isEmpty()) {
+            for (MessageAgent agent : queue) {
+                ProxyComm.instance.register(agent);
+            }
+            queue.clear();
         }
-        queue.clear();
     }
 
 }

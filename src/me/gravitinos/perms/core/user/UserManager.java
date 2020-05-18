@@ -5,6 +5,9 @@ import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.ContextSet;
+import me.gravitinos.perms.core.context.ImmutableContextSet;
+import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.subject.Inheritance;
 import me.gravitinos.perms.core.subject.PPermission;
@@ -27,6 +30,8 @@ public class UserManager {
 
     private DataManager dataManager;
 
+    private ContextSet defaultGroupContext = new MutableContextSet(Context.CONTEXT_SERVER_LOCAL);
+
     private ArrayList<User> loadedUsers = new ArrayList<>();
 
     public UserManager(DataManager dataManager) {
@@ -47,7 +52,18 @@ public class UserManager {
      * @param username The username of the user -> in case the user is not in the data manager and userdata has to be created
      * @return A future containing whether the operation was successful (true) or not (false)
      */
-    public synchronized CompletableFuture<Boolean> loadUser(@NotNull UUID id, @NotNull String username) {
+    public CompletableFuture<Boolean> loadUser(@NotNull UUID id, @NotNull String username) {
+        return loadUser(id, username, true);
+    }
+
+    /**
+     * Loads a specific user from the data manager specified in the constructor
+     *
+     * @param id       The id of the user
+     * @param username The username of the user -> in case the user is not in the data manager and userdata has to be created
+     * @return A future containing whether the operation was successful (true) or not (false)
+     */
+    public CompletableFuture<Boolean> loadUser(@NotNull UUID id, @NotNull String username, boolean addDefaultGroup) {
         CompletableFuture<Boolean> result = new CompletableFuture<>();
 
         synchronized (beingLoaded) {
@@ -66,79 +82,83 @@ public class UserManager {
                 CachedSubject cachedSubject = dataManager.getSubject(id).get();
                 User user;
                 if (cachedSubject == null || cachedSubject.getData() == null || cachedSubject.getSubjectId() == null) {
-                    user = new UserBuilder(id, username).addInheritance(GroupManager.instance.getDefaultGroup(), Context.CONTEXT_SERVER_LOCAL).build();
+                    if(addDefaultGroup) {
+                        user = new UserBuilder(id, username).addInheritance(GroupManager.instance.getDefaultGroup(), getDefaultGroupInheritanceContext()).build();
+                    } else {
+                        user = new UserBuilder(id, username).build();
+                    }
                     this.unloadUser(id);
-                    this.addUser(user); //This will also save the user to the backend
+                    this.addUser(user).get(); //This will also save the user to the backend
                 } else {
                     user = new User(cachedSubject, (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s)), this);
-                    if (this.isUserLoaded(user.getUniqueID())) {
-                        this.getUser(user.getUniqueID()).updateFromCachedSubject(cachedSubject, (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s))); //Will not save user to the backend (Purposefully)
-                    } else {
-                        this.loadedUsers.add(user); //This will NOT save the user to the backend (Purposefully)
+                    synchronized (this) {
+                        if (this.isUserLoaded(user.getUniqueID())) {
+                            this.getUser(user.getUniqueID()).updateFromCachedSubject(cachedSubject, (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s))); //Will not save user to the backend (Purposefully)
+                        } else {
+                            this.loadedUsers.add(user); //This will NOT save the user to the backend (Purposefully)
+                        }
                     }
                 }
 
                 //TODO remove later
 
-                Map<Integer, String> index = PermsManager.instance.getCachedServerIndex();
-
-                user.getDataManager().performOrderedOpAsync(() -> {
-                    for (int ints : index.keySet()) {
-                        String name = index.get(ints);
-                        String finalServer = Integer.toString(ints);
-
-                        //inheritance
-                        boolean a = false;
-                        for (Inheritance inheritances : user.getInheritances()) {
-                            if (inheritances.getContext().getServer().equals(name)) {
-                                a = true;
-                            }
-                        }
-                        if (a) {
-                            PermsManager.instance.getImplementation().sendDebugMessage("Found old-formatted subject inheritances in &e" + user.getName() + "&7 changing to new identifier-serverName format!");
-                            ArrayList<Inheritance> inheritances = user.getInheritances();
-                            user.clearInheritances();
-                            inheritances.forEach(i -> {
-                                if (i.getContext().getServer().equals(name)) {
-                                    Context.setContextServer(i.getContext(), finalServer);
-                                }
-                            });
-                            user.addInheritances(inheritances);
-                        }
-
-
-                        //perms
-                        a = false;
-                        for (PPermission perms : user.getOwnPermissions()) {
-                            if (perms.getContext().getServer().equals(name)) {
-                                a = true;
-                            }
-                        }
-                        if (a) {
-                            PermsManager.instance.getImplementation().sendDebugMessage("Found old-formatted permissions in &e" + user.getName() + "&7 changing to new identifier-serverName format!");
-                            ArrayList<PPermission> perms = user.getOwnPermissions().getPermissions();
-                            user.removeOwnPermissions(perms);
-                            ArrayList<PPermission> newPerms = new ArrayList<>();
-                            perms.forEach(p -> {
-                                if (p.getContext().getServer().equals(name)) {
-                                    newPerms.add(new PPermission(p.getPermission(), new Context(finalServer, p.getContext().getWorldName(), p.getExpiry()), p.getPermissionIdentifier()));
-                                } else {
-                                    newPerms.add(p);
-                                }
-                            });
-                            user.addOwnPermissions(newPerms);
-                        }
-                    }
-                    return null;
-                });
+//                Map<Integer, String> index = PermsManager.instance.getCachedServerIndex();
+//
+//                user.getDataManager().performOrderedOpAsync(() -> {
+//                    for (int ints : index.keySet()) {
+//                        String name = index.get(ints);
+//                        String finalServer = Integer.toString(ints);
+//
+//                        //inheritance
+//                        boolean a = false;
+//                        for (Inheritance inheritances : user.getInheritances()) {
+//                            if (inheritances.getContext().getServer().equals(name)) {
+//                                a = true;
+//                            }
+//                        }
+//                        if (a) {
+//                            PermsManager.instance.getImplementation().sendDebugMessage("Found old-formatted subject inheritances in &e" + user.getName() + "&7 changing to new identifier-serverName format!");
+//                            ArrayList<Inheritance> inheritances = user.getInheritances();
+//                            user.clearInheritances();
+//                            inheritances.forEach(i -> {
+//                                if (i.getContext().getServer().equals(name)) {
+//                                    Context.setContextServer(i.getContext(), finalServer);
+//                                }
+//                            });
+//                            user.addInheritances(inheritances);
+//                        }
+//
+//
+//                        //perms
+//                        a = false;
+//                        for (PPermission perms : user.getOwnPermissions()) {
+//                            if (perms.getContext().getServer().equals(name)) {
+//                                a = true;
+//                            }
+//                        }
+//                        if (a) {
+//                            PermsManager.instance.getImplementation().sendDebugMessage("Found old-formatted permissions in &e" + user.getName() + "&7 changing to new identifier-serverName format!");
+//                            ArrayList<PPermission> perms = user.getOwnPermissions().getPermissions();
+//                            user.removeOwnPermissions(perms);
+//                            ArrayList<PPermission> newPerms = new ArrayList<>();
+//                            perms.forEach(p -> {
+//                                if (p.getContext().getServer().equals(name)) {
+//                                    newPerms.add(new PPermission(p.getPermission(), new Context(finalServer, p.getContext().getWorldName(), p.getExpiry()), p.getPermissionIdentifier()));
+//                                } else {
+//                                    newPerms.add(p);
+//                                }
+//                            });
+//                            user.addOwnPermissions(newPerms);
+//                        }
+//                    }
+//                    return null;
+//                });
 
 
             } catch (Throwable e) {
-                Bukkit.getLogger().severe("Problem loading user " + username + " Exception: " + e.getMessage());
-                SpigotPerms.instance.getImpl().addToLog(e.getMessage());
+                PermsManager.instance.getImplementation().addToLog("Problem loading user " + username + " (" + id + "): " + e.getMessage());
                 result.complete(false);
                 beingLoaded.remove(id);
-                Bukkit.getLogger().severe("-----------------------------------------");
                 e.printStackTrace();
             }
 
@@ -148,6 +168,14 @@ public class UserManager {
         });
 
         return result;
+    }
+
+    public void setDefaultGroupInheritanceContext(ContextSet context){
+        this.defaultGroupContext = context;
+    }
+
+    public ContextSet getDefaultGroupInheritanceContext(){
+        return this.defaultGroupContext;
     }
 
     public CompletableFuture<Boolean> reloadUsers() {
@@ -215,7 +243,7 @@ public class UserManager {
      * @param uuid The uuid of the user
      * @return The user object or null if the user is not loaded in this user manager
      */
-    public User getUser(UUID uuid) {
+    public synchronized User getUser(UUID uuid) {
         for (User u : loadedUsers) {
             if (u.getUniqueID().equals(uuid)) {
                 return u;
@@ -224,7 +252,7 @@ public class UserManager {
         return null;
     }
 
-    public User getUserFromName(String name) {
+    public synchronized User getUserFromName(String name) {
         for (User u : loadedUsers) {
             if (u.getName().equals(name)) {
                 return u;
@@ -249,11 +277,14 @@ public class UserManager {
      *
      * @param user The user to add
      */
-    public void addUser(User user) {
+    public CompletableFuture<Void> addUser(User user) {
         this.loadedUsers.add(user);
         if (dataManager != null) {
-            dataManager.addSubject(user);
+            return dataManager.addSubject(user);
         }
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        future.complete(null);
+        return future;
     }
 
     /**

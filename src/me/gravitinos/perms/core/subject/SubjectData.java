@@ -25,6 +25,9 @@ public abstract class SubjectData {
     public SubjectData(){
     }
 
+    public static Map<String, String> getData(SubjectData data){
+        return data.data;
+    }
     protected void setData(String key, String val){
         this.data.put(key, val);
         this.listeners.values().forEach(v -> v.update(key, val));

@@ -1,6 +1,7 @@
 package me.gravitinos.perms.spigot;
 
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.subject.Inheritance;
@@ -32,12 +33,14 @@ public class PermsVault extends Permission {
     //s1 -> playername s2 -> permission
     @Override
     public boolean playerHas(String s, String s1, String s2) {
+        if(SpigotPerms.getCurrentInstance() == null)
+            return false;
         if(Bukkit.getPlayer(s1) != null){
-            User user = UserManager.instance.getUser(Bukkit.getPlayer(s1).getUniqueId());
+            User user = SpigotPerms.getCurrentInstance().getManager().getUserManager().getUser(Bukkit.getPlayer(s1).getUniqueId());
             if(user == null){
                 return false;
             } else {
-                return user.hasOwnPermission(s2, Context.CONTEXT_SERVER_LOCAL);
+                return user.hasOwnPermission(s2, new MutableContextSet(Context.CONTEXT_SERVER_LOCAL));
             }
         }
         return false;
@@ -45,8 +48,10 @@ public class PermsVault extends Permission {
 
     @Override
     public boolean playerAdd(String s, String s1, String s2) {
+        if(SpigotPerms.getCurrentInstance() == null)
+            return false;
         if(Bukkit.getPlayer(s1) != null){
-            User user = UserManager.instance.getUser(Bukkit.getPlayer(s1).getUniqueId());
+            User user = SpigotPerms.getCurrentInstance().getManager().getUserManager().getUser(Bukkit.getPlayer(s1).getUniqueId());
             if(user == null){
                 return false;
             } else {
@@ -59,8 +64,10 @@ public class PermsVault extends Permission {
 
     @Override
     public boolean playerRemove(String s, String s1, String s2) {
+        if(SpigotPerms.getCurrentInstance() == null)
+            return false;
         if(Bukkit.getPlayer(s1) != null){
-            User user = UserManager.instance.getUser(Bukkit.getPlayer(s1).getUniqueId());
+            User user = SpigotPerms.getCurrentInstance().getManager().getUserManager().getUser(Bukkit.getPlayer(s1).getUniqueId());
             if(user == null){
                 return false;
             } else {
@@ -73,15 +80,19 @@ public class PermsVault extends Permission {
 
     @Override
     public boolean groupHas(String s, String s1, String s2) {
+        if(SpigotPerms.getCurrentInstance() == null)
+            return false;
         Group group = GroupManager.instance.getVisibleGroup(s1);
         if(group == null){
             return false;
         }
-        return group.hasOwnPermission(s2, Context.CONTEXT_SERVER_LOCAL);
+        return group.hasOwnPermission(s2, new MutableContextSet(Context.CONTEXT_SERVER_LOCAL));
     }
 
     @Override
     public boolean groupAdd(String s, String s1, String s2) {
+        if(SpigotPerms.getCurrentInstance() == null)
+            return false;
         Group group = GroupManager.instance.getVisibleGroup(s1);
         if(group == null){
             return false;
@@ -92,6 +103,8 @@ public class PermsVault extends Permission {
 
     @Override
     public boolean groupRemove(String s, String s1, String s2) {
+        if(SpigotPerms.getCurrentInstance() == null)
+            return false;
         Group group = GroupManager.instance.getVisibleGroup(s1);
         if(group == null){
             return false;
@@ -102,8 +115,10 @@ public class PermsVault extends Permission {
 
     @Override
     public boolean playerInGroup(String s, String s1, String s2) {
+        if(SpigotPerms.getCurrentInstance() == null)
+            return false;
         if(Bukkit.getPlayer(s1) != null){
-            User user = UserManager.instance.getUser(Bukkit.getPlayer(s1).getUniqueId());
+            User user = SpigotPerms.getCurrentInstance().getManager().getUserManager().getUser(Bukkit.getPlayer(s1).getUniqueId());
             if(user == null){
                 return false;
             } else {
@@ -124,8 +139,10 @@ public class PermsVault extends Permission {
 
     @Override
     public boolean playerAddGroup(String s, String s1, String s2) {
+        if(SpigotPerms.getCurrentInstance() == null)
+            return false;
         if(Bukkit.getPlayer(s1) != null){
-            User user = UserManager.instance.getUser(Bukkit.getPlayer(s1).getUniqueId());
+            User user = SpigotPerms.getCurrentInstance().getManager().getUserManager().getUser(Bukkit.getPlayer(s1).getUniqueId());
             if(user == null){
                 return false;
             } else {
@@ -133,7 +150,7 @@ public class PermsVault extends Permission {
                 if(g == null){
                     return false;
                 }
-                user.addInheritance(g, Context.CONTEXT_SERVER_LOCAL);
+                user.addInheritance(g, new MutableContextSet(Context.CONTEXT_SERVER_LOCAL));
                 return true;
             }
         }
@@ -142,8 +159,10 @@ public class PermsVault extends Permission {
 
     @Override
     public boolean playerRemoveGroup(String s, String s1, String s2) {
+        if(SpigotPerms.getCurrentInstance() == null)
+            return false;
         if(Bukkit.getPlayer(s1) != null){
-            User user = UserManager.instance.getUser(Bukkit.getPlayer(s1).getUniqueId());
+            User user = SpigotPerms.getCurrentInstance().getManager().getUserManager().getUser(Bukkit.getPlayer(s1).getUniqueId());
             if(user == null){
                 return false;
             } else {
@@ -160,8 +179,10 @@ public class PermsVault extends Permission {
 
     @Override
     public String[] getPlayerGroups(String s, String s1) {
+        if(SpigotPerms.getCurrentInstance() == null)
+            return new String[0];
         if(Bukkit.getPlayer(s1) != null){
-            User user = UserManager.instance.getUser(Bukkit.getPlayer(s1).getUniqueId());
+            User user = SpigotPerms.getCurrentInstance().getManager().getUserManager().getUser(Bukkit.getPlayer(s1).getUniqueId());
             if(user == null){
                 return new String[0];
             } else {
@@ -179,8 +200,11 @@ public class PermsVault extends Permission {
 
     @Override
     public String getPrimaryGroup(String s, String s1) {
+        if(SpigotPerms.getCurrentInstance() == null)
+            return "";
+
         if(Bukkit.getPlayer(s1) != null){
-            User user = UserManager.instance.getUser(Bukkit.getPlayer(s1).getUniqueId());
+            User user = SpigotPerms.getCurrentInstance().getManager().getUserManager().getUser(Bukkit.getPlayer(s1).getUniqueId());
             if(user == null){
                 return null;
             } else {
@@ -192,6 +216,8 @@ public class PermsVault extends Permission {
 
     @Override
     public String[] getGroups() {
+        if(SpigotPerms.getCurrentInstance() == null)
+            return new String[0];
         ArrayList<String> groups = new ArrayList<>();
         GroupManager.instance.getLoadedGroups().forEach(g -> groups.add(g.getName()));
         return groups.toArray(new String[0]);

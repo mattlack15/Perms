@@ -1,8 +1,9 @@
 package me.gravitinos.perms.spigot.command;
 
-import me.gravitinos.perms.core.PermsManager;
+import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.MutableContextSet;
+import me.gravitinos.perms.core.context.ServerContextType;
 import me.gravitinos.perms.core.group.Group;
-import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.subject.Inheritance;
 import me.gravitinos.perms.spigot.SpigotPerms;
@@ -93,16 +94,13 @@ public class CommandGroup extends GravSubCommand {
             sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fPriority &6> &a" + group.getPriority());
             sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fPrefix &6> &r" + group.getPrefix());
             sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fSuffix &6> &r" + group.getSuffix());
-            sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fServer &6> &7" + group.getServerContext() + " (&e" + (GroupData.SERVER_GLOBAL.equals(group.getServerContext()) ? "Global&7)" : (GroupData.SERVER_LOCAL.equals(group.getServerContext()) ? "Local&7)" : "Foreign&7)")));
+            sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fServer &6> &7" + ServerContextType.getType(group.getContext()).getDisplay());
             sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fChat Colour &6> &r" + group.getChatColour() + "People in this group have this chat colour");
             sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fDescription &6> &r" + group.getDescription());
             sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fDefault Group &6> " + (group.equals(GroupManager.instance.getDefaultGroup()) ? "&aTrue" : "&cFalse"));
             sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fInheritances &6>");
-            for(Inheritance inheritance : group.getInheritances()){
-                boolean global = inheritance.getContext().getServer().equals(GroupData.SERVER_GLOBAL);
-                boolean applies = global || inheritance.getContext().getServer().equals(GroupData.SERVER_LOCAL);
-                sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&7- &e" + inheritance.getParent().getName() + (applies ? (global ? "&c&lGLOBAL" : "&a&lLOCAL") : " &cDoes not apply here &7(&f" + inheritance.getContext().getNameOfServer() + "&7)"));
-            }
+            for(Inheritance inheritance : group.getInheritances())
+                sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&7- &e" + inheritance.getParent().getName() + ServerContextType.getType(inheritance.getContext()).getDisplay());
 
         }
         return true;

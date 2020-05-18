@@ -1,7 +1,9 @@
 package me.gravitinos.perms.spigot.util.Menus;
 
 import javafx.scene.control.MenuItem;
+import lombok.Getter;
 import me.gravitinos.perms.spigot.SpigotPerms;
+import me.gravitinos.perms.spigot.gui.UtilMenuActionableList;
 import me.gravitinos.perms.spigot.util.ItemBuilder;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -196,7 +198,57 @@ public abstract class Menu {
         }
     }
 
+    public void setTitle(String title){
+        this.title = title;
+    }
+
     public Map<Integer, MenuElement> getElements() {
         return elements;
     }
+
+    @Getter
+    private int currentPage = 0;
+
+    public void setupActionableList(int startPos, int endPos, int backPos, int nextPos, UtilMenuActionableList.MenuElementSupplier elementSupplier, int page) {
+        //Pageable list
+        currentPage = page;
+
+        int calculatedMarginLeft = startPos % 9;
+        int calculatedMarginRight = 8 - endPos % 9;
+
+        int elementIndex = 0;
+        boolean placing = true;
+        for (int slot = startPos; slot <= endPos; slot++) {
+            if (8 - slot % 9 < calculatedMarginRight) {
+                slot += calculatedMarginLeft + calculatedMarginRight;
+            }
+
+            if (placing) {
+                MenuElement element = elementSupplier.getElement(elementIndex);
+                if (element == null) {
+                    placing = false;
+                    this.setElement(slot, null);
+                } else {
+                    this.setElement(slot, element);
+                }
+            } else {
+                this.setElement(slot, null);
+            }
+            elementIndex++;
+        }
+
+        MenuElement back = new MenuElement(new ItemBuilder(Material.ARROW, 1).setName("&fBack").build()).setClickHandler((e, i) -> this.setupActionableList(startPos, endPos, backPos
+                , nextPos, elementSupplier, page - 1));
+        MenuElement next = new MenuElement(new ItemBuilder(Material.ARROW, 1).setName("&fNext").build()).setClickHandler((e, i) -> this.setupActionableList(startPos, endPos, backPos
+                , nextPos, elementSupplier, page + 1));
+
+        if (page != 0) {
+            this.setElement(backPos, back);
+        }
+        if (elementSupplier.getElement(elementIndex + 1) != null) {
+            this.setElement(nextPos, next);
+        }
+        MenuManager.instance.invalidateInvsForMenu(this);
+    }
+
 }

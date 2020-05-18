@@ -2,6 +2,8 @@ package me.gravitinos.perms.spigot.gui;
 
 import com.google.common.collect.Lists;
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.ContextSet;
+import me.gravitinos.perms.core.context.ServerContextType;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.group.GroupManager;
@@ -23,9 +25,9 @@ import java.util.concurrent.ExecutionException;
 public class MenuGroupInheritanceEditor extends UtilMenuActionableList {
 
     public interface GroupInheritanceEditorHandler{
-        CompletableFuture<Void> addGroup(Group group, Context context);
+        CompletableFuture<Void> addGroup(Group group, ContextSet context);
         CompletableFuture<Void> removeGroup(Group group);
-        Map<Group, Context> getGroups();
+        Map<Group, ContextSet> getGroups();
     }
 
     private GroupInheritanceEditorHandler handler;
@@ -40,7 +42,7 @@ public class MenuGroupInheritanceEditor extends UtilMenuActionableList {
 
     public void setup(){
 
-        Map<Group, Context> contexts = handler.getGroups();
+        Map<Group, ContextSet> contexts = handler.getGroups();
 
         ArrayList<Group> groups = Lists.newArrayList(contexts.keySet());
 
@@ -52,19 +54,19 @@ public class MenuGroupInheritanceEditor extends UtilMenuActionableList {
 
             Group group = groups.get(num);
 
-            long expirSeconds = (contexts.get(group).getBeforeTime() - System.currentTimeMillis()) / 1000;
+            long expirSeconds = (contexts.get(group).getExpiration() - System.currentTimeMillis()) / 1000;
             String expirTime = expirSeconds > 60 ? expirSeconds > 3600 ? expirSeconds > 86400 ? (expirSeconds / 86400) + " days" :
                     (expirSeconds / 3600) + " hours" : (expirSeconds / 60) + " minutes" : expirSeconds + " seconds";
 
-            if(contexts.get(group).getBeforeTime() == 0){
+            if(contexts.get(group).getExpiration() == 0){
                 expirTime = "&cNever";
             }
 
             ItemBuilder builder = new ItemBuilder(Material.BOOK, 1);
             builder.setName("&e" + group.getName());
             builder.addLore("&9Expiration: &f" + expirTime);
-            builder.addLore("&6Inheritance Context: &6" + (contexts.get(group).getServer().equals(GroupData.SERVER_GLOBAL) ? "&cGLOBAL" : (contexts.get(group).getServer().equals(GroupData.SERVER_LOCAL) ? "&aLOCAL" : contexts.get(group).getNameOfServer())));
-            builder.addLore("&fGroup Server Context: &6" + (group.getServerContext().equals(GroupData.SERVER_GLOBAL) ? "&cGLOBAL" : (group.getServerContext().equals(GroupData.SERVER_LOCAL) ? "&aLOCAL" : group.getServerNameOfServerContext())));
+            builder.addLore("&6Inheritance Context: &6" + ServerContextType.getType(contexts.get(group)).getDisplay());
+            builder.addLore("&fGroup Server Context: &6" + ServerContextType.getType(group.getContext()).getDisplay());
             builder.addLore("&fDefault Group: " + (GroupManager.instance.getDefaultGroup().equals(group) ? "&atrue" : "&cfalse"));
             builder.addLore("&fPriority: &a" + group.getPriority());
             builder.addLore("&fPrefix: " + group.getPrefix());
@@ -129,7 +131,8 @@ public class MenuGroupInheritanceEditor extends UtilMenuActionableList {
                 .addLore("&fPrefix: " + g.getPrefix())
                 .addLore("&fSuffix: " + g.getSuffix()).build())
                         .setClickHandler((e1, i1) -> {
-                            handler.addGroup(g, new Context(g.getServerContext(), Context.VAL_ALL));
+                            handler.addGroup(g, g.getContext());
+                            GroupManager.instance.eliminateInheritanceMistakes();
                             groups.clear();
                             contexts.clear();
                             contexts.putAll(handler.getGroups());

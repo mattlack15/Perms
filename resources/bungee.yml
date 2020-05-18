@@ -3,7 +3,3 @@ name: SoraxusPermsProxy
 version: 1.0
 author: Gravitinos
 description: Permissions Plugin by Gravitinos
-commands:
-  ranks:
-    description: Permissions main command
-    usage: /<command>

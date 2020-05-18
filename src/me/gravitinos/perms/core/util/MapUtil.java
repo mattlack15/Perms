@@ -1,4 +1,5 @@
 package me.gravitinos.perms.core.util;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -6,6 +7,25 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class MapUtil {
+//    public static String mapToString(Map<String, String> map) {
+//        StringSerializer serializer = new StringSerializer();
+//        serializer.writeInt(map.size());
+//        for (Map.Entry<String, String> entries : map.entrySet()) {
+//            serializer.writeString(entries.getKey());
+//            serializer.writeString(entries.getValue());
+//        }
+//        return serializer.toString();
+//    }
+//
+//    public static Map<String, String> stringToMap(String str){
+//        StringSerializer serializer = new StringSerializer(str);
+//        int amount = serializer.readInt();
+//        Map<String, String> map = new HashMap<>();
+//        for(int i = 0; i < amount; i++)
+//            map.put(serializer.readString(), serializer.readString());
+//        return map;
+//    }
+
     public static String mapToString(Map<String, String> map) {
         StringBuilder stringBuilder = new StringBuilder();
 

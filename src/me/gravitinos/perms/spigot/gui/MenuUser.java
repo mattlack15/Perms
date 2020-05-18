@@ -1,18 +1,17 @@
 package me.gravitinos.perms.spigot.gui;
 
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.ContextSet;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.subject.ImmutablePermissionList;
 import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.user.User;
 import me.gravitinos.perms.core.user.UserManager;
-import me.gravitinos.perms.spigot.SpigotPerms;
 import me.gravitinos.perms.spigot.util.ItemBuilder;
 import me.gravitinos.perms.spigot.util.Menus.Menu;
 import me.gravitinos.perms.spigot.util.Menus.MenuElement;
 import me.gravitinos.perms.spigot.util.Menus.MenuManager;
 import org.bukkit.Material;
-import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
@@ -49,7 +48,7 @@ public class MenuUser extends Menu {
                 MenuManager.instance.invalidateElementsInInvForMenu(this, e.getSlot());
             } else {
                 (new MenuGroupInheritanceEditor(this.user.getName() + " > Groups", new MenuGroupInheritanceEditor.GroupInheritanceEditorHandler() {
-                    public CompletableFuture<Void> addGroup(Group group, Context context) {
+                    public CompletableFuture<Void> addGroup(Group group, ContextSet context) {
                         return MenuUser.this.user.addInheritance(group, context);
                     }
 
@@ -57,11 +56,11 @@ public class MenuUser extends Menu {
                         return MenuUser.this.user.removeInheritance(group);
                     }
 
-                    public Map<Group, Context> getGroups() {
-                        Map groupContextMap = new HashMap();
+                    public Map<Group, ContextSet> getGroups() {
+                        Map<Group, ContextSet> groupContextMap = new HashMap<>();
                         MenuUser.this.user.getInheritances().forEach((i) -> {
                             if (i.getParent() instanceof Group) {
-                                groupContextMap.put(i.getParent(), i.getContext());
+                                groupContextMap.put((Group) i.getParent(), i.getContext());
                             }
 
                         });

@@ -7,15 +7,17 @@ import me.gravitinos.perms.core.backend.sql.SQLHandler;
 import me.gravitinos.perms.core.config.PermsConfiguration;
 import me.gravitinos.perms.core.converter.Converter;
 import me.gravitinos.perms.core.converter.converters.ConverterIdentifierToSubjectId;
-import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.user.UserManager;
 import net.md_5.bungee.api.ChatColor;
 import org.jetbrains.annotations.NotNull;
 
 import javax.sql.DataSource;
-import java.sql.DriverManager;
+import java.sql.DatabaseMetaData;
+import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -54,15 +56,40 @@ public class PermsManager {
             }
         }
 
+        try {
+            if (!dataManager.testBackendConnection().get()) {
+                this.implementation.consoleLog(ChatColor.RED + "UNABLE TO CONNECT TO BACKEND");
+                return;
+            }
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        }
+
         //Converters (things that change formats from old versions to new formats of newer versions)
         //Please put them in order of oldest version to newest version
         runConverters(new ConverterIdentifierToSubjectId());
+
+        try {
+            cachedServerIndex = dataManager.getServerIndex().get();
+            if (!cachedServerIndex.containsKey(implementation.getConfigSettings().getServerId()) || !cachedServerIndex.get(implementation.getConfigSettings().getServerId()).equals(implementation.getConfigSettings().getServerName())) {
+                removeServerFromIndex(implementation.getConfigSettings().getServerId()).get();
+                dataManager.putServerIndex(implementation.getConfigSettings().getServerId(), implementation.getConfigSettings().getServerName()).get();
+                cachedServerIndex = dataManager.getServerIndex().get();
+            }
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        }
 
         try {
             this.groupManager.loadGroups().get(); //Load groups
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }
+    }
+
+    public void shutdown() {
+        if (this.dataManager != null)
+            this.dataManager.shutdown();
     }
 
     private void runConverters(Converter... converters) {
@@ -105,10 +132,13 @@ public class PermsManager {
         return future;
     }
 
-    private DataSource getHikariDataSource(String url, PermsConfiguration configuration) throws Exception {
+    private DataSource getHikariDataSource(String datasourceClass, PermsConfiguration configuration) throws Exception {
         HikariConfig config = new HikariConfig();
-        config.setJdbcUrl(url);
-        config.setDriverClassName(DriverManager.getDriver(url).getClass().getCanonicalName());
+        config.setDataSourceClassName(datasourceClass);
+        config.addDataSourceProperty("serverName", configuration.getSQLHost());
+        config.addDataSourceProperty("port", configuration.getSQLPort());
+        config.addDataSourceProperty("databaseName", configuration.getSQLDatabase());
+        config.addDataSourceProperty("rewriteBatchedStatements", true);
         config.setUsername(configuration.getSQLUsername());
         config.setPassword(configuration.getSQLPassword());
         config.setMaximumPoolSize(Runtime.getRuntime().availableProcessors() * 2 + 1);
@@ -118,7 +148,7 @@ public class PermsManager {
 
     public boolean connectSQL(SQLHandler dataManager, PermsConfiguration config) {
         try {
-            dataManager.setDataSource(getHikariDataSource("jdbc:mysql://" + config.getSQLHost() + ":" + config.getSQLPort() + "/" + config.getSQLDatabase() + "?rewriteBatchedStatements=true", config));
+            dataManager.setDataSource(getHikariDataSource(config.getDatabaseType().equalsIgnoreCase("mysql") ? "com.mysql.jdbc.jdbc2.optional.MysqlDataSource" : "org.mariadb.jdbc.MariaDbDataSource", config));
             if (dataManager.getConnection() == null) {
                 this.implementation.addToLog(ChatColor.RED + "Unable to connect to SQL!");
                 this.implementation.consoleLog(ChatColor.RED + "Unable to connect to SQL!");
@@ -132,23 +162,21 @@ public class PermsManager {
             this.implementation.sendDebugMessage(ChatColor.RED + "Unable to connect to SQL!");
             return false;
         }
+
+        try {
+            DatabaseMetaData meta = dataManager.getConnection().getMetaData();
+//            implementation.sendDebugMessage("Max user connections: &e" + (meta.getMaxConnections() != 0 ? meta.getMaxConnections() : "Unlimited"));
+//            implementation.consoleLog("Max user connections: &e" + (meta.getMaxConnections() != 0 ? meta.getMaxConnections() : "Unlimited"));
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
         try {
             dataManager.setup().get();
-            cachedServerIndex = dataManager.getServerIndex().get();
-            if(cachedServerIndex.containsKey(config.getServerId())){
-                if(!cachedServerIndex.get(config.getServerId()).equals(config.getServerName())){
-                    removeServerFromIndex(config.getServerId());
-                    dataManager.putServerIndex(config.getServerId(), config.getServerName()).get();
-                    cachedServerIndex = dataManager.getServerIndex().get();
-                }
-            }
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
-            this.implementation.addToLog(ChatColor.RED + "Unable to setup SQL Database!");
-            this.implementation.consoleLog(ChatColor.RED + "Unable to setup SQL Database!");
-            this.implementation.sendDebugMessage(ChatColor.RED + "Unable to setup SQL Database!");
-            return false;
         }
+
         return true;
     }
 
@@ -167,17 +195,13 @@ public class PermsManager {
         try {
             return this.cachedServerIndex.get(serverId);
         } catch (Exception e) {
-            if (serverId == GroupData.SERVER_GLOBAL) {
-                return "";
-            } else {
-                return null;
-            }
+            return null;
         }
     }
 
-    public void removeServerFromIndex(int id) {
+    public CompletableFuture<Void> removeServerFromIndex(int id) {
         this.cachedServerIndex.remove(id);
-        dataManager.removeServerIndex(id);
+        return dataManager.removeServerIndex(id);
     }
 
     /**
@@ -191,6 +215,24 @@ public class PermsManager {
             }
         });
         return id.get();
+    }
+
+    private List<String> cachedGodUsers = new ArrayList<>();
+
+    public void reloadGodUsers(){
+        cachedGodUsers = getImplementation().getConfigSettings().getGodUsers();
+    }
+
+    public List<String> getGodUsers(){
+        return cachedGodUsers;
+    }
+
+    public UserManager getUserManager() {
+        return this.userManager;
+    }
+
+    public GroupManager getGroupManager() {
+        return this.groupManager;
     }
 
     public Map<Integer, String> getCachedServerIndex() {
