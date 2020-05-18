@@ -113,7 +113,7 @@ public class MenuPermissionEditor extends UtilMenuActionableList {
 
         ArrayList<PPermission> permissions = handler.getPermissions().getPermissions();
         permissions.removeIf(p -> {
-            boolean remove = p.getContext().appliesToAny(new Context(Context.SERVER_IDENTIFIER, Integer.toString(server)));
+            boolean remove = !p.getContext().appliesToAny(new Context(Context.SERVER_IDENTIFIER, Integer.toString(server))) || (p.getContext().filterByKey(Context.SERVER_IDENTIFIER).size() == 0 && server != -1);
             if(!remove && filters.length != 0) {
                 remove = true;
                 for (String filter : filters) {
@@ -183,7 +183,7 @@ public class MenuPermissionEditor extends UtilMenuActionableList {
             if (e.getClick().equals(ClickType.LEFT)) {
                 p.closeInventory();
                 p.sendMessage(UtilColour.toColour(SpigotPerms.pluginPrefix + "Enter the permission in chat (can include context after a space)"));
-                p.sendTitle("", UtilColour.toColour("&b&lEnter part of a permission in Chat"),10, 600, 10);
+                p.sendTitle("", UtilColour.toColour("&b&lEnter a permission in Chat"),10, 600, 10);
                 ChatListener.instance.addChatInputHandler(p.getUniqueId(), (s) -> {
                     p.sendTitle("", "", 10, 10, 10);
                     String[] spaceSplit = s.split(" ");

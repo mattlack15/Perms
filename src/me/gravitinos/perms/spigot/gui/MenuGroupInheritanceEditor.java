@@ -58,7 +58,7 @@ public class MenuGroupInheritanceEditor extends UtilMenuActionableList {
             String expirTime = expirSeconds > 60 ? expirSeconds > 3600 ? expirSeconds > 86400 ? (expirSeconds / 86400) + " days" :
                     (expirSeconds / 3600) + " hours" : (expirSeconds / 60) + " minutes" : expirSeconds + " seconds";
 
-            if(contexts.get(group).getExpiration() == 0){
+            if(contexts.get(group).getExpiration() == -1){
                 expirTime = "&cNever";
             }
 
