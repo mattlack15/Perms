@@ -15,6 +15,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Predicate;
 
 public class GroupManager {
@@ -38,57 +39,64 @@ public class GroupManager {
      *
      * @return A future representing the completion of the load operation, true if successful, false if their was an error
      */
-    public CompletableFuture<Boolean> loadGroups() {
+    public synchronized CompletableFuture<Boolean> loadGroups() {
         CompletableFuture<Boolean> out = new CompletableFuture<>();
         ArrayList<UUID> successfullyLoaded = new ArrayList<>();
         PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
-            synchronized (GroupManager.class) {
-                try {
-                    List<CachedSubject> groups = dataManager.getAllSubjectsOfType(Subject.GROUP).get();
-                    Map<UUID, SubjectRef> references = new HashMap<>();
-
-                    //Create references
-                    groups.forEach(cs -> references.put(cs.getSubjectId(), new SubjectRef(null)));
-
-                    //Load and set references
-                    groups.forEach(cs -> {
-                        Group g;
-
-                        boolean exists = this.isGroupExactLoaded(cs.getSubjectId());
-
-                        if (exists) {
-                            g = this.getGroupExact(cs.getSubjectId());
-                            synchronized (this) {
-                                g.updateFromCachedSubject(cs, references::get, false);
-                            }
-                        } else {
-                            g = new Group(cs, references::get, this);
-                        }
-                        references.get(cs.getSubjectId()).setReference(g);
-                        if (!exists) {
-                            synchronized (this) {
-                                this.loadedGroups.add(g); //Add groups to loadedGroups
-                            }
-                        }
-                        successfullyLoaded.add(g.getSubjectId());
-                    });
-
-                    //Get rid of groups that aren't supposed to be loaded
-                    for (Group group : Lists.newArrayList(getLoadedGroups())) {
-                        if (!successfullyLoaded.contains(group.getSubjectId())) {
-                            this.unloadGroup(group);
+                synchronized (beingLoaded) {
+                    for (CompletableFuture<Boolean> futures : beingLoaded.values()) {
+                        try {
+                            futures.get();
+                        } catch (InterruptedException | ExecutionException e) {
+                            e.printStackTrace();
                         }
                     }
+                    try {
+                        List<CachedSubject> groups = dataManager.getAllSubjectsOfType(Subject.GROUP).get();
+                        Map<UUID, SubjectRef> references = new HashMap<>();
 
-                    //Check for inheritance mistakes
-                    this.eliminateInheritanceMistakes();
+                        //Create references
+                        groups.forEach(cs -> references.put(cs.getSubjectId(), new SubjectRef(null)));
 
-                } catch (Exception e) {
-                    out.complete(false);
-                    e.printStackTrace();
-                }
+                        //Load and set references
+                        groups.forEach(cs -> {
+                            Group g;
 
-                // Convert (Probably remove later)
+                            boolean exists = this.isGroupExactLoaded(cs.getSubjectId());
+
+                            if (exists) {
+                                g = this.getGroupExact(cs.getSubjectId());
+                                synchronized (this) {
+                                    g.updateFromCachedSubject(cs, references::get, false);
+                                }
+                            } else {
+                                g = new Group(cs, references::get, this);
+                            }
+                            references.get(cs.getSubjectId()).setReference(g);
+                            if (!exists) {
+                                synchronized (this) {
+                                    this.loadedGroups.add(g); //Add groups to loadedGroups
+                                }
+                            }
+                            successfullyLoaded.add(g.getSubjectId());
+                        });
+
+                        //Get rid of groups that aren't supposed to be loaded
+                        for (Group group : Lists.newArrayList(getLoadedGroups())) {
+                            if (!successfullyLoaded.contains(group.getSubjectId())) {
+                                this.unloadGroup(group);
+                            }
+                        }
+
+                        //Check for inheritance mistakes
+                        this.eliminateInheritanceMistakes();
+
+                    } catch (Exception e) {
+                        out.complete(false);
+                        e.printStackTrace();
+                    }
+
+                    // Convert (Probably remove later)
 
 //                for (Group group : this.loadedGroups) {
 //                    Map<Integer, String> index = PermsManager.instance.getCachedServerIndex();
@@ -149,9 +157,9 @@ public class GroupManager {
 //                    });
 //
 //                }
-                //
-                out.complete(true);
-            }
+                    //
+                    out.complete(true);
+                }
         });
 
         return out;
@@ -326,6 +334,7 @@ public class GroupManager {
     }
 
     private static final Map<UUID, CompletableFuture<Boolean>> beingLoaded = new HashMap<>();
+    private volatile boolean loadingGroups = false;
 
     /**
      * Loads a group
@@ -337,17 +346,19 @@ public class GroupManager {
     public synchronized CompletableFuture<Boolean> loadGroup(@NotNull UUID groupId, @NotNull SubjectSupplier supplier) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
-        synchronized (beingLoaded) {
-            if (beingLoaded.containsKey(groupId) && !beingLoaded.get(groupId).isDone()) {
-                return beingLoaded.get(groupId);
-            } else {
-                beingLoaded.remove(groupId);
-                beingLoaded.put(groupId, future);
-            }
-        }
 
         PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
             try {
+
+                synchronized (beingLoaded) {
+                    if (beingLoaded.containsKey(groupId) && !beingLoaded.get(groupId).isDone()) {
+                        future.complete(beingLoaded.get(groupId).get());
+                        return;
+                    } else {
+                        beingLoaded.remove(groupId);
+                        beingLoaded.put(groupId, future);
+                    }
+                }
 
                 boolean exists = this.isGroupExactLoaded(groupId);
 

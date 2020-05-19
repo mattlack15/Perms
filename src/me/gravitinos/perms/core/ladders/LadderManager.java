@@ -5,10 +5,9 @@ import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.group.GroupManager;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 public class LadderManager {
     public static LadderManager instance;
@@ -27,9 +26,15 @@ public class LadderManager {
 
     public CompletableFuture<Boolean> loadLadders() {
         CompletableFuture<Boolean> out = new CompletableFuture<>();
-        List<UUID> successfullyLoaded = new ArrayList<>();
         PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
-            synchronized (GroupManager.class) {
+            synchronized (this) {
+                for(CompletableFuture<Boolean> futures : beingLoaded.values()) {
+                    try {
+                        futures.get();
+                    } catch (InterruptedException | ExecutionException e) {
+                        e.printStackTrace();
+                    }
+                }
                 getDataManager().getRankLadders().thenAccept(ladders -> {
                     this.loadedLadders = ladders;
                     out.complete(true);
@@ -62,9 +67,22 @@ public class LadderManager {
         loadedLadders.removeIf(ladder -> ladder.getId().equals(id));
     }
 
+    private static Map<UUID, CompletableFuture<Boolean>> beingLoaded = new HashMap<>();
+
     public CompletableFuture<Boolean> loadLadder(UUID id) {
         CompletableFuture<Boolean> out = new CompletableFuture<>();
         getDataManager().getRankLadder(id).thenAccept(ladder -> {
+            synchronized (this) {
+                if(beingLoaded.containsKey(id)) {
+                    try {
+                        out.complete(beingLoaded.get(id).get());
+                    } catch (InterruptedException | ExecutionException e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    beingLoaded.put(id, out);
+                }
+            }
             loadedLadders.add(ladder);
             out.complete(true);
         });
