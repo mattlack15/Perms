@@ -18,15 +18,14 @@ import me.gravitinos.perms.spigot.file.SpigotFileDataManager;
 import me.gravitinos.perms.spigot.listeners.ChatListener;
 import me.gravitinos.perms.spigot.listeners.LoginListener;
 import me.gravitinos.perms.spigot.messaging.MessageManager;
+import me.gravitinos.perms.spigot.messaging.listeners.ListenerReloadAll;
+import me.gravitinos.perms.spigot.messaging.listeners.ListenerReloadLadder;
 import me.gravitinos.perms.spigot.messaging.listeners.ListenerReloadSubject;
 import me.gravitinos.perms.spigot.verbose.VerboseController;
 import net.milkbowl.vault.permission.Permission;
 import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
-import org.bukkit.ChunkSnapshot;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.craftbukkit.v1_12_R1.CraftChunkSnapshot;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.ServicePriority;
@@ -101,6 +100,8 @@ public class SpigotPerms extends JavaPlugin {
         new ProxyComm();
         new MessageManager();
         ProxyComm.instance.registerListener(new ListenerReloadSubject());
+        ProxyComm.instance.registerListener(new ListenerReloadLadder());
+        ProxyComm.instance.registerListener(new ListenerReloadAll());
         task1Id = new BukkitRunnable(){
             @Override
             public void run() {

@@ -158,7 +158,7 @@ public class GroupManager {
     }
 
     public synchronized void eliminateInheritanceMistakes() {
-        ArrayList<Subject> grps = new ArrayList<>(this.loadedGroups);
+        List<Subject> grps = new ArrayList<>(this.loadedGroups);
         Subject.checkForAndRemoveInheritanceMistakes(grps);
         this.loadedGroups.clear();
         grps.forEach(s -> this.loadedGroups.add((Group) s));

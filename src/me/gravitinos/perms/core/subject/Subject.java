@@ -10,6 +10,7 @@ import net.md_5.bungee.api.ChatColor;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
@@ -51,7 +52,7 @@ public abstract class Subject<T extends SubjectData> {
     /**
      * Sets this subject's own permissions
      *
-     * @param ownPermissions
+     * @param ownPermissions List of permissions
      */
     protected synchronized void setOwnPermissions(@NotNull ArrayList<PPermission> ownPermissions) {
         this.ownPermissions = ownPermissions;
@@ -336,7 +337,7 @@ public abstract class Subject<T extends SubjectData> {
      *
      * @param subjects the group of subjects to check
      */
-    public static void checkForAndRemoveInheritanceMistakes(ArrayList<Subject> subjects) {
+    public static void checkForAndRemoveInheritanceMistakes(List<Subject> subjects) {
         for (Subject subject : subjects) {
             treeSearchThing(subject, new ArrayList<>());
         }

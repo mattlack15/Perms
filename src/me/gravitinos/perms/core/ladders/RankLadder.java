@@ -8,7 +8,6 @@ import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.user.User;
 import me.gravitinos.perms.core.util.MapUtil;
-import me.gravitinos.perms.core.util.StringSerializer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -83,20 +82,11 @@ public class RankLadder {
         this.cleanupGroups();
     }
 
-    /**
-     * Cleans up groups, returns list of removed groups
-     */
-    public synchronized List<UUID> cleanupGroups(){
-        List<UUID> removed = getIncompatibleOrNullGroups();
-        this.groups.removeAll(removed);
-        return removed;
-    }
-
     public String getDataEncoded(){
         return MapUtil.mapToString(data);
     }
 
-    public synchronized List<UUID> getIncompatibleOrNullGroups(){
+    public synchronized List<UUID> cleanupGroups(){
         List<UUID> removed = new ArrayList<>();
         this.groups.removeIf(g -> {
             Group m = GroupManager.instance.getGroupExact(g);
@@ -114,6 +104,13 @@ public class RankLadder {
         this.groups.add(id);
         dataManager.updateRankLadder(this);
         return true;
+    }
+    public synchronized boolean removeGroup(Group group) {
+        return this.groups.remove(group.getSubjectId());
+    }
+
+    public boolean containsGroup(Group group) {
+        return this.groups.contains(group.getSubjectId());
     }
 
     public boolean canAddGroup(Group group){
