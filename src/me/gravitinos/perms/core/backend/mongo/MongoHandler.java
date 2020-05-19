@@ -8,6 +8,7 @@ import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.cache.OwnerPermissionPair;
 import me.gravitinos.perms.core.context.ContextSet;
+import me.gravitinos.perms.core.ladders.RankLadder;
 import me.gravitinos.perms.core.subject.*;
 import org.jetbrains.annotations.NotNull;
 
@@ -23,6 +24,12 @@ public class MongoHandler extends DataManager {
     private static final String COLLECTION_INHERITANCE = "perms_inheritance";
     private static final String COLLECTION_PERMISSIONS = "perms_permissions";
     private static final String COLLECTION_SERVER_INDEX = "perms_server_index";
+    private static final String COLLECTION_RANK_LADDERS = "perms_rank_ladders";
+
+    //Rank Ladders
+    private static final String FIELD_LADDER_ID = "_id";
+    private static final String FIELD_LADDER_DATA = "data";
+    private static final String FIELD_LADDER_
 
     //Permission
     private static final String FIELD_PERMISSION_NAME = "permission";
@@ -480,6 +487,31 @@ public class MongoHandler extends DataManager {
             opPerm.execute();
             return null;
         });
+    }
+
+    @Override
+    public CompletableFuture<List<RankLadder>> getRankLadders() {
+        return null;
+    }
+
+    @Override
+    public CompletableFuture<RankLadder> getRankLadder(UUID id) {
+        return null;
+    }
+
+    @Override
+    public CompletableFuture<Void> removeRankLadder(UUID id) {
+        return null;
+    }
+
+    @Override
+    public CompletableFuture<Void> addRankLadder(RankLadder ladder) {
+        return null;
+    }
+
+    @Override
+    public CompletableFuture<Void> updateRankLadder(RankLadder ladder) {
+        return null;
     }
 
     @Override

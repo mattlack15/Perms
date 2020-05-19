@@ -3,6 +3,7 @@ package me.gravitinos.perms.core.util;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.UUID;
 
 public class StringSerializer {
     private List<Byte> bytes = new ArrayList<>();
@@ -73,6 +74,15 @@ public class StringSerializer {
         if(reading >= bytes.size())
             throw new UnsupportedOperationException("End of byte array reached (StringSerializer)");
         return bytes.get(reading++);
+    }
+
+    public void writeUUID(UUID id){
+        this.writeLong(id.getMostSignificantBits());
+        this.writeLong(id.getLeastSignificantBits());
+    }
+
+    public UUID readUUID(){
+        return new UUID(this.readLong(), this.readLong());
     }
 
     public int readInt(){

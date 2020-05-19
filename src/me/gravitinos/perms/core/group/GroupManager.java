@@ -44,7 +44,7 @@ public class GroupManager {
         PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
             synchronized (GroupManager.class) {
                 try {
-                    ArrayList<CachedSubject> groups = dataManager.getAllSubjectsOfType(Subject.GROUP).get();
+                    List<CachedSubject> groups = dataManager.getAllSubjectsOfType(Subject.GROUP).get();
                     Map<UUID, SubjectRef> references = new HashMap<>();
 
                     //Create references
@@ -171,21 +171,21 @@ public class GroupManager {
 
     /**
      * Gets a group that is loaded within this group manager <br>
-     * This will find a group in which the provided query context is satisfied (or an exact match if specified) by the group's context
+     * This will find a group in which the provided query context satisfies (or an exact match if specified) the group's context
      * NOTE: Finds the FIRST group that matches the query
      *
      * @param name              The name of the group to look for
      * @param exactContextMatch If true, then will return a group with the exact context provided
      * @return The group or null if the group is not contained within this group manager
      */
-    private synchronized Group findGroup(String name, ContextSet contexts, boolean groupContextSatisfied, boolean exactContextMatch) {
+    private synchronized Group findGroup(String name, ContextSet contexts, boolean exactContextMatch) {
         boolean caseSensitive = PermsManager.instance.getImplementation().getConfigSettings().isCaseSensitiveGroups();
         for (Group g : loadedGroups) {
             if (caseSensitive && g.getName().equals(name) || !caseSensitive && g.getName().equalsIgnoreCase(name)) {
                 if (exactContextMatch) {
                     if(!g.getContext().equals(contexts))
                         continue;
-                } else if (!(groupContextSatisfied && g.getContext().isSatisfiedBy(contexts) || !groupContextSatisfied && contexts.isSatisfiedBy(g.getContext()))) {
+                } else if (!(g.getContext().isSatisfiedBy(contexts))) {
                     continue;
                 }
                 return g;
@@ -214,14 +214,14 @@ public class GroupManager {
      * @return Group
      */
     public synchronized Group getGroupLocal(String name) {
-        return this.findGroup(name, new MutableContextSet(Context.CONTEXT_SERVER_LOCAL), true, true);
+        return this.findGroup(name, new MutableContextSet(Context.CONTEXT_SERVER_LOCAL), true);
     }
 
     /**
      * Get a group by name which is valid on a certain provided server
      */
     public synchronized Group getGroupOfServer(String name, int serverId) {
-        return this.findGroup(name, new MutableContextSet(new Context(Context.SERVER_IDENTIFIER, Integer.toString(serverId))), false, false);
+        return this.findGroup(name, new MutableContextSet(new Context(Context.SERVER_IDENTIFIER, Integer.toString(serverId))), false);
     }
 
     /**
@@ -231,7 +231,7 @@ public class GroupManager {
      * @return Group
      */
     public synchronized Group getGroupGlobal(String name) {
-        return this.findGroup(name, new MutableContextSet(), true, true);
+        return this.findGroup(name, new MutableContextSet(), true);
     }
 
     /**

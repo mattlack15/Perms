@@ -3,13 +3,11 @@ package me.gravitinos.perms.core.backend;
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
+import me.gravitinos.perms.core.ladders.RankLadder;
 import me.gravitinos.perms.core.subject.*;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -30,7 +28,7 @@ public abstract class DataManager {
 
     public abstract CompletableFuture<Void> addSubject(Subject subject);
 
-    public abstract CompletableFuture<CachedSubject> getSubject(UUID subjectId); //Change to SubjectId
+    public abstract CompletableFuture<CachedSubject> getSubject(UUID subjectId);
 
     public abstract CompletableFuture<Void> updateSubject(Subject subject);
 
@@ -46,7 +44,7 @@ public abstract class DataManager {
 
     public abstract CompletableFuture<Void> removePermissionExact(Subject subject, PPermission permission);
 
-    public abstract CompletableFuture<ArrayList<CachedInheritance>> getInheritances(UUID subjectId);
+    public abstract CompletableFuture<List<CachedInheritance>> getInheritances(UUID subjectId);
 
     public abstract CompletableFuture<Void> updateInheritances(Subject subject);
 
@@ -74,11 +72,23 @@ public abstract class DataManager {
 
     public abstract CompletableFuture<Void> addInheritances(ArrayList<Inheritance> inheritances);
 
-    public abstract CompletableFuture<ArrayList<CachedSubject>> getAllSubjectsOfType(String type);
+    public abstract CompletableFuture<List<CachedSubject>> getAllSubjectsOfType(String type);
 
     public abstract CompletableFuture<Void> clearAllData();
 
     public abstract CompletableFuture<Void> clearSubjectsOfType(String type);
+
+    //Rank Ladders
+    public abstract CompletableFuture<List<RankLadder>> getRankLadders();
+
+    public abstract CompletableFuture<RankLadder> getRankLadder(UUID id);
+
+    public abstract CompletableFuture<Void> removeRankLadder(UUID id);
+
+    public abstract CompletableFuture<Void> addRankLadder(RankLadder ladder);
+
+    public abstract CompletableFuture<Void> updateRankLadder(RankLadder ladder);
+    //
 
     public abstract CompletableFuture<Map<Integer, String>> getServerIndex();
 

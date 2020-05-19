@@ -3,10 +3,8 @@ package me.gravitinos.perms.core.context;
 import lombok.Getter;
 import lombok.Setter;
 import me.gravitinos.perms.core.util.StringSerializer;
-import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -45,21 +43,55 @@ public abstract class ContextSet implements Iterable<Context> {
      * If the other context has 0 of a type, it will match with all of that type
      */
     public boolean isSatisfiedBy(ContextSet set) {
-        if(set.size() == 0 || this.size() == 0)
+
+        if(this.size() == 0)
             return true;
-        for (Context context : this){
-            ContextSet filtered = set.filterByKey(context.getKey());
-            if(filtered.size() != 0 && !filtered.contains(context))
+        if(set.size() == 0)
+            return false;
+
+        List<String> keys = this.getUniqueKeys();
+        for (String key : keys) {
+            ContextSet filtered = set.filterByKey(key);
+            if (filtered.size() == 0)
+                return false;
+            if (!filtered.containsAny(this.filterByKey(key)))
                 return false;
         }
         return true;
     }
 
-    public int size(){
+    public boolean oldSatisfiedBy(ContextSet set) {
+        if (set.size() == 0 || this.size() == 0)
+            return true;
+        for (Context context : this) {
+            ContextSet filtered = set.filterByKey(context.getKey());
+            if (filtered.size() != 0 && !filtered.contains(context))
+                return false;
+        }
+        return true;
+    }
+
+    public boolean containsAny(ContextSet set) {
+        for (Context context : set)
+            if (this.contains(context))
+                return true;
+        return false;
+    }
+
+    public List<String> getUniqueKeys() {
+        List<String> keys = new ArrayList<>();
+        this.contexts.forEach(c -> {
+            if (!keys.contains(c.getKey()))
+                keys.add(c.getKey());
+        });
+        return keys;
+    }
+
+    public int size() {
         return this.getContexts().size();
     }
 
-    public boolean contains(Context context){
+    public boolean contains(Context context) {
         return this.getContexts().contains(context);
     }
 
@@ -87,7 +119,7 @@ public abstract class ContextSet implements Iterable<Context> {
         return set;
     }
 
-    public Context get(int i){
+    public Context get(int i) {
         return this.contexts.get(i);
     }
 
@@ -109,7 +141,7 @@ public abstract class ContextSet implements Iterable<Context> {
         StringSerializer serializer = new StringSerializer(str);
         set.setExpiration(serializer.readLong());
         int amount = serializer.readInt();
-        for(int i = 0; i < amount; i++)
+        for (int i = 0; i < amount; i++)
             set.addContext(Context.fromString(serializer.readString()));
         return set;
     }
@@ -133,13 +165,13 @@ public abstract class ContextSet implements Iterable<Context> {
     /**
      * Basically returns whether either one could satisfy the other
      */
-    public boolean canCollide(ContextSet context){
+    public boolean canCollide(ContextSet context) {
         return context.isSatisfiedBy(this) || this.isSatisfiedBy(context);
     }
 
     @Override
-    public boolean equals(Object o){
-        if(!(o instanceof ContextSet))
+    public boolean equals(Object o) {
+        if (!(o instanceof ContextSet))
             return false;
 
         return ((ContextSet) o).contexts.containsAll(this.contexts) && this.contexts.containsAll(((ContextSet) o).contexts);

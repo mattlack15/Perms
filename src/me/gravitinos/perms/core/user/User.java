@@ -63,7 +63,7 @@ public class User extends Subject<UserData> {
      * @param inheritanceSupplier Inheritance supplier to handle getting inherited subject objects usually just groupManager::getGroup
      * @param save                Whether or not to save this change to the backend (files or sql)
      */
-    public void updateFromCachedSubject(CachedSubject subject, SubjectSupplier inheritanceSupplier, boolean save) {
+    public synchronized void updateFromCachedSubject(CachedSubject subject, SubjectSupplier inheritanceSupplier, boolean save) {
 
         this.setSubjectId(subject.getSubjectId());
 
@@ -184,7 +184,7 @@ public class User extends Subject<UserData> {
      * @param server       The server in which this will apply on (Custom or UserData.SERVER_LOCAL or UserData.SERVER_GLOBAL)
      * @param displayGroup The display group
      */
-    protected void setDisplayGroup(int server, Group displayGroup) {
+    protected synchronized void setDisplayGroup(int server, Group displayGroup) {
         this.getData().setDisplayGroup(server, displayGroup.getSubjectId());
     }
 
@@ -193,7 +193,7 @@ public class User extends Subject<UserData> {
      *
      * @param displayGroup The display group
      */
-    protected void setDisplayGroup(Group displayGroup) {
+    protected synchronized void setDisplayGroup(Group displayGroup) {
         this.setDisplayGroup(GroupData.SERVER_LOCAL, displayGroup);
     }
 
@@ -211,7 +211,7 @@ public class User extends Subject<UserData> {
      *
      * @param prefix The prefix to set to
      */
-    public void setPrefix(String prefix) {
+    public synchronized void setPrefix(String prefix) {
         this.getData().setPrefix(prefix);
     }
 
@@ -268,7 +268,7 @@ public class User extends Subject<UserData> {
      *
      * @param permission the permission to add
      */
-    public CompletableFuture<Void> addOwnPermission(@NotNull PPermission permission) {
+    public synchronized CompletableFuture<Void> addOwnPermission(@NotNull PPermission permission) {
         if (this.hasOwnPermission(permission)) {
             CompletableFuture<Void> future = new CompletableFuture<>();
             future.complete(null);
@@ -293,7 +293,7 @@ public class User extends Subject<UserData> {
      *
      * @param permission the permission to remove
      */
-    public CompletableFuture<Void> removeOwnPermission(@NotNull PPermission permission) {
+    public synchronized CompletableFuture<Void> removeOwnPermission(@NotNull PPermission permission) {
         PPermission p = super.removeOwnSubjectPermission(permission);
 
         //Update backend
@@ -314,7 +314,7 @@ public class User extends Subject<UserData> {
      *
      * @param permission the permission to remove
      */
-    public CompletableFuture<Void> removeOwnPermission(@NotNull String permission) {
+    public synchronized CompletableFuture<Void> removeOwnPermission(@NotNull String permission) {
         super.removeOwnSubjectPermission(permission);
 
         //Update backend
@@ -331,7 +331,7 @@ public class User extends Subject<UserData> {
     /**
      * Adds a lot of permissions in bulk, please use this for large amounts of permissions as Transfers to SQL can be a lot quicker
      */
-    public CompletableFuture<Void> addOwnPermissions(@NotNull ArrayList<PPermission> permissions) {
+    public synchronized CompletableFuture<Void> addOwnPermissions(@NotNull ArrayList<PPermission> permissions) {
         permissions.forEach(p -> super.addOwnSubjectPermission(p));
 
         //Update backend
@@ -346,7 +346,7 @@ public class User extends Subject<UserData> {
     /**
      * removes a lot of permissions in bulk, please use this for large amounts of permissions as Transfers to SQL can be a lot quicker
      */
-    public CompletableFuture<Void> removeOwnPermissions(@NotNull ArrayList<PPermission> permissions) {
+    public synchronized CompletableFuture<Void> removeOwnPermissions(@NotNull ArrayList<PPermission> permissions) {
         permissions.forEach(p -> super.removeOwnSubjectPermission(p));
 
         //Update backend
@@ -407,7 +407,7 @@ public class User extends Subject<UserData> {
      * @param subject The inheritance to add
      * @param context The context that this will apply in
      */
-    public CompletableFuture<Void> addInheritance(@NotNull Subject<?> subject, @NotNull ContextSet context) {
+    public synchronized CompletableFuture<Void> addInheritance(@NotNull Subject<?> subject, @NotNull ContextSet context) {
 
         if (this.hasInheritance(subject, context)) {
             CompletableFuture<Void> future = new CompletableFuture<>();
@@ -433,7 +433,7 @@ public class User extends Subject<UserData> {
      *
      * @param subject the parent to remove
      */
-    public CompletableFuture<Void> removeInheritance(@NotNull Subject<?> subject) {
+    public synchronized CompletableFuture<Void> removeInheritance(@NotNull Subject<?> subject) {
         super.removeOwnSubjectInheritance(subject);
 
         if (dataManager != null) {
@@ -510,7 +510,7 @@ public class User extends Subject<UserData> {
     /**
      * Adds a lot of permissions in bulk, please use this for large amounts of permissions as Transfers to SQL can be a lot quicker
      */
-    public CompletableFuture<Void> addInheritances(@NotNull ArrayList<Inheritance> inheritances) {
+    public synchronized CompletableFuture<Void> addInheritances(@NotNull ArrayList<Inheritance> inheritances) {
         ArrayList<Inheritance> ps = Lists.newArrayList(inheritances);
         inheritances.forEach(p -> {
             if (!this.getInheritances().contains(p)) {
@@ -532,7 +532,7 @@ public class User extends Subject<UserData> {
     /**
      * Clears all global inheritances
      */
-    public CompletableFuture<Void> clearInheritancesGlobal() {
+    public synchronized CompletableFuture<Void> clearInheritancesGlobal() {
         ArrayList<UUID> parents = new ArrayList<>();
 
         for (Inheritance i : super.getInheritances()) {
@@ -569,7 +569,7 @@ public class User extends Subject<UserData> {
     public boolean hasPermission(String permission, ContextSet context) {
         ArrayList<PPermission> permissions = this.getAllPermissions(context);
         for (PPermission perms : permissions) {
-            if (perms.getPermission().equalsIgnoreCase(permission) && context.isSatisfiedBy(perms.getContext())) {
+            if (perms.getPermission().equalsIgnoreCase(permission) && perms.getContext().isSatisfiedBy(context)) {
                 return true;
             }
         }
@@ -600,7 +600,7 @@ public class User extends Subject<UserData> {
     /**
      * Clears ALL inheritances from this user
      */
-    public CompletableFuture<Void> clearInheritances() {
+    public synchronized CompletableFuture<Void> clearInheritances() {
         ArrayList<UUID> parents = new ArrayList<>();
 
         for (Inheritance i : super.getInheritances()) {
