@@ -10,6 +10,7 @@ import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.group.GroupManager;
+import me.gravitinos.perms.core.ladders.RankLadder;
 import me.gravitinos.perms.core.subject.*;
 import me.gravitinos.perms.core.user.UserData;
 import me.gravitinos.perms.core.user.UserManager;
@@ -22,10 +23,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -482,8 +480,8 @@ public class SpigotFileDataManager extends DataManager {
     }
 
     @Override
-    public CompletableFuture<ArrayList<CachedInheritance>> getInheritances(UUID name) {
-        CompletableFuture<ArrayList<CachedInheritance>> future = new CompletableFuture<>();
+    public CompletableFuture<List<CachedInheritance>> getInheritances(UUID name) {
+        CompletableFuture<List<CachedInheritance>> future = new CompletableFuture<>();
         runAsync(() -> {
             ConfigurationSection section = getSection(name);
             if (section == null) {
@@ -623,7 +621,7 @@ public class SpigotFileDataManager extends DataManager {
                 UserData data = new UserData(subject.getData());
 
                 section.set(USER_DATA_USERNAME, data.getName());
-                section.set(USER_DATA_DISPLAYGROUP, data.getDisplayGroup(GroupData.SERVER_LOCAL).toString());
+//                section.set(USER_DATA_DISPLAYGROUP, data.getDisplayGroup());
                 section.set(USER_DATA_NOTES, data.getNotes());
                 section.set(USER_DATA_PREFIX, data.getPrefix());
                 section.set(USER_DATA_SUFFIX, data.getSuffix());
@@ -768,8 +766,8 @@ public class SpigotFileDataManager extends DataManager {
     }
 
     @Override
-    public CompletableFuture<ArrayList<CachedSubject>> getAllSubjectsOfType(String type) {
-        CompletableFuture<ArrayList<CachedSubject>> future = new CompletableFuture<>();
+    public CompletableFuture<List<CachedSubject>> getAllSubjectsOfType(String type) {
+        CompletableFuture<List<CachedSubject>> future = new CompletableFuture<>();
         runAsync(() -> {
             ArrayList<CachedSubject> subjects = new ArrayList<>();
             if (Subject.USER.equals(type)) {
@@ -843,6 +841,31 @@ public class SpigotFileDataManager extends DataManager {
     }
 
     @Override
+    public CompletableFuture<List<RankLadder>> getRankLadders() {
+        return runAsync(ArrayList::new);
+    }
+
+    @Override
+    public CompletableFuture<RankLadder> getRankLadder(UUID id) {
+        return null;
+    }
+
+    @Override
+    public CompletableFuture<Void> removeRankLadder(UUID id) {
+        return runAsync(() -> null);
+    }
+
+    @Override
+    public CompletableFuture<Void> addRankLadder(RankLadder ladder) {
+        return runAsync(() -> null);
+    }
+
+    @Override
+    public CompletableFuture<Void> updateRankLadder(RankLadder ladder) {
+        return runAsync(() -> null);
+    }
+
+    @Override
     public CompletableFuture<Map<Integer, String>> getServerIndex() {
         CompletableFuture<Map<Integer, String>> future = new CompletableFuture<>();
         future.complete(new HashMap<>());
@@ -868,5 +891,10 @@ public class SpigotFileDataManager extends DataManager {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         future.complete(true);
         return future;
+    }
+
+    @Override
+    public boolean isRemote() {
+        return false;
     }
 }

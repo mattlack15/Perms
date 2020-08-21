@@ -19,6 +19,7 @@ public class GroupBuilder {
     private UUID groupId = UUID.randomUUID();
     private ArrayList<CachedInheritance> inherited = new ArrayList<>();
     private ArrayList<PPermission> permissions = new ArrayList<>();
+    private GroupManager groupManager = GroupManager.instance;
 
     public GroupData getData(){
         return this.data;
@@ -42,6 +43,11 @@ public class GroupBuilder {
     }
     public GroupBuilder setSuffix(String suffix){
         this.data.setSuffix(suffix);
+        return this;
+    }
+
+    public GroupBuilder setGroupManager(GroupManager manager) {
+        this.groupManager = manager;
         return this;
     }
 
@@ -82,7 +88,7 @@ public class GroupBuilder {
     }
 
     public Group build(){
-        return new Group(this.toCachedSubject(), (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s)), GroupManager.instance);
+        return new Group(this.toCachedSubject(), (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s)), groupManager);
     }
 
 }

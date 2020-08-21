@@ -7,6 +7,7 @@ import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.subject.SubjectData;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -23,7 +24,7 @@ public final class CachedSubject {
     @Setter
     private SubjectData data;
     @Setter
-    private ArrayList<PPermission> permissions;
+    private List<PPermission> permissions;
     @Setter
-    private ArrayList<CachedInheritance> inheritances;
+    private List<CachedInheritance> inheritances;
 }

@@ -117,9 +117,9 @@ public class MenuUserList extends UtilMenuActionableList {
                         new MenuUserList(p, listRows, this.getBackButton()).open(p);
                         return;
                     }
-                    p.sendTitle("", UtilColour.toColour("&b&lEnter a search query in Chat"),10, 600, 10);
+                    p.sendTitle("", UtilColour.toColour("&b&lEnter a search query in Chat"));
                     ChatListener.instance.addChatInputHandler(p.getUniqueId(), (s) -> doInMainThread(() -> {
-                        p.sendTitle("", "", 10, 10, 10);
+                        p.sendTitle("", "");
                         new MenuUserList(p, listRows, this.getBackButton(), s).open(p);
                     }));
                     p.closeInventory();
@@ -136,9 +136,9 @@ public class MenuUserList extends UtilMenuActionableList {
 
         this.setElement(2, new MenuElement(new ItemBuilder(Material.EYE_OF_ENDER, 1).setName("&eLoad Offline User").addLore("&7Loads an offline user").build())
                 .setClickHandler((e, i) -> {
-                    ((Player)e.getWhoClicked()).sendTitle("", UtilColour.toColour("&b&lEnter their full username in Chat"),10, 600, 10);
+                    ((Player)e.getWhoClicked()).sendTitle("", UtilColour.toColour("&b&lEnter their full username in Chat"));
                     ChatListener.instance.addChatInputHandler(e.getWhoClicked().getUniqueId(), (s) -> PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
-                        ((Player)e.getWhoClicked()).sendTitle("", "", 10, 10, 10);
+                        ((Player)e.getWhoClicked()).sendTitle("", "");
                         OfflinePlayer p = Bukkit.getOfflinePlayer(s);
                         e.getWhoClicked().sendMessage(UtilColour.toColour(SpigotPerms.pluginPrefix + "Loading..."));
                         if (p != null) {

@@ -9,10 +9,7 @@ import me.gravitinos.perms.core.user.User;
 import net.md_5.bungee.api.ChatColor;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -28,8 +25,8 @@ public abstract class Subject<T extends SubjectData> {
 
     private UUID subjectId;
 
-    private ArrayList<PPermission> ownPermissions = new ArrayList<>();
-    private ArrayList<Inheritance> inherited = new ArrayList<>();
+    private List<PPermission> ownPermissions = Collections.synchronizedList(new ArrayList<>());
+    private List<Inheritance> inherited = Collections.synchronizedList(new ArrayList<>());
 
     @NotNull
     private T data;
@@ -54,7 +51,7 @@ public abstract class Subject<T extends SubjectData> {
      *
      * @param ownPermissions List of permissions
      */
-    protected synchronized void setOwnPermissions(@NotNull ArrayList<PPermission> ownPermissions) {
+    protected synchronized void setOwnPermissions(@NotNull List<PPermission> ownPermissions) {
         this.ownPermissions = ownPermissions;
         this.ownPermissions.removeIf(Objects::isNull);
     }
@@ -63,11 +60,11 @@ public abstract class Subject<T extends SubjectData> {
      * Get the Subject ID
      * This will always be the same for the same subject no matter what object it is represented by
      */
-    public UUID getSubjectId() {
+    public synchronized UUID getSubjectId() {
         return this.subjectId;
     }
 
-    protected void setSubjectId(UUID id) {
+    protected synchronized void setSubjectId(UUID id) {
         this.subjectId = id;
     }
 
@@ -111,7 +108,7 @@ public abstract class Subject<T extends SubjectData> {
      *
      * @return Immutable set of permissions
      */
-    protected ImmutablePermissionList getPermissions() {
+    protected synchronized ImmutablePermissionList getPermissions() {
         this.removeExpiredPerms();
         return new ImmutablePermissionList(ownPermissions);
     }
@@ -119,7 +116,7 @@ public abstract class Subject<T extends SubjectData> {
     /**
      * Sets the internal data object for this subject
      */
-    protected void setData(@NotNull T data) {
+    protected synchronized void setData(@NotNull T data) {
         this.data = data;
     }
 
@@ -129,17 +126,17 @@ public abstract class Subject<T extends SubjectData> {
      *
      * @return list of inheritances
      */
-    protected ArrayList<Inheritance> getInheritances() {
+    protected synchronized ArrayList<Inheritance> getInheritances() {
         this.removeExpiredInheritances();
         this.inherited.removeIf((i) -> !i.isValid());
         return Lists.newArrayList(this.inherited);
     }
 
-    public String getName() {
+    public synchronized String getName() {
         return this.data.getName();
     }
 
-    public void setName(String name) {
+    public synchronized void setName(String name) {
         this.data.setName(name);
     }
 
@@ -190,7 +187,7 @@ public abstract class Subject<T extends SubjectData> {
     protected synchronized PPermission removeOwnSubjectPermission(@NotNull PPermission permission) {
         AtomicReference<PPermission> p = new AtomicReference<>();
         this.ownPermissions.removeIf(Objects::isNull);
-        ((ArrayList<PPermission>) this.ownPermissions.clone()).forEach(perm -> {
+        (new ArrayList<>(this.ownPermissions)).forEach(perm -> {
             if (perm.getPermissionIdentifier().equals(permission.getPermissionIdentifier())) {
                 p.set(perm);
                 ownPermissions.remove(perm);
@@ -246,7 +243,7 @@ public abstract class Subject<T extends SubjectData> {
      * @param permission
      * @return
      */
-    protected boolean hasOwnPermission(PPermission permission) {
+    protected synchronized boolean hasOwnPermission(PPermission permission) {
         return this.getPermissions().getPermissions().contains(permission);
     }
 
@@ -256,7 +253,7 @@ public abstract class Subject<T extends SubjectData> {
      * @param permission
      * @return
      */
-    protected boolean hasOwnPermission(String permission, ContextSet context) {
+    protected synchronized boolean hasOwnPermission(String permission, ContextSet context) {
         for (PPermission perms : this.getPermissions()) {
             if (perms.getPermission().equalsIgnoreCase(permission) && perms.getContext().isSatisfiedBy(context)) {
                 return true;
@@ -270,11 +267,11 @@ public abstract class Subject<T extends SubjectData> {
      *
      * @return Type
      */
-    public String getType() {
+    public synchronized String getType() {
         return type;
     }
 
-    protected boolean hasOwnOrInheritedPermission(String permission, ContextSet contexts) {
+    protected synchronized boolean hasOwnOrInheritedPermission(String permission, ContextSet contexts) {
         if (this.hasOwnPermission(permission, contexts))
             return true;
         for (Inheritance inheritances : getInheritances()) {
@@ -294,7 +291,7 @@ public abstract class Subject<T extends SubjectData> {
      *
      * @return
      */
-    protected ArrayList<PPermission> getAllPermissions(ContextSet contexts) {
+    protected synchronized ArrayList<PPermission> getAllPermissions(ContextSet contexts) {
 
         ArrayList<PPermission> perms = new ArrayList<>();
         this.getPermissions().forEach(p -> {
@@ -320,7 +317,7 @@ public abstract class Subject<T extends SubjectData> {
      *
      * @return
      */
-    protected ArrayList<PPermission> getAllPermissions() {
+    protected synchronized ArrayList<PPermission> getAllPermissions() {
         ArrayList<PPermission> perms = new ArrayList<>(this.getPermissions().getPermissions());
 
         for (Inheritance inheritances : getInheritances()) {

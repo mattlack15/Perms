@@ -3,6 +3,7 @@ package me.gravitinos.perms.spigot.command;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.context.ServerContextType;
+import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.subject.Inheritance;
 import me.gravitinos.perms.core.user.User;
 import me.gravitinos.perms.core.user.UserManager;
@@ -125,11 +126,11 @@ public class CommandUser extends GravSubCommand {
                 sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fUUID &6> &7" + user.getUniqueID());
                 sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fPrefix &6> " + user.getPrefix());
                 sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fSuffix &6> " + user.getSuffix());
-                sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fDisplay Group &6> &7" + user.getDisplayGroup());
+                sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fDisplay Group &6> &7" + GroupManager.instance.getGroupExact(user.getDisplayGroup()).getName());
 
                 sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fInheritances (Groups) &6>");
                 for (Inheritance inheritance : user.getInheritances())
-                    sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&7- &e" + inheritance.getParent().getName() + ServerContextType.getType(inheritance.getContext()).getDisplay());
+                    sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&7- &e" + inheritance.getParent().getName() + " " + ServerContextType.getType(inheritance.getContext()).getDisplay());
 
             }
         });

@@ -86,11 +86,7 @@ public class MenuManager implements Listener {
                 InvInfo info = this.getInfo(p.getUniqueId());
                 if (info != null) {
                     if (info.getCurrentMenu() != null && info.getCurrentMenu().equals(m)) {
-                        if (info.getCurrentInv() == null) {
-                            m.open(p, info.getData());
-                        } else {
-                            info.getCurrentInv().setContents(m.buildInventory().getContents());
-                        }
+                        m.open(p, info.getData());
                     }
                 }
             }
@@ -134,10 +130,10 @@ public class MenuManager implements Listener {
     }
 
     @EventHandler
-    public void onPluginDisable(PluginDisableEvent event){
-        if(event.getPlugin().equals(SpigotPerms.instance)){
-            for(UUID id : infos.keySet()){
-                if(Bukkit.getPlayer(id) != null){
+    public void onPluginDisable(PluginDisableEvent event) {
+        if (event.getPlugin().equals(SpigotPerms.instance)) {
+            for (UUID id : infos.keySet()) {
+                if (Bukkit.getPlayer(id) != null) {
                     Bukkit.getPlayer(id).closeInventory();
                 }
             }

@@ -8,7 +8,7 @@ import java.util.Map;
 
 public class MapUtil {
 //    public static String mapToString(Map<String, String> map) {
-//        StringSerializer serializer = new StringSerializer();
+//        GravSerializer serializer = new GravSerializer();
 //        serializer.writeInt(map.size());
 //        for (Map.Entry<String, String> entries : map.entrySet()) {
 //            serializer.writeString(entries.getKey());
@@ -18,7 +18,7 @@ public class MapUtil {
 //    }
 //
 //    public static Map<String, String> stringToMap(String str){
-//        StringSerializer serializer = new StringSerializer(str);
+//        GravSerializer serializer = new GravSerializer(str);
 //        int amount = serializer.readInt();
 //        Map<String, String> map = new HashMap<>();
 //        for(int i = 0; i < amount; i++)

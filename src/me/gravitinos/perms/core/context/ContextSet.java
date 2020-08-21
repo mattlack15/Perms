@@ -2,7 +2,7 @@ package me.gravitinos.perms.core.context;
 
 import lombok.Getter;
 import lombok.Setter;
-import me.gravitinos.perms.core.util.StringSerializer;
+import me.gravitinos.perms.core.util.GravSerializer;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -129,7 +129,7 @@ public abstract class ContextSet implements Iterable<Context> {
     }
 
     public String toString() {
-        StringSerializer serializer = new StringSerializer();
+        GravSerializer serializer = new GravSerializer();
         serializer.writeLong(expiration);
         serializer.writeInt(contexts.size());
         contexts.forEach(c -> serializer.writeString(c.toString()));
@@ -138,11 +138,19 @@ public abstract class ContextSet implements Iterable<Context> {
 
     public static ContextSet fromString(String str) {
         ContextSet set = new MutableContextSet();
-        StringSerializer serializer = new StringSerializer(str);
+        GravSerializer serializer = new GravSerializer(str);
         set.setExpiration(serializer.readLong());
         int amount = serializer.readInt();
-        for (int i = 0; i < amount; i++)
-            set.addContext(Context.fromString(serializer.readString()));
+        for (int i = 0; i < amount; i++) {
+            String s = serializer.readString();
+            try {
+                set.addContext(Context.fromString(s));
+            } catch(Exception e){
+                e.printStackTrace();
+                System.out.println("FAILED TO LOAD CONTEXT RAW STRING: " + s);
+                System.out.println("RAW CONTEXTSET STRING: " + str);
+            }
+        }
         return set;
     }
 

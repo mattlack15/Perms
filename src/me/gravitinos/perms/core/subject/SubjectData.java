@@ -3,18 +3,20 @@ package me.gravitinos.perms.core.subject;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.util.MapUtil;
 import me.gravitinos.perms.core.util.SubjectDataUpdateListener;
+import org.bukkit.Bukkit;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Base class for GroupData and UserData
  */
 public abstract class SubjectData {
-    private Map<String, SubjectDataUpdateListener> listeners = new HashMap<>();
-    private Map<String, String> data = new HashMap<>();
+    private Map<String, SubjectDataUpdateListener> listeners = new ConcurrentHashMap<>();
+    private Map<String, String> data = new ConcurrentHashMap<>();
 
     public String INTERNAL_DATA_KEY_NAME = "internal.name";
 

@@ -4,9 +4,7 @@ package me.gravitinos.perms.core.context;
 import lombok.Getter;
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.group.GroupData;
-import me.gravitinos.perms.core.util.StringSerializer;
-
-import java.io.*;
+import me.gravitinos.perms.core.util.GravSerializer;
 
 /**
  * Immutable
@@ -26,13 +24,22 @@ public final class Context {
     @Getter
     private String value;
 
-    public Context(String key, String value) {
+    public Context(String key, String value){
+        this(key, value, true);
+    }
+
+    public Context(String key, String value, boolean autoCorrect) {
 
         //Auto-Correct
-        ContextAutoCorrect.StrPair pair = ContextAutoCorrect.autoCorrect(key, value);
+        if(autoCorrect) {
+            ContextAutoCorrect.StrPair pair = ContextAutoCorrect.autoCorrect(key, value);
 
-        this.key = pair.getKey();
-        this.value = pair.getValue();
+            this.key = pair.getKey();
+            this.value = pair.getValue();
+        } else {
+            this.key = key.toLowerCase();
+            this.value = value.toLowerCase();
+        }
     }
 
     public boolean equals(Object o) {
@@ -40,14 +47,14 @@ public final class Context {
     }
 
     public String toString() {
-        StringSerializer serializer = new StringSerializer();
+        GravSerializer serializer = new GravSerializer();
         serializer.writeString(key);
         serializer.writeString(value);
         return serializer.toString();
     }
 
     public static Context fromString(String str){
-        StringSerializer serializer = new StringSerializer(str);
+        GravSerializer serializer = new GravSerializer(str);
         String key = serializer.readString();
         String value = serializer.readString();
         return new Context(key, value);
@@ -71,8 +78,8 @@ public final class Context {
 //    public static final Context CONTEXT_ALL = new Context();
 //    public static final Context CONTEXT_SERVER_GLOBAL = new Context(VAL_INT_ALL, VAL_STR_ALL);
 //    public static final Context CONTEXT_SERVER_LOCAL = new Context(GroupData.SERVER_LOCAL, VAL_STR_ALL);
-//    private static final String SERVER_IDENTIFIER = "server";
-//    private static final String WORLD_IDENTIFIER = "world";
+    private static final String OLD_SERVER_IDENTIFIER = "server";
+    private static final String OLD_WORLD_IDENTIFIER = "world";
 //    private static final String TIME_IDENTIFIER = "beforeTime";
 //    private int server;
 //    private String worldName;
@@ -92,30 +99,25 @@ public final class Context {
 //        this(GroupData.SERVER_GLOBAL, VAL_STR_ALL);
 //    }
 //
-//    public static Context fromString(String str) {
-//        if (str == null) {
-//            return Context.CONTEXT_SERVER_LOCAL;
-//        }
-//        Context context = new Context(CONTEXT_SERVER_LOCAL.getServer(), VAL_STR_ALL);
-//        int index;
-//
-//        index = str.indexOf(SERVER_IDENTIFIER);
-//        if (index != -1) {
-//            index += SERVER_IDENTIFIER.length() + 1; //Add the length of the identifier and "=" to it
-//            String afterIdentifier = str.substring(index);
-//            String[] quoteSplit = afterIdentifier.split("'");
-//            String[] spaceSplit = afterIdentifier.split(" ");
-//            try {
-//                if (quoteSplit.length < 2) {
-//                    context.server = Integer.parseInt(spaceSplit.length != 0 ? (quoteSplit.length != 0 ? spaceSplit[0] : VAL_STR_ALL) : VAL_STR_ALL);
-//                } else {
-//                    context.server = Integer.parseInt(quoteSplit[1]);
-//                }
-//            } catch(NumberFormatException e){
-//                //To convert from old "" as VAL_INT_ALL
-//                context.server = Context.VAL_INT_ALL;
-//            }
-//        }
+    public static boolean isOldFormat(String str) {
+        if (str == null) {
+            return false;
+        }
+        int index;
+
+        try {
+            PermsManager.instance.getImplementation().consoleLog("assdaegs5342145");
+            index = str.indexOf(OLD_SERVER_IDENTIFIER);
+            if (index == -1 || str.charAt(index + OLD_SERVER_IDENTIFIER.length()) != '=')
+                return false;
+            index = str.indexOf(OLD_WORLD_IDENTIFIER);
+            PermsManager.instance.getImplementation().consoleLog("assdaegs");
+            return index != -1 && str.charAt(index + OLD_WORLD_IDENTIFIER.length()) == '=';
+        } catch(Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 //
 //        index = str.indexOf(WORLD_IDENTIFIER);
 //        if (index != -1) {

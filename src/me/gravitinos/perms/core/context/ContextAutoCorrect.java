@@ -25,7 +25,7 @@ public abstract class ContextAutoCorrect {
                             if (PermsManager.instance.getCachedServerIndex().containsValue(value)) {
                                 value = Integer.toString(PermsManager.instance.getServerId(value));
                             } else {
-                                throw new IllegalArgumentException("Cannot set value for key SERVER_IDENTIFIER to a server name that does not exist!");
+                                throw new IllegalArgumentException("Cannot set value for key SERVER_IDENTIFIER to a server name that does not exist! ("  + value + ")");
                             }
                         }
                     }

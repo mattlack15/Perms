@@ -36,7 +36,6 @@ public class ListenerReloadSubject implements MessageCallback {
             if(UserManager.instance.isUserLoaded(id)){
                 User user = UserManager.instance.getUser(id);
                 String username = user.getName();
-                UserManager.instance.unloadUser(id);
                 UserManager.instance.loadUser(id, username);
             } else if(GroupManager.instance.isGroupExactLoaded(id)){
                 GroupManager.instance.loadGroup(id, (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s)));

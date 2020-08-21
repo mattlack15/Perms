@@ -63,6 +63,8 @@ public class SpigotPerms extends JavaPlugin {
 
     private SpigotImpl impl;
 
+    private Placeholders placeholderExpansion;
+
     private int task1Id = -1;
 
     public void onEnable() {
@@ -122,8 +124,7 @@ public class SpigotPerms extends JavaPlugin {
         }
 
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
-            PlaceholderAPI.unregisterPlaceholderHook(this.getName());
-            PlaceholderAPI.registerPlaceholderHook(this.getName(), new Placeholders());
+            (placeholderExpansion = new Placeholders()).register();
         }
         if (integrateWithVault()) {
             impl.consoleLog("Integrated with vault!");
@@ -148,7 +149,9 @@ public class SpigotPerms extends JavaPlugin {
     }
 
     public void onDisable() {
-        PlaceholderAPI.unregisterPlaceholderHook(this);
+        if(Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            placeholderExpansion.unregister();
+        }
         if(task1Id != -1)
             Bukkit.getScheduler().cancelTask(task1Id);
         this.manager.shutdown();

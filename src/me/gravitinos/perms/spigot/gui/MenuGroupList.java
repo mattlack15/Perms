@@ -77,7 +77,7 @@ public class MenuGroupList extends UtilMenuActionableList {
                 return null;
             }
 
-            ItemBuilder builder = new ItemBuilder(Material.BOOK, 1);
+            ItemBuilder builder = new ItemBuilder(Material.getMaterial(group.getIconCombinedId() >> 4), 1, (byte) (group.getIconCombinedId() & 15));
 
             String name = group.getName();
             for(String filter : filters){
@@ -148,12 +148,19 @@ public class MenuGroupList extends UtilMenuActionableList {
                         return;
                     }
                     e.getWhoClicked().sendMessage(ChatColor.translateAlternateColorCodes('&', SpigotPerms.pluginPrefix + "Enter the group name in chat:"));
-                    p.sendTitle("", UtilColour.toColour("&b&lEnter the group's name in Chat"),10, 600, 10);
+                    p.sendTitle("", UtilColour.toColour("&b&lEnter the group's name in Chat"));
                     ChatListener.instance.addChatInputHandler(p.getUniqueId(), (s) -> {
-                        p.sendTitle("", "", 10, 10, 10);
+                        p.sendTitle("", "");
                         Group group = new GroupBuilder(s).build();
-                        GroupManager.instance.addGroup(group);
-                        doInMainThread(() -> new MenuGroup(group, getBackButton(new MenuGroupList(p, listRows, listForeign, this.getBackButton(), filters))).open(p));
+                        if(!GroupManager.instance.addGroup(group)){
+                            p.sendMessage(ChatColor.RED + "There was a problem creating the group, most likely the group already exists.");
+                            doInMainThread(() -> {
+                                setup();
+                                open(p);
+                            });
+                        } else {
+                            doInMainThread(() -> new MenuGroup(group, getBackButton(new MenuGroupList(p, listRows, listForeign, this.getBackButton(), filters))).open(p));
+                        }
                     });
                     e.getWhoClicked().closeInventory();
                 });

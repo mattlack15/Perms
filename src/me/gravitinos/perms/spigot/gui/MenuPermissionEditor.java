@@ -18,6 +18,7 @@ import me.gravitinos.perms.spigot.util.Menus.MenuElement;
 import me.gravitinos.perms.spigot.util.StringUtil;
 import me.gravitinos.perms.spigot.util.UtilBookInput;
 import me.gravitinos.perms.spigot.util.UtilColour;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -43,6 +44,8 @@ public class MenuPermissionEditor extends UtilMenuActionableList {
         CompletableFuture<Void> removePermission(PPermission p);
 
         ImmutablePermissionList getPermissions();
+
+        boolean isGodLocked();
     }
 
     private PermissionEditorHandler handler;
@@ -77,13 +80,20 @@ public class MenuPermissionEditor extends UtilMenuActionableList {
 
             final int server = servers.get(index);
 
+            if(PermsManager.instance.getServerName(server) == null && server != -1)
+                return null;
+
             MenuElement element = new MenuElement(new ItemBuilder(Material.COMMAND, 1).setName("&a" + (server == -1 ? "GLOBAL" : PermsManager.instance.getServerName(server)))
                     .addLore("&7Click to see permissions that apply to this server")
                     .addLore("&7Press Q&7 if this server doesn't exist to &cremove").addGlow().build());
             element.setClickHandler((e, i) -> {
                 if (e.getClick().equals(ClickType.DROP)) {
                         if (server != -1) {
-                            element.addTempLore(this, confirmMessage, 60);
+                            if(PermsManager.instance.getGodUsers().contains(e.getWhoClicked().getName())) {
+                                element.addTempLore(this, confirmMessage, 60);
+                            } else {
+                                element.addTempLore(this, "&cYou must be a God User to delete servers!", 60);
+                            }
                         } else {
                             element.addTempLore(this, "&4Cannot delete GLOBAL", 60);
                         }
@@ -109,11 +119,11 @@ public class MenuPermissionEditor extends UtilMenuActionableList {
 
     public void setupPermissions(int server, int page, String... filters) {
 
-        this.setTitle(title + " (" + PermsManager.instance.getServerName(server) + ")");
+        this.setTitle(title);
 
         ArrayList<PPermission> permissions = handler.getPermissions().getPermissions();
         permissions.removeIf(p -> {
-            boolean remove = !p.getContext().appliesToAny(new Context(Context.SERVER_IDENTIFIER, Integer.toString(server))) || (p.getContext().filterByKey(Context.SERVER_IDENTIFIER).size() == 0 && server != -1);
+            boolean remove = !p.getContext().appliesToAny(new Context(Context.SERVER_IDENTIFIER, Integer.toString(server)) /* no server id will be -1 so global will work */) || (p.getContext().filterByKey(Context.SERVER_IDENTIFIER).size() == 0 && server != -1);
             if(!remove && filters.length != 0) {
                 remove = true;
                 for (String filter : filters) {
@@ -151,6 +161,10 @@ public class MenuPermissionEditor extends UtilMenuActionableList {
 
             element.setItem(builder.build());
             element.setClickHandler((e, i) -> {
+                if(handler.isGodLocked() && !PermsManager.instance.getGodUsers().contains(e.getWhoClicked().getName())) {
+                    element.addTempLore(this, "&cThis subject is &4God Locked!", 60);
+                    return;
+                }
                 if (e.getClick().equals(ClickType.RIGHT)) {
                     handler.removePermission(permission);
                     this.setupPermissions(server, page);
@@ -179,24 +193,19 @@ public class MenuPermissionEditor extends UtilMenuActionableList {
         this.setElement(6, new MenuElement(new ItemBuilder(Material.SIGN, 1).setName("&aAdd").addLore("&fLeft Click &7to add single permission")
                 .addLore("&fRight Click &7to add permission through permission index")
                 .addLore("&fShift Left Click &7to add multiple permissions through a book and quill (Copy/Paste)").build()).setClickHandler((e, i) -> {
+            if(handler.isGodLocked() && !PermsManager.instance.getGodUsers().contains(e.getWhoClicked().getName())) {
+                getElement(e.getSlot()).addTempLore(this, "&cThis subject is &4God Locked!", 60);
+                return;
+            }
             Player p = (Player) e.getWhoClicked();
             if (e.getClick().equals(ClickType.LEFT)) {
                 p.closeInventory();
                 p.sendMessage(UtilColour.toColour(SpigotPerms.pluginPrefix + "Enter the permission in chat (can include context after a space)"));
-                p.sendTitle("", UtilColour.toColour("&b&lEnter a permission in Chat"),10, 600, 10);
+                p.sendTitle("", UtilColour.toColour("&b&lEnter a permission in Chat"));
                 ChatListener.instance.addChatInputHandler(p.getUniqueId(), (s) -> {
-                    p.sendTitle("", "", 10, 10, 10);
-                    String[] spaceSplit = s.split(" ");
-                    String perm;
-                    ContextSet context = new MutableContextSet();
-                    if (spaceSplit.length > 1) {
-                        perm = spaceSplit[0];
-                        context = ContextSet.fromString(s.substring(perm.length()));
-                    } else if (spaceSplit.length == 1) {
-                        perm = spaceSplit[0];
-                    } else {
-                        perm = " ";
-                    }
+                    p.sendTitle("", "");
+                    String perm = s;
+                    ContextSet context = server == -1 ? new MutableContextSet() : new MutableContextSet(new Context(Context.SERVER_IDENTIFIER, Integer.toString(server)));
                     handler.addPermission(new PPermission(perm, context));
                     this.setupPermissions(server, page);
                     Menu.doInMainThread(() -> this.open(p));
@@ -224,32 +233,13 @@ public class MenuPermissionEditor extends UtilMenuActionableList {
                                 String[] perms = page.split(", ");
                                 toAdd.addAll(Arrays.asList(perms));
                             }
-                            new UtilMenuActionableList("Select Server Context", 1, (num) -> {
-                                if (num == 0) {
-                                    return new MenuElement(new ItemBuilder(Material.EMPTY_MAP, 1).setName("&aLocal").addLore("&7Click to add all permissions as &alocal&7 permissions").build())
-                                            .setClickHandler((e1, i1) -> {
-                                                ArrayList<PPermission> permsToAdd = new ArrayList<>();
-                                                toAdd.forEach(s -> permsToAdd.add(new PPermission(s, new MutableContextSet())));
-                                                handler.addPermissions(permsToAdd);
-                                                permissions.clear();
-                                                permissions.addAll(handler.getPermissions().getPermissions());
-                                                setupPermissions(server, page);
-                                                Menu.doInMainThread(() -> MenuPermissionEditor.this.open(p));
-                                            });
-                                } else if (num == 4) {
-                                    return new MenuElement(new ItemBuilder(Material.MAP, 1).setName("&bGlobal").addLore("&7Click to add all permissions as &cglobal&7 permissions").build())
-                                            .setClickHandler((e1, i1) -> {
-                                                ArrayList<PPermission> permsToAdd = new ArrayList<>();
-                                                toAdd.forEach(s -> permsToAdd.add(new PPermission(s, new MutableContextSet())));
-                                                handler.addPermissions(permsToAdd);
-                                                permissions.clear();
-                                                permissions.addAll(handler.getPermissions().getPermissions());
-                                                setupPermissions(server, page);
-                                                Menu.doInMainThread(() -> MenuPermissionEditor.this.open(p));
-                                            });
-                                }
-                                return null;
-                            }, (MenuElement) null).setMargin(2).setupPage(0, true).open(p);
+                            ArrayList<PPermission> permsToAdd = new ArrayList<>();
+                            toAdd.forEach(s -> permsToAdd.add(new PPermission(s, server == -1 ? new MutableContextSet() : new MutableContextSet(new Context(Context.SERVER_IDENTIFIER, Integer.toString(server))))));
+                            handler.addPermissions(permsToAdd);
+                            permissions.clear();
+                            permissions.addAll(handler.getPermissions().getPermissions());
+                            setupPermissions(server, page);
+                            Menu.doInMainThread(() -> MenuPermissionEditor.this.open(p));
                         });
                     }
                 }.runTaskLater(SpigotPerms.instance, 1);
@@ -259,7 +249,7 @@ public class MenuPermissionEditor extends UtilMenuActionableList {
                     public List<String> getCurrentPermissions() {
                         List<String> currentPermissions = new ArrayList<>();
                         handler.getPermissions().forEach(p -> {
-                            if (p.getContext().appliesToAny(new Context(Context.SERVER_IDENTIFIER, Integer.toString(GroupData.SERVER_LOCAL)))) {
+                            if (p.getContext().appliesToAny(new Context(Context.SERVER_IDENTIFIER, Integer.toString(server)))) {
                                 currentPermissions.add(p.getPermission());
                             }
                         });
@@ -268,7 +258,7 @@ public class MenuPermissionEditor extends UtilMenuActionableList {
 
                     @Override
                     public void addPermission(String permission) {
-                        handler.addPermission(new PPermission(permission, new MutableContextSet()));
+                        handler.addPermission(new PPermission(permission, server == -1 ? new MutableContextSet() : new MutableContextSet(new Context(Context.SERVER_IDENTIFIER, Integer.toString(server)))));
                     }
                 }, getBackButton(this).setClickHandler((e1, i1) -> {
                     setupPermissions(server, page);
@@ -284,9 +274,9 @@ public class MenuPermissionEditor extends UtilMenuActionableList {
                     if(e.getClick().isLeftClick()) {
                         p.closeInventory();
                         p.sendMessage(UtilColour.toColour(SpigotPerms.pluginPrefix + "Enter part of a permission search here:"));
-                        p.sendTitle("", UtilColour.toColour("&b&lEnter part of a permission in Chat"),10, 600, 10);
+                        p.sendTitle("", UtilColour.toColour("&b&lEnter part of a permission in Chat"));
                         ChatListener.instance.addChatInputHandler(p.getUniqueId(), (s) -> doInMainThread(() -> {
-                            p.sendTitle("", "", 10, 10, 10);
+                            p.sendTitle("", "");
                             setupPermissions(server, page, s);
                             open(p);
                         }));

@@ -10,11 +10,15 @@ import me.gravitinos.perms.core.cache.OwnerPermissionPair;
 import me.gravitinos.perms.core.context.ContextSet;
 import me.gravitinos.perms.core.ladders.RankLadder;
 import me.gravitinos.perms.core.subject.*;
+import me.gravitinos.perms.core.util.GravSerializer;
+import me.gravitinos.perms.core.util.MapUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public class MongoHandler extends DataManager {
     private MongoClient client;
@@ -29,7 +33,8 @@ public class MongoHandler extends DataManager {
     //Rank Ladders
     private static final String FIELD_LADDER_ID = "_id";
     private static final String FIELD_LADDER_DATA = "data";
-    private static final String FIELD_LADDER_
+    private static final String FIELD_LADDER_GROUPS = "groups";
+    private static final String FIELD_LADDER_CONTEXT = "context";
 
     //Permission
     private static final String FIELD_PERMISSION_NAME = "permission";
@@ -207,7 +212,7 @@ public class MongoHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<ArrayList<CachedInheritance>> getInheritances(UUID subjectId) {
+    public CompletableFuture<List<CachedInheritance>> getInheritances(UUID subjectId) {
         return runAsync(() -> {
             //Inheritances
             ArrayList<CachedInheritance> inheritances = new ArrayList<>();
@@ -390,7 +395,7 @@ public class MongoHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<ArrayList<CachedSubject>> getAllSubjectsOfType(String type) {
+    public CompletableFuture<List<CachedSubject>> getAllSubjectsOfType(String type) {
         return runAsync(() -> {
 
             ArrayList<CachedSubject> subjects = new ArrayList<>();
@@ -491,27 +496,43 @@ public class MongoHandler extends DataManager {
 
     @Override
     public CompletableFuture<List<RankLadder>> getRankLadders() {
-        return null;
+        return runAsync(() -> {
+            List<RankLadder> ladders = new ArrayList<>();
+            this.database.getCollection(COLLECTION_RANK_LADDERS).find().forEach(lo -> ladders.add(objToRankLadder(lo)));
+            return ladders;
+        });
     }
 
     @Override
     public CompletableFuture<RankLadder> getRankLadder(UUID id) {
-        return null;
+        return runAsync(() -> {
+            DBObject object = this.database.getCollection(COLLECTION_RANK_LADDERS).findOne(new BasicDBObject(FIELD_LADDER_ID, id.toString()));
+            if (object == null)
+                return null;
+            return objToRankLadder(object);
+        });
     }
 
     @Override
     public CompletableFuture<Void> removeRankLadder(UUID id) {
-        return null;
+        return runAsync(() -> {
+            this.database.getCollection(COLLECTION_RANK_LADDERS).remove(new BasicDBObject(FIELD_LADDER_ID, id.toString()));
+            return null;
+        });
     }
 
     @Override
     public CompletableFuture<Void> addRankLadder(RankLadder ladder) {
-        return null;
+        return runAsync(() -> {
+            this.database.getCollection(COLLECTION_RANK_LADDERS).insert(rankLadderToObj(ladder));
+            return null;
+        });
+
     }
 
     @Override
     public CompletableFuture<Void> updateRankLadder(RankLadder ladder) {
-        return null;
+        return addRankLadder(ladder);
     }
 
     @Override
@@ -594,8 +615,39 @@ public class MongoHandler extends DataManager {
         return new PPermission(permission, context, id);
     }
 
+    public RankLadder objToRankLadder(DBObject object){
+        UUID id = UUID.fromString((String) object.get(FIELD_LADDER_ID));
+        Map<String, String> data = MapUtil.stringToMap((String) object.get(FIELD_LADDER_DATA));
+        ConcurrentMap<String, String> concData = new ConcurrentHashMap<>(data);
+        ContextSet contexts = ContextSet.fromString((String) object.get(FIELD_LADDER_CONTEXT));
+        GravSerializer serializer = new GravSerializer((String) object.get(FIELD_LADDER_GROUPS));
+        List<UUID> groups = new ArrayList<>();
+        int num = serializer.readInt();
+        while(num-- > 0){
+            groups.add(serializer.readUUID());
+        }
+        return new RankLadder(id, groups, contexts, null, concData);
+    }
+
+    public BasicDBObject rankLadderToObj(RankLadder ladder){
+        BasicDBObject object = new BasicDBObject(FIELD_LADDER_ID, ladder.getId().toString());
+        object.put(FIELD_LADDER_DATA, ladder.getDataEncoded());
+        GravSerializer serializer = new GravSerializer();
+        List<UUID> groups = ladder.getGroups();
+        serializer.writeInt(groups.size());
+        groups.forEach(serializer::writeUUID);
+        object.put(FIELD_LADDER_GROUPS, serializer.toString());
+        object.put(FIELD_LADDER_CONTEXT, ladder.getContext().toString());
+        return object;
+    }
+
     @Override
     public CompletableFuture<Boolean> testBackendConnection() {
         return runAsync(() -> connected);
+    }
+
+    @Override
+    public boolean isRemote() {
+        return true;
     }
 }

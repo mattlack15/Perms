@@ -1,6 +1,7 @@
 package me.gravitinos.perms.spigot;
 
 import me.clip.placeholderapi.PlaceholderHook;
+import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.user.User;
@@ -8,7 +9,12 @@ import me.gravitinos.perms.core.user.UserManager;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
-public class Placeholders extends PlaceholderHook{
+public class Placeholders extends PlaceholderExpansion {
+    @Override
+    public boolean canRegister() {
+        return true;
+    }
+
     @Override
     public String onPlaceholderRequest(Player p, String identifier) {
 
@@ -21,7 +27,6 @@ public class Placeholders extends PlaceholderHook{
             return "<--->";
         }
 
-        //%<pluginname>_<identifier>%
         if(identifier.equalsIgnoreCase("prefix")){
             Group displayGroup = GroupManager.instance.getGroupExact(UserManager.instance.getUser(p.getUniqueId()).getDisplayGroup());
             if(displayGroup == null){
@@ -58,5 +63,20 @@ public class Placeholders extends PlaceholderHook{
             return displayGroup.getName();
         }
         return null;
+    }
+
+    @Override
+    public String getIdentifier() {
+        return SpigotPerms.instance.getName().toLowerCase();
+    }
+
+    @Override
+    public String getAuthor() {
+        return "Gravitinos";
+    }
+
+    @Override
+    public String getVersion() {
+        return "2.4";
     }
 }

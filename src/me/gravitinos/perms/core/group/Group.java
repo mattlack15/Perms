@@ -7,22 +7,23 @@ import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.context.ContextSet;
-import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.subject.*;
 import me.gravitinos.perms.core.util.SubjectSupplier;
 import me.gravitinos.perms.spigot.messaging.MessageManager;
 import me.gravitinos.perms.spigot.messaging.MessageReloadSubject;
+import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Group extends Subject<GroupData> {
     private DataManager dataManager;
 
-    private volatile boolean updatingData = false;
+    private final AtomicBoolean updatingData = new AtomicBoolean(false);
 
     public Group(GroupBuilder builder, SubjectSupplier inheritanceSupplier) {
         this(builder, inheritanceSupplier, null);
@@ -65,22 +66,20 @@ public class Group extends Subject<GroupData> {
 
         this.getData().addUpdateListener("MAIN_LISTENER", (k, v) -> {
             if (dataManager != null) {
-                synchronized (this) {
-                    if (!updatingData) {
-                        updatingData = true;
-                        PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
-                            try {
-                                Thread.sleep(2); //Saves on database requests, so that it will update all of the changed subject data (if a thread makes more than one change) in one update
-                                dataManager.updateSubjectData(this).get();
-                                if(MessageManager.instance != null){
-                                    MessageManager.instance.queueMessage(new MessageReloadSubject(this.getSubjectId()));
-                                }
-                            } catch (InterruptedException | ExecutionException e) {
-                                e.printStackTrace();
+                if (updatingData.compareAndSet(false, true)) {
+                    PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
+                        try {
+                            Thread.sleep(5); //Saves on database requests, so that it will update all of the changed subject data (if a thread makes more than one change) in one update
+                            updatingData.set(false);
+                            dataManager.updateSubjectData(this).get();
+                            if (MessageManager.instance != null) {
+                                MessageManager.instance.queueMessage(new MessageReloadSubject(this.getSubjectId()));
                             }
-                            updatingData = false;
-                        });
-                    }
+                        } catch (InterruptedException | ExecutionException e) {
+                            e.printStackTrace();
+                            updatingData.compareAndSet(true, false);
+                        }
+                    });
                 }
             }
         });
@@ -406,7 +405,8 @@ public class Group extends Subject<GroupData> {
                     }
                     MessageManager.instance.queueMessage(new MessageReloadSubject(this.getSubjectId()));
                 });
-            return future;        }
+            return future;
+        }
         CompletableFuture<Void> future = new CompletableFuture<>();
         future.complete(null);
         return future;
@@ -492,6 +492,32 @@ public class Group extends Subject<GroupData> {
         return this.getData().getChatColour();
     }
 
+    public boolean isGodLocked() {
+        return this.getData().isGodLocked();
+    }
+
+    public void setGodLocked(boolean value) {
+        this.getData().setGodLocked(value);
+    }
+
+    /**
+     * Sets the combined ID and Data of the Icon of this group<br>
+     * You can get the combinedId by doing:<br>
+     * combined = id << 4 | data
+     */
+    public void setIconCombinedId(int combinedId) {
+        this.getData().setIconCombinedId(combinedId);
+    }
+
+    /**
+     * Gets the combined ID and Data of the Icon of this group<br>
+     * You can get the ID by doing combined >> 4 or combined >>> 4<br>
+     * You can get the Data by doing combined & 15
+     */
+    public int getIconCombinedId() {
+        return this.getData().getIconCombinedId();
+    }
+
     /**
      * Gets the set prefix of this group
      *
@@ -532,7 +558,7 @@ public class Group extends Subject<GroupData> {
      * Utility function
      * Returns whether or not this group is a fully global group
      */
-    public boolean isGlobal(){
+    public boolean isGlobal() {
         return this.getContext().size() == 0;
     }
 

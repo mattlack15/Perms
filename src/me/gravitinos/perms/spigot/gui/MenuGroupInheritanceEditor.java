@@ -1,6 +1,7 @@
 package me.gravitinos.perms.spigot.gui;
 
 import com.google.common.collect.Lists;
+import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.context.ContextSet;
 import me.gravitinos.perms.core.context.ServerContextType;
@@ -27,6 +28,7 @@ public class MenuGroupInheritanceEditor extends UtilMenuActionableList {
     public interface GroupInheritanceEditorHandler{
         CompletableFuture<Void> addGroup(Group group, ContextSet context);
         CompletableFuture<Void> removeGroup(Group group);
+        boolean isGodLocked();
         Map<Group, ContextSet> getGroups();
     }
 
@@ -62,7 +64,7 @@ public class MenuGroupInheritanceEditor extends UtilMenuActionableList {
                 expirTime = "&cNever";
             }
 
-            ItemBuilder builder = new ItemBuilder(Material.BOOK, 1);
+            ItemBuilder builder = new ItemBuilder(Material.getMaterial(group.getIconCombinedId() >> 4), 1, (byte) (group.getIconCombinedId() & 15));
             builder.setName("&e" + group.getName());
             builder.addLore("&9Expiration: &f" + expirTime);
             builder.addLore("&6Inheritance Context: &6" + ServerContextType.getType(contexts.get(group)).getDisplay());
@@ -90,6 +92,10 @@ public class MenuGroupInheritanceEditor extends UtilMenuActionableList {
             builder.addLore("&eShift Left Click &f- &dOpen Group");
 
             return new MenuElement(builder.build()).setClickHandler((e, i) -> {
+                if(handler.isGodLocked() && !PermsManager.instance.getGodUsers().contains(e.getWhoClicked().getName())) {
+                    getElement(e.getSlot()).addTempLore(this, "&cThis subject is &4God Locked!", 60);
+                    return;
+                }
                 if(e.getClick().isRightClick()){
                     handler.removeGroup(group);
                     groups.clear();
@@ -118,7 +124,10 @@ public class MenuGroupInheritanceEditor extends UtilMenuActionableList {
         .setClickHandler((e, i) -> {
             ArrayList<Group> groupList = GroupManager.instance.getLoadedGroups();
             groupList.removeIf(g -> !g.serverContextAppliesToThisServer());
-
+            if(handler.isGodLocked() && !PermsManager.instance.getGodUsers().contains(e.getWhoClicked().getName())) {
+                getElement(e.getSlot()).addTempLore(this, "&cThis subject is &4God Locked!", 60);
+                return;
+            }
             new UtilMenuActionableList("Add Group", 4, (num) -> {
                 if(num >= groupList.size()){
                     return null;

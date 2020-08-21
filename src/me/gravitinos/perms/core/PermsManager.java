@@ -2,14 +2,18 @@ package me.gravitinos.perms.core;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import lombok.Getter;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.backend.sql.SQLHandler;
 import me.gravitinos.perms.core.config.PermsConfiguration;
 import me.gravitinos.perms.core.converter.Converter;
+import me.gravitinos.perms.core.converter.converters.ConverterContext;
 import me.gravitinos.perms.core.converter.converters.ConverterIdentifierToSubjectId;
 import me.gravitinos.perms.core.group.GroupManager;
+import me.gravitinos.perms.core.ladders.LadderManager;
 import me.gravitinos.perms.core.user.UserManager;
 import net.md_5.bungee.api.ChatColor;
+import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 
 import javax.sql.DataSource;
@@ -28,6 +32,8 @@ public class PermsManager {
 
     private GroupManager groupManager;
     private UserManager userManager;
+    @Getter
+    private LadderManager ladderManager;
     private DataManager dataManager;
 
     private PermsImplementation implementation;
@@ -42,6 +48,7 @@ public class PermsManager {
 
         this.groupManager = new GroupManager(dataManager);
         this.userManager = new UserManager(dataManager);
+        this.ladderManager = new LadderManager(dataManager);
 
         //Config checks
         if (implementation.getConfigSettings().getServerName().equals("")) {
@@ -67,7 +74,7 @@ public class PermsManager {
 
         //Converters (things that change formats from old versions to new formats of newer versions)
         //Please put them in order of oldest version to newest version
-        runConverters(new ConverterIdentifierToSubjectId());
+        runConverters(new ConverterIdentifierToSubjectId(), new ConverterContext());
 
         try {
             cachedServerIndex = dataManager.getServerIndex().get();
@@ -82,6 +89,7 @@ public class PermsManager {
 
         try {
             this.groupManager.loadGroups().get(); //Load groups
+            this.ladderManager.loadLadders().get(); //Load rank ladders
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }
@@ -139,6 +147,7 @@ public class PermsManager {
         config.addDataSourceProperty("port", configuration.getSQLPort());
         config.addDataSourceProperty("databaseName", configuration.getSQLDatabase());
         config.addDataSourceProperty("rewriteBatchedStatements", true);
+        config.setLeakDetectionThreshold(20 * 1000);
         config.setUsername(configuration.getSQLUsername());
         config.setPassword(configuration.getSQLPassword());
         config.setMaximumPoolSize(Runtime.getRuntime().availableProcessors() * 2 + 1);
@@ -148,6 +157,7 @@ public class PermsManager {
 
     public boolean connectSQL(SQLHandler dataManager, PermsConfiguration config) {
         try {
+            this.getImplementation().consoleLog("Database type: " + config.getDatabaseType());
             dataManager.setDataSource(getHikariDataSource(config.getDatabaseType().equalsIgnoreCase("mysql") ? "com.mysql.jdbc.jdbc2.optional.MysqlDataSource" : "org.mariadb.jdbc.MariaDbDataSource", config));
             if (dataManager.getConnection() == null) {
                 this.implementation.addToLog(ChatColor.RED + "Unable to connect to SQL!");

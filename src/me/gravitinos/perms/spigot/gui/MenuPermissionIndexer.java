@@ -129,8 +129,9 @@ public class MenuPermissionIndexer extends UtilMenuActionableList {
             if (e.getClick().isLeftClick()) {
                 p.closeInventory();
                 p.sendMessage(UtilColour.toColour(SpigotPerms.pluginPrefix + "Enter plugin search here:"));
-                ((Player)e.getWhoClicked()).sendTitle("", UtilColour.toColour("&b&lEnter search query in Chat"),10, 600, 10);
+                ((Player)e.getWhoClicked()).sendTitle("", UtilColour.toColour("&b&lEnter search query in Chat"));
                 ChatListener.instance.addChatInputHandler(p.getUniqueId(), (s) -> doInMainThread(() -> {
+                    ((Player)e.getWhoClicked()).sendTitle("", "");
                     setupPluginList(true, s);
                     open(p);
                 }));
@@ -147,9 +148,9 @@ public class MenuPermissionIndexer extends UtilMenuActionableList {
             if (e.getClick().isLeftClick()) {
                 p.closeInventory();
                 p.sendMessage(UtilColour.toColour(SpigotPerms.pluginPrefix + "Enter part of a permission search here:"));
-                ((Player)e.getWhoClicked()).sendTitle("", UtilColour.toColour("&b&lEnter search query in Chat"),10, 600, 10);
+                ((Player)e.getWhoClicked()).sendTitle("", UtilColour.toColour("&b&lEnter search query in Chat"));
                 ChatListener.instance.addChatInputHandler(p.getUniqueId(), (s) -> doInMainThread(() -> {
-                    ((Player)e.getWhoClicked()).sendTitle("", "", 10, 10, 10);
+                    ((Player)e.getWhoClicked()).sendTitle("", "");
                     setupPluginList(false, s);
                     open(p);
                 }));

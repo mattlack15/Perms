@@ -2,6 +2,7 @@ package me.gravitinos.perms.core.ladders;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.Setter;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.context.ContextSet;
 import me.gravitinos.perms.core.group.Group;
@@ -20,10 +21,11 @@ public class RankLadder {
     private UUID id;
     private List<UUID> groups;
     private ContextSet context;
+    @Setter
     private DataManager dataManager;
     private ConcurrentMap<String, String> data;
 
-    public void setRank(User user, int index) {
+    public synchronized void setRank(User user, int index) {
         Group group = GroupManager.instance.getGroupExact(groups.get(index));
         if(group == null)
             return;
@@ -31,12 +33,11 @@ public class RankLadder {
     }
 
     public synchronized void setName(String name){
-        //TODO data update
         this.data.put("name", name);
         dataManager.updateRankLadder(this);
     }
 
-    public String getName(){
+    public synchronized String getName(){
         return this.data.get("name");
     }
 
@@ -55,12 +56,16 @@ public class RankLadder {
     public synchronized void demote(User user) {
         this.cleanupGroups();
         int currentIndex = getRankIndex(user);
-        if(currentIndex-1 < 0)
-            return;
+
+        //Remove if they have it
         for(Group group : user.getGroupsInOrderOfPriority()){
             if(this.groups.contains(group.getSubjectId()))
                 user.removeInheritance(group);
         }
+
+        //If there's nothing below, then just leave it at they have nothing that is in this ladder
+        if(currentIndex-1 < 0)
+            return;
         user.addInheritance(GroupManager.instance.getGroupExact(this.groups.get(currentIndex-1)), context);
     }
 
@@ -68,7 +73,7 @@ public class RankLadder {
         List<Group> groups = user.getGroupsInOrderOfPriority();
         for(Group g : groups){
             if(this.groups.contains(g.getSubjectId()))
-                return this.groups.indexOf(g);
+                return this.groups.indexOf(g.getSubjectId());
         }
         return -1;
     }
@@ -95,14 +100,26 @@ public class RankLadder {
                 removed.add(g);
             return rem;
         });
+        dataManager.updateRankLadder(this);
         return removed;
+    }
+
+    public boolean isGodLocked() {
+        return Boolean.parseBoolean(this.data.get("locked"));
+    }
+
+    public synchronized void setGodLocked(boolean locked){
+        this.data.put("locked", Boolean.toString(locked));
+        dataManager.updateRankLadder(this);
     }
 
     public synchronized boolean addGroup(Group group){
         if(!canAddGroup(group))
             return false;
-        this.groups.add(id);
-        dataManager.updateRankLadder(this);
+        if(!this.groups.contains(group.getSubjectId())) {
+            this.groups.add(group.getSubjectId());
+            dataManager.updateRankLadder(this);
+        }
         return true;
     }
     public synchronized boolean removeGroup(Group group) {
@@ -114,6 +131,6 @@ public class RankLadder {
     }
 
     public boolean canAddGroup(Group group){
-        return context.isSatisfiedBy(this.context);
+        return context.isSatisfiedBy(this.context) && this.groups.size() < 200; //Cap of 200 groups due to SQL storage cap
     }
 }

@@ -1,6 +1,5 @@
 package me.gravitinos.perms.core.converter.converters;
 
-import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.backend.sql.SQLDao;
 import me.gravitinos.perms.core.backend.sql.SQLHandler;
@@ -10,10 +9,11 @@ import me.gravitinos.perms.spigot.file.SpigotFileDataManager;
 
 import java.sql.SQLException;
 
-public class ConverterIdentifierToSubjectId extends Converter {
+public class ConverterContext extends Converter {
+
     @Override
     public String getName() {
-        return "IDENTIFIER_TO_SUBJECT_ID";
+        return "Context Update";
     }
 
     @Override
@@ -24,14 +24,10 @@ public class ConverterIdentifierToSubjectId extends Converter {
             //Using SQL
             SQLHandler sqlHandler = (SQLHandler) dataManager;
             try(SQLDao dao = sqlHandler.getDao()) {
-                return dao.checkConverterIdentifierToSubjectId();
+                return dao.checkConverterContext();
             } catch (SQLException e) {
                 return false;
             }
-        } else if(dataManager instanceof SpigotFileDataManager){
-            //Using files
-            SpigotFileDataManager fileHandler = (SpigotFileDataManager) dataManager;
-            return fileHandler.checkConverterIdentifierToSubjectId();
         }
         return false;
     }
@@ -43,15 +39,12 @@ public class ConverterIdentifierToSubjectId extends Converter {
             //Using SQL
             SQLHandler sqlHandler = (SQLHandler) dataManager;
             try(SQLDao dao = sqlHandler.getDao()) {
-                return dao.convertIdentifierToSubjectId();
+                dao.convertContext();
+                return true;
             } catch (SQLException e) {
                 e.printStackTrace();
                 return false;
             }
-        } else if(dataManager instanceof SpigotFileDataManager){
-            //Using files
-            SpigotFileDataManager fileHandler = (SpigotFileDataManager) dataManager;
-            return fileHandler.convertIdentifierToSubjectId();
         }
         return false;
     }

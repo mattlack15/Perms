@@ -1,25 +1,13 @@
 package me.gravitinos.perms.spigot.gui;
 
-import me.gravitinos.perms.core.group.Group;
-import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.group.GroupManager;
-import me.gravitinos.perms.core.subject.Inheritance;
-import me.gravitinos.perms.core.subject.Subject;
-import me.gravitinos.perms.core.user.User;
-import me.gravitinos.perms.core.user.UserManager;
 import me.gravitinos.perms.spigot.SpigotPerms;
-import me.gravitinos.perms.spigot.listeners.ChatListener;
 import me.gravitinos.perms.spigot.util.ItemBuilder;
 import me.gravitinos.perms.spigot.util.Menus.Menu;
 import me.gravitinos.perms.spigot.util.Menus.MenuElement;
-import me.gravitinos.perms.spigot.util.UtilColour;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
-import org.bukkit.event.inventory.ClickType;
-
-import java.util.ArrayList;
 
 public class MenuMain extends Menu {
 
@@ -35,9 +23,9 @@ public class MenuMain extends Menu {
     public static final Sound DING_SOUND = matchSound("ORB_PICKUP");
     public static final Sound ITEM_BREAK_SOUND = matchSound("ITEM_BREAK");
 
-    public static Sound matchSound(String match){
-        for(Sound sounds : Sound.values()){
-            if(sounds.toString().contains(match)){
+    public static Sound matchSound(String match) {
+        for (Sound sounds : Sound.values()) {
+            if (sounds.toString().contains(match)) {
                 return sounds;
             }
         }
@@ -48,12 +36,13 @@ public class MenuMain extends Menu {
         super(SpigotPerms.instance.getName() + " by Gravitinos", 5);
         this.setup(player);
     }
-    private void setup(Player player){
+
+    private void setup(Player player) {
 
         //Create the users button
         MenuElement users = new MenuElement(new ItemBuilder(Material.SKULL_ITEM, 1).setupAsSkull("Gravitinos").setName("&6&lUsers")
-        .addLore("&7Manage/View users").build()).setClickHandler((e, i) -> {
-            if(player.hasPermission(SpigotPerms.commandName + ".user.list")){
+                .addLore("&7Manage/View users").build()).setClickHandler((e, i) -> {
+            if (player.hasPermission(SpigotPerms.commandName + ".user.list")) {
                 player.playSound(player.getLocation(), OPEN_USER_LIST_SOUND, 1f, 1f);
                 new MenuUserList(player, 4, getBackButton(this)).open(player); //Open user list menu for the viewer
             } else {
@@ -63,8 +52,8 @@ public class MenuMain extends Menu {
         });
 
         MenuElement groups = new MenuElement(new ItemBuilder(Material.BOOK, 1).setName("&6&lGroups")
-        .addLore("&7Manage/View groups").build()).setClickHandler((e, i) -> {
-            if(player.hasPermission(SpigotPerms.commandName + ".group.list")){
+                .addLore("&7Manage/View groups").build()).setClickHandler((e, i) -> {
+            if (player.hasPermission(SpigotPerms.commandName + ".group.list")) {
                 player.playSound(player.getLocation(), OPEN_GROUP_LIST_SOUND, 1f, 1f);
                 new MenuGroupList(player, 4, false, getBackButton(this)).open(player);
             } else {
@@ -80,8 +69,8 @@ public class MenuMain extends Menu {
                 });
 
         MenuElement configEditor = new MenuElement(new ItemBuilder(Material.COMMAND, 1).setName("&9&lConfiguration")
-        .addLore("&7Click to edit supported configuration settings").build()).setClickHandler((e, i) -> {
-            if(player.hasPermission(SpigotPerms.commandName + ".config")){
+                .addLore("&7Click to edit supported configuration settings").build()).setClickHandler((e, i) -> {
+            if (player.hasPermission(SpigotPerms.commandName + ".config")) {
                 player.playSound(player.getLocation(), OPEN_GROUP_LIST_SOUND, 1f, 1f);
                 new MenuConfig(getBackButton(this)).open(player);
             } else {
@@ -90,6 +79,18 @@ public class MenuMain extends Menu {
             }
         });
 
+        MenuElement rankLadders = new MenuElement(new ItemBuilder(Material.LADDER, 1).setName("&6&lRank Ladders").addLore("&7Manage/View Rank Ladders")
+                .build()).setClickHandler((e, i) -> {
+            if (player.hasPermission(SpigotPerms.commandName + ".rankladders")) {
+                player.playSound(player.getLocation(), OPEN_GROUP_LIST_SOUND, 1f, 1f);
+                new MenuLadderList(getBackButton(this)).open((Player) e.getWhoClicked());
+            } else {
+                MenuElement clickedElement = this.getElement(e.getSlot());
+                clickedElement.addTempLore(this, "&cYou do not have permission to access this!", 60);
+            }
+        });
+
+        this.setElement(13, rankLadders);
         this.setElement(20, users);
         this.setElement(24, groups);
         this.setElement(31, configEditor);

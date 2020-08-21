@@ -6,23 +6,17 @@ import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.context.ContextSet;
-import me.gravitinos.perms.core.context.ImmutableContextSet;
 import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.group.GroupManager;
-import me.gravitinos.perms.core.subject.Inheritance;
-import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.subject.Subject;
 import me.gravitinos.perms.core.subject.SubjectRef;
-import me.gravitinos.perms.spigot.SpigotPerms;
-import org.bukkit.Bukkit;
+import me.gravitinos.perms.core.util.FutureIDLock;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 public class UserManager {
 
@@ -32,18 +26,18 @@ public class UserManager {
 
     private ContextSet defaultGroupContext = new MutableContextSet(Context.CONTEXT_SERVER_LOCAL);
 
-    private ArrayList<User> loadedUsers = new ArrayList<>();
+    private List<User> loadedUsers = Collections.synchronizedList(new ArrayList<>());
+
+    private FutureIDLock<Boolean> loadLock = new FutureIDLock<>();
 
     public UserManager(DataManager dataManager) {
         instance = this;
         this.dataManager = dataManager;
     }
 
-    public DataManager getDataManager() {
+    public synchronized DataManager getDataManager() {
         return this.dataManager;
     }
-
-    private static final Map<UUID, CompletableFuture<Boolean>> beingLoaded = new HashMap<>();
 
     /**
      * Loads a specific user from the data manager specified in the constructor
@@ -52,7 +46,7 @@ public class UserManager {
      * @param username The username of the user -> in case the user is not in the data manager and userdata has to be created
      * @return A future containing whether the operation was successful (true) or not (false)
      */
-    public CompletableFuture<Boolean> loadUser(@NotNull UUID id, @NotNull String username) {
+    public Future<Boolean> loadUser(@NotNull UUID id, @NotNull String username) {
         return loadUser(id, username, true);
     }
 
@@ -63,18 +57,13 @@ public class UserManager {
      * @param username The username of the user -> in case the user is not in the data manager and userdata has to be created
      * @return A future containing whether the operation was successful (true) or not (false)
      */
-    public CompletableFuture<Boolean> loadUser(@NotNull UUID id, @NotNull String username, boolean addDefaultGroup) {
+    public Future<Boolean> loadUser(@NotNull UUID id, @NotNull String username, boolean addDefaultGroup) {
         CompletableFuture<Boolean> result = new CompletableFuture<>();
 
-        synchronized (beingLoaded) {
-            if (beingLoaded.containsKey(id) && !beingLoaded.get(id).isDone()) {
-                return beingLoaded.get(id);
-            } else {
-                beingLoaded.remove(id);
-                beingLoaded.put(id, result);
-            }
+        Future<Boolean> o = loadLock.tryLock(id, result);
+        if (o != null) {
+            return o;
         }
-
 
         PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
 
@@ -82,7 +71,7 @@ public class UserManager {
                 CachedSubject cachedSubject = dataManager.getSubject(id).get();
                 User user;
                 if (cachedSubject == null || cachedSubject.getData() == null || cachedSubject.getSubjectId() == null) {
-                    if(addDefaultGroup) {
+                    if (addDefaultGroup) {
                         user = new UserBuilder(id, username).addInheritance(GroupManager.instance.getDefaultGroup(), getDefaultGroupInheritanceContext()).build();
                     } else {
                         user = new UserBuilder(id, username).build();
@@ -91,108 +80,50 @@ public class UserManager {
                     this.addUser(user).get(); //This will also save the user to the backend
                 } else {
                     user = new User(cachedSubject, (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s)), this);
-                    synchronized (this) {
-                        if (this.isUserLoaded(user.getUniqueID())) {
-                            this.getUser(user.getUniqueID()).updateFromCachedSubject(cachedSubject, (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s))); //Will not save user to the backend (Purposefully)
-                        } else {
-                            this.loadedUsers.add(user); //This will NOT save the user to the backend (Purposefully)
-                        }
+                    if (this.isUserLoaded(user.getUniqueID())) {
+                        this.getUser(user.getUniqueID()).updateFromCachedSubject(cachedSubject, (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s))); //Will not save user to the backend (Purposefully)
+                    } else {
+                        //Synchronized list so it's fine
+                        this.loadedUsers.add(user); //This will NOT save the user to the backend (Purposefully)
                     }
                 }
-
-                //TODO remove later
-
-//                Map<Integer, String> index = PermsManager.instance.getCachedServerIndex();
-//
-//                user.getDataManager().performOrderedOpAsync(() -> {
-//                    for (int ints : index.keySet()) {
-//                        String name = index.get(ints);
-//                        String finalServer = Integer.toString(ints);
-//
-//                        //inheritance
-//                        boolean a = false;
-//                        for (Inheritance inheritances : user.getInheritances()) {
-//                            if (inheritances.getContext().getServer().equals(name)) {
-//                                a = true;
-//                            }
-//                        }
-//                        if (a) {
-//                            PermsManager.instance.getImplementation().sendDebugMessage("Found old-formatted subject inheritances in &e" + user.getName() + "&7 changing to new identifier-serverName format!");
-//                            ArrayList<Inheritance> inheritances = user.getInheritances();
-//                            user.clearInheritances();
-//                            inheritances.forEach(i -> {
-//                                if (i.getContext().getServer().equals(name)) {
-//                                    Context.setContextServer(i.getContext(), finalServer);
-//                                }
-//                            });
-//                            user.addInheritances(inheritances);
-//                        }
-//
-//
-//                        //perms
-//                        a = false;
-//                        for (PPermission perms : user.getOwnPermissions()) {
-//                            if (perms.getContext().getServer().equals(name)) {
-//                                a = true;
-//                            }
-//                        }
-//                        if (a) {
-//                            PermsManager.instance.getImplementation().sendDebugMessage("Found old-formatted permissions in &e" + user.getName() + "&7 changing to new identifier-serverName format!");
-//                            ArrayList<PPermission> perms = user.getOwnPermissions().getPermissions();
-//                            user.removeOwnPermissions(perms);
-//                            ArrayList<PPermission> newPerms = new ArrayList<>();
-//                            perms.forEach(p -> {
-//                                if (p.getContext().getServer().equals(name)) {
-//                                    newPerms.add(new PPermission(p.getPermission(), new Context(finalServer, p.getContext().getWorldName(), p.getExpiry()), p.getPermissionIdentifier()));
-//                                } else {
-//                                    newPerms.add(p);
-//                                }
-//                            });
-//                            user.addOwnPermissions(newPerms);
-//                        }
-//                    }
-//                    return null;
-//                });
-
-
             } catch (Throwable e) {
                 PermsManager.instance.getImplementation().addToLog("Problem loading user " + username + " (" + id + "): " + e.getMessage());
-                result.complete(false);
-                beingLoaded.remove(id);
                 e.printStackTrace();
+                result.complete(false);
+                return;
+            } finally {
+                loadLock.unlock(id);
             }
-
             result.complete(true);
-            beingLoaded.remove(id);
-
         });
 
         return result;
     }
 
-    public void setDefaultGroupInheritanceContext(ContextSet context){
+    public synchronized void setDefaultGroupInheritanceContext(ContextSet context) {
         this.defaultGroupContext = context;
     }
 
-    public ContextSet getDefaultGroupInheritanceContext(){
+    public synchronized ContextSet getDefaultGroupInheritanceContext() {
         return this.defaultGroupContext;
     }
 
     public CompletableFuture<Boolean> reloadUsers() {
         Map<UUID, String> loaded = new HashMap<>();
-        for (User user : Lists.newArrayList(this.loadedUsers)) {
+        for (User user : getLoadedUsers()) {
             loaded.put(user.getUniqueID(), user.getName());
             this.unloadUser(user.getUniqueID());
         }
 
-        ArrayList<CompletableFuture<Boolean>> futures = new ArrayList<>();
+        ArrayList<Future<Boolean>> futures = new ArrayList<>();
         for (UUID ids : loaded.keySet()) {
             futures.add(this.loadUser(ids, loaded.get(ids)));
         }
 
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
-            for (CompletableFuture<Boolean> booleanCompletableFuture : futures) {
+            for (Future<Boolean> booleanCompletableFuture : futures) {
                 try {
                     booleanCompletableFuture.get();
                 } catch (InterruptedException | ExecutionException e) {
@@ -204,11 +135,11 @@ public class UserManager {
         return future;
     }
 
-    public ArrayList<User> getLoadedUsers() {
+    public synchronized ArrayList<User> getLoadedUsers() {
         return Lists.newArrayList(this.loadedUsers);
     }
 
-    public CompletableFuture<Void> saveTo(DataManager dataManager) {
+    public synchronized CompletableFuture<Void> saveTo(DataManager dataManager) {
         ArrayList<Subject> users = Lists.newArrayList(loadedUsers);
         return dataManager.addSubjects(users);
     }
@@ -218,7 +149,7 @@ public class UserManager {
      *
      * @param uuid The unique ID of the user to unload
      */
-    public void unloadUser(UUID uuid) {
+    public synchronized void unloadUser(UUID uuid) {
         loadedUsers.removeIf(u -> u.getUniqueID().equals(uuid));
     }
 
@@ -228,7 +159,7 @@ public class UserManager {
      * @param uuid The user's uuid to check for
      * @return True if the user is loaded in this user manager, false otherwise
      */
-    public boolean isUserLoaded(UUID uuid) {
+    public synchronized boolean isUserLoaded(UUID uuid) {
         for (User u : loadedUsers) {
             if (u.getUniqueID().equals(uuid)) {
                 return true;
@@ -261,7 +192,7 @@ public class UserManager {
         return null;
     }
 
-    public CompletableFuture<Void> removeUser(User user) {
+    public synchronized CompletableFuture<Void> removeUser(User user) {
         if (user == null) {
             CompletableFuture<Void> f = new CompletableFuture<>();
             f.complete(null);
@@ -277,7 +208,11 @@ public class UserManager {
      *
      * @param user The user to add
      */
-    public CompletableFuture<Void> addUser(User user) {
+    public synchronized CompletableFuture<Void> addUser(User user) {
+        if (user == null) {
+            System.out.println("PERMS > TRIED TO ADD NULL USER TO USERMANAGER -> contact grav");
+            new IllegalArgumentException("").printStackTrace();
+        }
         this.loadedUsers.add(user);
         if (dataManager != null) {
             return dataManager.addSubject(user);
@@ -292,7 +227,7 @@ public class UserManager {
      *
      * @param users List of the users to add
      */
-    public void addUsers(ArrayList<User> users) {
+    public synchronized void addUsers(ArrayList<User> users) {
         this.loadedUsers.addAll(users);
         ArrayList<Subject> subjects = Lists.newArrayList(users);
         if (dataManager != null) {

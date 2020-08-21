@@ -20,6 +20,7 @@ public class UserBuilder {
     private UserData data = new UserData();
     private ArrayList<CachedInheritance> inherited = new ArrayList<>();
     private ArrayList<PPermission> permissions = new ArrayList<>();
+    private UserManager userManager = UserManager.instance;
 
     public UserBuilder(UUID id, String name){
         this.setUUIDAndName(id, name);
@@ -76,13 +77,18 @@ public class UserBuilder {
         return this;
     }
 
+    public UserBuilder setUserManager(UserManager manager) {
+        this.userManager = manager;
+        return this;
+    }
+
     public UserBuilder setSuffix(String suffix){
         this.getData().setSuffix(suffix);
         return this;
     }
 
     public User build(){
-        return new User(this.toCachedSubject(), (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s)), UserManager.instance);
+        return new User(this.toCachedSubject(), (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s)), this.userManager);
     }
 
 }

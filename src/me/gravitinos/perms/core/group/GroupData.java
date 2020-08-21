@@ -5,6 +5,8 @@ import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.context.ContextSet;
 import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.subject.SubjectData;
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
 
 public class GroupData extends SubjectData {
     public static final int SERVER_LOCAL = PermsManager.instance.getImplementation().getConfigSettings().getServerId();
@@ -14,12 +16,14 @@ public class GroupData extends SubjectData {
     private static final String DESCRIPTION = "description";
     private static final String CONTEXT = "context";
     private static final String PRIORITY = "priority";
-    private static final String GOD_LOCK_INHERITANCE = "god_lock_inheritances";
-    private static final String GOD_LOCK_PERMISSION = "god_lock_permissions";
-    private static final String GOD_LOCK_DELETE = "god_lock_deletion";
-    private static final String GOD_LOCK_OPTIONS = "god_lock_options";
+    private static final String GOD_LOCK = "god_locked";
+    private static final String ICON = "icon";
+   // private static final String GOD_LOCK_INHERITANCE = "god_lock_inheritances";
+   // private static final String GOD_LOCK_PERMISSION = "god_lock_permissions";
+   // private static final String GOD_LOCK_DELETE = "god_lock_deletion";
+   // private static final String GOD_LOCK_OPTIONS = "god_lock_options";
 
-    private ContextSet cachedContext = null;
+    private volatile ContextSet cachedContext = null;
 
     public GroupData() {
     }
@@ -68,37 +72,45 @@ public class GroupData extends SubjectData {
         this.setData(CHAT_COLOUR, colour);
     }
 
-    public void setGodLockPermission(boolean val) {
-        this.setData(GOD_LOCK_PERMISSION, Boolean.toString(val));
+    public boolean isGodLocked(){
+        return Boolean.parseBoolean(this.getData(GOD_LOCK));
     }
 
-    public void setGodLockInheritance(boolean val){
-        this.setData(GOD_LOCK_INHERITANCE, Boolean.toString(val));
+    public void setGodLocked(boolean value) {
+        this.setData(GOD_LOCK, Boolean.toString(value));
     }
 
-    public void setGodLockDelete(boolean val){
-        this.setData(GOD_LOCK_DELETE, Boolean.toString(val));
-    }
-
-    public void setGodLockOptions(boolean val){
-        this.setData(GOD_LOCK_OPTIONS, Boolean.toString(val));
-    }
-
-    public boolean isGodLockPermission(){
-        return Boolean.valueOf(this.getData(GOD_LOCK_PERMISSION));
-    }
-
-    public boolean isGodLockInheritance(){
-        return Boolean.valueOf(this.getData(GOD_LOCK_INHERITANCE));
-    }
-
-    public boolean isGodLockDelete(){
-        return Boolean.valueOf(this.getData(GOD_LOCK_DELETE));
-    }
-
-    public boolean isGodLockOptions(){
-        return Boolean.valueOf(this.getData(GOD_LOCK_OPTIONS));
-    }
+//    public void setGodLockPermission(boolean val) {
+//        this.setData(GOD_LOCK_PERMISSION, Boolean.toString(val));
+//    }
+//
+//    public void setGodLockInheritance(boolean val){
+//        this.setData(GOD_LOCK_INHERITANCE, Boolean.toString(val));
+//    }
+//
+//    public void setGodLockDelete(boolean val){
+//        this.setData(GOD_LOCK_DELETE, Boolean.toString(val));
+//    }
+//
+//    public void setGodLockOptions(boolean val){
+//        this.setData(GOD_LOCK_OPTIONS, Boolean.toString(val));
+//    }
+//
+//    public boolean isGodLockPermission(){
+//        return Boolean.valueOf(this.getData(GOD_LOCK_PERMISSION));
+//    }
+//
+//    public boolean isGodLockInheritance(){
+//        return Boolean.valueOf(this.getData(GOD_LOCK_INHERITANCE));
+//    }
+//
+//    public boolean isGodLockDelete(){
+//        return Boolean.valueOf(this.getData(GOD_LOCK_DELETE));
+//    }
+//
+//    public boolean isGodLockOptions(){
+//        return Boolean.valueOf(this.getData(GOD_LOCK_OPTIONS));
+//    }
 
     public ContextSet getContext() {
         if(cachedContext == null) {
@@ -124,6 +136,19 @@ public class GroupData extends SubjectData {
             this.setPriority(0);
             return 0;
         }
+    }
+
+    public int getIconCombinedId() {
+        try {
+            return Integer.parseInt(getData(ICON));
+        } catch (NumberFormatException e) {
+            this.setIconCombinedId(Material.BOOK.getId() << 4);
+            return Material.BOOK.getId() << 4;
+        }
+    }
+
+    public void setIconCombinedId(int combinedId) {
+        this.setData(ICON, Integer.toString(combinedId));
     }
 
     public void setPriority(int i) {

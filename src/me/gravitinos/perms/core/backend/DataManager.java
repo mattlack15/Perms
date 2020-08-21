@@ -98,6 +98,8 @@ public abstract class DataManager {
 
     public abstract CompletableFuture<Boolean> testBackendConnection();
 
+    public abstract boolean isRemote();
+
     //Shutdown
     public void shutdown(){};
 

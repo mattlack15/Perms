@@ -5,21 +5,21 @@ import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 
-public class StringSerializer {
+public class GravSerializer {
     private List<Byte> bytes = new ArrayList<>();
     private int reading = 0;
     private int mark = 0;
 
-    public StringSerializer(){
+    public GravSerializer(){
 
     }
 
-    public StringSerializer(String input){
+    public GravSerializer(String input){
         for(byte b : Base64.getDecoder().decode(input))
             bytes.add(b);
     }
 
-    public StringSerializer(byte[] input){
+    public GravSerializer(byte[] input){
         for(byte b : input)
             bytes.add(b);
     }
@@ -72,7 +72,7 @@ public class StringSerializer {
     
     public byte readByte() {
         if(reading >= bytes.size())
-            throw new UnsupportedOperationException("End of byte array reached (StringSerializer)");
+            throw new UnsupportedOperationException("End of byte array reached (GravSerializer)");
         return bytes.get(reading++);
     }
 

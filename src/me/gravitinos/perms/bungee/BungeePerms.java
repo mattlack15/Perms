@@ -9,6 +9,7 @@ import me.gravitinos.perms.core.backend.sql.SQLHandler;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.group.GroupManager;
+import me.gravitinos.perms.core.subject.SubjectRef;
 import me.gravitinos.perms.core.user.User;
 import me.gravitinos.perms.core.user.UserManager;
 import net.md_5.bungee.api.CommandSender;
@@ -130,7 +131,6 @@ public class BungeePerms extends Plugin implements Listener {
                 //Add default group
                 if(user.getInheritances().size() == 0 && GroupManager.instance.getDefaultGroup().isGlobal()){
                     user.addInheritance(GroupManager.instance.getDefaultGroup(), new MutableContextSet()).get();
-                    getLogger().info("Adding default group to " + user.getName());
                 }
 
                 getLogger().info("Userdata loaded for " + user.getName() + " (" + user.getUniqueID() + ")");
@@ -192,7 +192,20 @@ public class BungeePerms extends Plugin implements Listener {
                 if (cmd.equals("perms::reloadsubject")) {
                     event.setCancelled(true);
 
-                    String id = stream.readUTF();
+                    String idStr = stream.readUTF();
+
+                    //Update
+                    UUID id = UUID.fromString(idStr);
+                    PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
+                        if(UserManager.instance.isUserLoaded(id)){
+                            User user = UserManager.instance.getUser(id);
+                            String username = user.getName();
+                            UserManager.instance.loadUser(id, username);
+                        } else if(GroupManager.instance.isGroupExactLoaded(id)){
+                            GroupManager.instance.loadGroup(id, (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s)));
+                        }
+                    });
+
                     for(ServerInfo servers : getProxy().getServers().values()){
 
                         if(sender.getServer().getInfo().getName().equals(servers.getName()))
@@ -201,10 +214,9 @@ public class BungeePerms extends Plugin implements Listener {
                         ByteArrayOutputStream b = new ByteArrayOutputStream();
                         DataOutputStream stream1 = new DataOutputStream(b);
                         stream1.writeUTF("perms::reloadsubject");
-                        stream1.writeUTF(id);
+                        stream1.writeUTF(idStr);
                         servers.sendData("BungeeCord", b.toByteArray());
                     }
-                    getProxy().getLogger().info("Done!");
                 }
             } catch(Exception e){
                 e.printStackTrace();

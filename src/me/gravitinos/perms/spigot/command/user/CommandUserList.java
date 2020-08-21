@@ -1,5 +1,6 @@
 package me.gravitinos.perms.spigot.command.user;
 
+import me.gravitinos.perms.core.context.ContextSet;
 import me.gravitinos.perms.core.context.ServerContextType;
 import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.user.User;
@@ -36,7 +37,7 @@ public class CommandUserList extends GravSubCommand {
 
         this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + user.getName() + "&f's permissions:");
         for(PPermission perms : user.getOwnPermissions()){
-            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&f - &e" + perms.getPermission() + " " + ServerContextType.getType(perms.getContext()) + " &fExpiry: &7" + (perms.getExpiry() == 0 ? "&cnever" : ((perms.getExpiry() - System.currentTimeMillis())/1000) + "s"));
+            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&f - &e" + perms.getPermission() + " " + ServerContextType.getType(perms.getContext()).getDisplay() + " &fExpiry: &7" + (perms.getExpiry() == ContextSet.NO_EXPIRATION ? "&cnever" : ((perms.getExpiry() - System.currentTimeMillis())/1000) + "s"));
         }
         return true;
     }

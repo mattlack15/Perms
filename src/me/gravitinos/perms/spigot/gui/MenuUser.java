@@ -3,6 +3,8 @@ package me.gravitinos.perms.spigot.gui;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.context.ContextSet;
 import me.gravitinos.perms.core.group.Group;
+import me.gravitinos.perms.core.ladders.LadderManager;
+import me.gravitinos.perms.core.ladders.RankLadder;
 import me.gravitinos.perms.core.subject.ImmutablePermissionList;
 import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.user.User;
@@ -16,6 +18,7 @@ import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -56,6 +59,11 @@ public class MenuUser extends Menu {
                         return MenuUser.this.user.removeInheritance(group);
                     }
 
+                    @Override
+                    public boolean isGodLocked() {
+                        return false;
+                    }
+
                     public Map<Group, ContextSet> getGroups() {
                         Map<Group, ContextSet> groupContextMap = new HashMap<>();
                         MenuUser.this.user.getInheritances().forEach((i) -> {
@@ -91,9 +99,57 @@ public class MenuUser extends Menu {
                     public ImmutablePermissionList getPermissions() {
                         return MenuUser.this.user.getOwnPermissions();
                     }
+
+                    @Override
+                    public boolean isGodLocked() {
+                        return false;
+                    }
                 }, Menu.getBackButton(this))).open(p, new Object[0]);
             }
         });
+
+        MenuElement demote = new MenuElement(new ItemBuilder(Material.WOOL, 1, (byte) 14).setName("&cDemote").addLore("&7Click to demote this user")
+        .addLore("&7in a certain rank ladder").build()).setClickHandler((e, i) -> {
+            if (!e.getWhoClicked().hasPermission("ranks.user.managegroups")) {
+                this.getElement(e.getSlot()).addTempLore(this, "&cYou do not have access to this!", 60);
+                MenuManager.instance.invalidateElementsInInvForMenu(this, e.getSlot());
+            } else {
+                List<RankLadder> ladders = LadderManager.instance.getLoadedLadders();
+                new UtilMenuActionableList("Pick a rank ladder", 3, (index) -> {
+                    if (index >= ladders.size())
+                        return null;
+                    RankLadder ladder = ladders.get(index);
+                    return new MenuElement(new ItemBuilder(Material.LADDER, 1).setName("&e&l" + ladder.getName()).build()).setClickHandler((e1, i1) -> {
+                        ladder.demote(user);
+                        setup();
+                        open((Player) e1.getWhoClicked());
+                    });
+                }, getBackButton(this)).open((Player) e.getWhoClicked());
+            }
+        });
+
+        MenuElement promote = new MenuElement(new ItemBuilder(Material.WOOL, 1, (byte) 5).setName("&aPromote").addLore("&7Click to promote this user")
+                .addLore("&7in a certain rank ladder").build()).setClickHandler((e, i) -> {
+            if (!e.getWhoClicked().hasPermission("ranks.user.managegroups")) {
+                this.getElement(e.getSlot()).addTempLore(this, "&cYou do not have access to this!", 60);
+                MenuManager.instance.invalidateElementsInInvForMenu(this, e.getSlot());
+            } else {
+                List<RankLadder> ladders = LadderManager.instance.getLoadedLadders();
+                new UtilMenuActionableList("Pick a rank ladder", 3, (index) -> {
+                    if (index >= ladders.size())
+                        return null;
+                    RankLadder ladder = ladders.get(index);
+                    return new MenuElement(new ItemBuilder(Material.LADDER, 1).setName("&e&l" + ladder.getName()).build()).setClickHandler((e1, i1) -> {
+                        ladder.promote(user);
+                        setup();
+                        open((Player) e1.getWhoClicked());
+                    });
+                }, getBackButton(this)).open((Player) e.getWhoClicked());
+            }
+        });
+
+        this.setElement(39, demote);
+        this.setElement(41, promote);
         this.setElement(4, this.backElement);
         this.setElement(20, permissionsEditor);
         this.setElement(22, groupsEditor);

@@ -76,7 +76,6 @@ public class SpigotPermissible extends PermissibleBase {
             long nano = System.nanoTime();
             ArrayList<String> perms = new ArrayList<>();
             user.getAllPermissions(context).forEach(p -> perms.add(p.getPermission()));
-            player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(TextComponent.fromLegacyText("&chasPermission: &f" + ((System.nanoTime() - nano) / 1000000f) + "ms")));
 
             if (perms.contains("-" + requ)) {
                 return false;

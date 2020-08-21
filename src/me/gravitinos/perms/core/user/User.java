@@ -16,6 +16,7 @@ import me.gravitinos.perms.core.subject.*;
 import me.gravitinos.perms.core.util.SubjectSupplier;
 import me.gravitinos.perms.spigot.messaging.MessageManager;
 import me.gravitinos.perms.spigot.messaging.MessageReloadSubject;
+import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -24,11 +25,12 @@ import java.util.Comparator;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class User extends Subject<UserData> {
     private DataManager dataManager;
 
-    private volatile boolean updatingData = false;
+    private final AtomicBoolean updatingData = new AtomicBoolean(false);
 
     public User(UserBuilder builder, SubjectSupplier inheritanceSupplier) {
         this(builder, inheritanceSupplier, null);
@@ -70,22 +72,20 @@ public class User extends Subject<UserData> {
         this.setData(new UserData(subject.getData()));
         this.getData().addUpdateListener("MAIN_LISTENER", (k, v) -> {
             if (dataManager != null) {
-                synchronized (this) {
-                    if (!updatingData) {
-                        updatingData = true;
-                        PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
-                            try {
-                                Thread.sleep(2); //Saves on database requests, so that it will update all of the changed subject data (if a thread makes more than one change) in one update
-                                dataManager.updateSubjectData(this).get();
-                                if(MessageManager.instance != null){
-                                    MessageManager.instance.queueMessage(new MessageReloadSubject(this.getSubjectId()));
-                                }
-                            } catch (InterruptedException | ExecutionException e) {
-                                e.printStackTrace();
+                if (updatingData.compareAndSet(false, true)) {
+                    PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
+                        try {
+                            Thread.sleep(5); //Saves on database requests, so that it will update all of the changed subject data (if a thread makes more than one change) in one update
+                            updatingData.set(false);
+                            dataManager.updateSubjectData(this).get();
+                            if (MessageManager.instance != null) {
+                                MessageManager.instance.queueMessage(new MessageReloadSubject(this.getSubjectId()));
                             }
-                            updatingData = false;
-                        });
-                    }
+                        } catch (InterruptedException | ExecutionException e) {
+                            e.printStackTrace();
+                            updatingData.compareAndSet(true, false);
+                        }
+                    });
                 }
             }
         });
@@ -465,7 +465,7 @@ public class User extends Subject<UserData> {
                 return null;
             }
         }
-        return this.addInheritance(GroupManager.instance.getDefaultGroup(), UserManager.instance.getDefaultGroupInheritanceContext());
+        return this.addInheritance(GroupManager.instance.getDefaultGroup(), GroupManager.instance.getDefaultGroup().getContext());
     }
 
     public ArrayList<Inheritance> getInheritances() {
@@ -536,7 +536,7 @@ public class User extends Subject<UserData> {
         ArrayList<UUID> parents = new ArrayList<>();
 
         for (Inheritance i : super.getInheritances()) {
-            if (i.getContext().filterByKey(Context.SERVER_IDENTIFIER).getContexts().size() == 0) {
+            if (i.getContext().filterByKey(Context.SERVER_IDENTIFIER).getContexts().size() != 0) {
                 continue;
             }
             super.removeOwnSubjectInheritance(i.getParent());
