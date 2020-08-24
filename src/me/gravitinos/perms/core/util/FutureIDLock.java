@@ -14,7 +14,7 @@ public class FutureIDLock<T> {
 
     private int getWaitNum(UUID key) {
         lock.lock();
-        if(!waitList.containsKey(key)) {
+        if (!waitList.containsKey(key)) {
             lock.unlock();
             return 0;
         }
@@ -33,7 +33,7 @@ public class FutureIDLock<T> {
         lock.lock();
         waitList.put(key, getWaitNum(key) - 1);
         int now = getWaitNum(key);
-        if(now <= 0)
+        if (now <= 0)
             waitList.remove(key);
         lock.unlock();
         return now;
@@ -41,12 +41,13 @@ public class FutureIDLock<T> {
 
     /**
      * Returns null if lock was acquired or if the lock is occupied, returns the associated future
-     * @param id The ID
+     *
+     * @param id     The ID
      * @param future The future to associate with the lock if no current lock is found
      */
     public Future<T> tryLock(UUID id, Future<T> future) {
         lock.lock();
-        if(map.containsKey(id)) {
+        if (map.containsKey(id)) {
             Future<T> future1 = map.get(id);
             lock.unlock();
             return future1;
@@ -58,7 +59,7 @@ public class FutureIDLock<T> {
 
     public void lockOrWait(UUID id, Future<T> future) {
         lock.lock();
-        if(map.containsKey(id)) {
+        if (map.containsKey(id)) {
             Future<T> future1 = map.get(id);
             map.put(id, future);
             incrementWaitNum(id);
@@ -78,7 +79,7 @@ public class FutureIDLock<T> {
     public void unlock(UUID id) {
         lock.lock();
         int num = decrementWaitNum(id);
-        if(num <= 0) {
+        if (num <= 0) {
             map.remove(id);
         }
         lock.unlock();

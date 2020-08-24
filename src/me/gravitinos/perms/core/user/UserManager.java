@@ -17,6 +17,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class UserManager {
 
@@ -27,6 +28,7 @@ public class UserManager {
     private ContextSet defaultGroupContext = new MutableContextSet(Context.CONTEXT_SERVER_LOCAL);
 
     private List<User> loadedUsers = Collections.synchronizedList(new ArrayList<>());
+    private ReentrantLock loadedUsersLock = new ReentrantLock(true);
 
     private FutureIDLock<Boolean> loadLock = new FutureIDLock<>();
 
@@ -76,15 +78,27 @@ public class UserManager {
                     } else {
                         user = new UserBuilder(id, username).build();
                     }
-                    this.unloadUser(id);
-                    this.addUser(user).get(); //This will also save the user to the backend
+
+                    CompletableFuture<?> f;
+                    loadedUsersLock.lock();
+                    try {
+                        this.unloadUser(id);
+                        f = this.addUser(user); //This will also save the user to the backend
+                    } finally {
+                        loadedUsersLock.unlock();
+                    }
+                    f.join();
                 } else {
-                    user = new User(cachedSubject, (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s)), this);
-                    if (this.isUserLoaded(user.getUniqueID())) {
-                        this.getUser(user.getUniqueID()).updateFromCachedSubject(cachedSubject, (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s))); //Will not save user to the backend (Purposefully)
-                    } else {
-                        //Synchronized list so it's fine
-                        this.loadedUsers.add(user); //This will NOT save the user to the backend (Purposefully)
+                    loadedUsersLock.lock();
+                    try {
+                        user = new User(cachedSubject, (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s)), this);
+                        if (this.isUserLoaded(user.getUniqueID())) {
+                            this.getUser(user.getUniqueID()).updateFromCachedSubject(cachedSubject, (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s))); //Will not save user to the backend (Purposefully)
+                        } else {
+                            this.loadedUsers.add(user); //This will NOT save the user to the backend (Purposefully)
+                        }
+                    } finally {
+                        loadedUsersLock.unlock();
                     }
                 }
             } catch (Throwable e) {
@@ -110,10 +124,16 @@ public class UserManager {
     }
 
     public CompletableFuture<Boolean> reloadUsers() {
+
         Map<UUID, String> loaded = new HashMap<>();
-        for (User user : getLoadedUsers()) {
-            loaded.put(user.getUniqueID(), user.getName());
-            this.unloadUser(user.getUniqueID());
+        loadedUsersLock.lock();
+        try {
+            for (User user : getLoadedUsers()) {
+                loaded.put(user.getUniqueID(), user.getName());
+                this.unloadUser(user.getUniqueID());
+            }
+        } finally {
+            loadedUsersLock.unlock();
         }
 
         ArrayList<Future<Boolean>> futures = new ArrayList<>();
@@ -135,13 +155,23 @@ public class UserManager {
         return future;
     }
 
-    public synchronized ArrayList<User> getLoadedUsers() {
-        return Lists.newArrayList(this.loadedUsers);
+    public ArrayList<User> getLoadedUsers() {
+        loadedUsersLock.lock();
+        try {
+            return Lists.newArrayList(this.loadedUsers);
+        } finally {
+            loadedUsersLock.unlock();
+        }
     }
 
     public synchronized CompletableFuture<Void> saveTo(DataManager dataManager) {
-        ArrayList<Subject> users = Lists.newArrayList(loadedUsers);
-        return dataManager.addSubjects(users);
+        loadedUsersLock.lock();
+        try {
+            ArrayList<Subject> users = Lists.newArrayList(loadedUsers);
+            return dataManager.addSubjects(users);
+        } finally {
+            loadedUsersLock.unlock();
+        }
     }
 
     /**
@@ -149,8 +179,13 @@ public class UserManager {
      *
      * @param uuid The unique ID of the user to unload
      */
-    public synchronized void unloadUser(UUID uuid) {
-        loadedUsers.removeIf(u -> u.getUniqueID().equals(uuid));
+    public void unloadUser(UUID uuid) {
+        loadedUsersLock.lock();
+        try {
+            loadedUsers.removeIf(u -> u.getUniqueID().equals(uuid));
+        } finally {
+            loadedUsersLock.unlock();
+        }
     }
 
     /**
@@ -159,8 +194,8 @@ public class UserManager {
      * @param uuid The user's uuid to check for
      * @return True if the user is loaded in this user manager, false otherwise
      */
-    public synchronized boolean isUserLoaded(UUID uuid) {
-        for (User u : loadedUsers) {
+    public boolean isUserLoaded(UUID uuid) {
+        for (User u : getLoadedUsers()) {
             if (u.getUniqueID().equals(uuid)) {
                 return true;
             }
@@ -174,32 +209,47 @@ public class UserManager {
      * @param uuid The uuid of the user
      * @return The user object or null if the user is not loaded in this user manager
      */
-    public synchronized User getUser(UUID uuid) {
-        for (User u : loadedUsers) {
-            if (u.getUniqueID().equals(uuid)) {
-                return u;
+    public User getUser(UUID uuid) {
+        loadedUsersLock.lock();
+        try {
+            for (User u : loadedUsers) {
+                if (u.getUniqueID().equals(uuid)) {
+                    return u;
+                }
             }
+            return null;
+        } finally {
+            loadedUsersLock.unlock();
         }
-        return null;
     }
 
-    public synchronized User getUserFromName(String name) {
-        for (User u : loadedUsers) {
-            if (u.getName().equals(name)) {
-                return u;
+    public User getUserFromName(String name) {
+        loadedUsersLock.lock();
+        try {
+            for (User u : loadedUsers) {
+                if (u.getName().equals(name)) {
+                    return u;
+                }
             }
+            return null;
+        } finally {
+            loadedUsersLock.unlock();
         }
-        return null;
     }
 
-    public synchronized CompletableFuture<Void> removeUser(User user) {
-        if (user == null) {
-            CompletableFuture<Void> f = new CompletableFuture<>();
-            f.complete(null);
-            return f;
-        } else {
-            this.unloadUser(user.getUniqueID());
-            return this.dataManager.removeSubject(user.getSubjectId());
+    public CompletableFuture<Void> removeUser(User user) {
+        loadedUsersLock.lock();
+        try {
+            if (user == null) {
+                CompletableFuture<Void> f = new CompletableFuture<>();
+                f.complete(null);
+                return f;
+            } else {
+                this.unloadUser(user.getUniqueID());
+                return this.dataManager.removeSubject(user.getSubjectId());
+            }
+        } finally {
+            loadedUsersLock.unlock();
         }
     }
 
@@ -208,18 +258,23 @@ public class UserManager {
      *
      * @param user The user to add
      */
-    public synchronized CompletableFuture<Void> addUser(User user) {
-        if (user == null) {
-            System.out.println("PERMS > TRIED TO ADD NULL USER TO USERMANAGER -> contact grav");
-            new IllegalArgumentException("").printStackTrace();
+    public CompletableFuture<Void> addUser(User user) {
+        loadedUsersLock.lock();
+        try {
+            if (user == null) {
+                System.out.println("PERMS > TRIED TO ADD NULL USER TO USERMANAGER -> contact grav");
+                new IllegalArgumentException("").printStackTrace();
+            }
+            this.loadedUsers.add(user);
+            if (dataManager != null) {
+                return dataManager.addSubject(user);
+            }
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            future.complete(null);
+            return future;
+        } finally {
+            loadedUsersLock.unlock();
         }
-        this.loadedUsers.add(user);
-        if (dataManager != null) {
-            return dataManager.addSubject(user);
-        }
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        future.complete(null);
-        return future;
     }
 
     /**
@@ -227,11 +282,16 @@ public class UserManager {
      *
      * @param users List of the users to add
      */
-    public synchronized void addUsers(ArrayList<User> users) {
-        this.loadedUsers.addAll(users);
-        ArrayList<Subject> subjects = Lists.newArrayList(users);
-        if (dataManager != null) {
-            dataManager.addSubjects(subjects);
+    public void addUsers(ArrayList<User> users) {
+        loadedUsersLock.lock();
+        try {
+            this.loadedUsers.addAll(users);
+            ArrayList<Subject> subjects = Lists.newArrayList(users);
+            if (dataManager != null) {
+                dataManager.addSubjects(subjects);
+            }
+        } finally {
+            loadedUsersLock.unlock();
         }
     }
 }

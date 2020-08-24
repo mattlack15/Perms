@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -38,7 +39,7 @@ public class PermsManager {
 
     private PermsImplementation implementation;
 
-    private Map<Integer, String> cachedServerIndex = new HashMap<>();
+    private Map<Integer, String> cachedServerIndex = new ConcurrentHashMap<>();
 
     public PermsManager(PermsImplementation implementation, @NotNull DataManager dataManager) {
         instance = this;

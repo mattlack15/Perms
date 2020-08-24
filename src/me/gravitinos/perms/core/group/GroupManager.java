@@ -11,12 +11,15 @@ import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.subject.Subject;
 import me.gravitinos.perms.core.subject.SubjectRef;
 import me.gravitinos.perms.core.util.FutureIDLock;
+import me.gravitinos.perms.core.util.SaveLoadLock;
 import me.gravitinos.perms.core.util.SubjectSupplier;
 import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 
 public class GroupManager {
@@ -24,7 +27,9 @@ public class GroupManager {
     public static GroupManager instance;
 
     private DataManager dataManager;
-    private List<Group> loadedGroups = Collections.synchronizedList(new ArrayList<>());
+    private ReentrantLock loadedGroupsLock = new ReentrantLock(true);
+    private List<Group> loadedGroups = new ArrayList<>();
+    private SaveLoadLock<UUID, Group> ioLock = new SaveLoadLock<>();
 
     public GroupManager(@NotNull DataManager dataManager) {
         instance = this;
@@ -40,11 +45,14 @@ public class GroupManager {
      *
      * @return A future representing the completion of the load operation, true if successful, false if their was an error
      */
-    public synchronized CompletableFuture<Boolean> loadGroups() {
+    public CompletableFuture<Boolean> loadGroups() {
         CompletableFuture<Boolean> out = new CompletableFuture<>();
         ArrayList<UUID> successfullyLoaded = new ArrayList<>();
         PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
+            //Acquire lock
+            ioLock.loadAllLock();
             try {
+
                 List<CachedSubject> groups = dataManager.getAllSubjectsOfType(Subject.GROUP).get();
                 Map<UUID, SubjectRef> references = new HashMap<>();
 
@@ -52,7 +60,8 @@ public class GroupManager {
                 groups.forEach(cs -> references.put(cs.getSubjectId(), new SubjectRef(null)));
 
                 //Load and set references
-                synchronized (this) {
+                loadedGroupsLock.lock();
+                try {
                     groups.forEach(cs -> {
                         Group g;
 
@@ -60,7 +69,6 @@ public class GroupManager {
 
                         if (exists) {
                             g = this.getGroupExact(cs.getSubjectId());
-                            Bukkit.broadcastMessage("Updating subject from cached subject (" + cs.getData().getName() + ")");
                             g.updateFromCachedSubject(cs, references::get, false);
                         } else {
                             g = new Group(cs, references::get, this);
@@ -81,11 +89,16 @@ public class GroupManager {
 
                     //Check for inheritance mistakes
                     this.eliminateInheritanceMistakes();
+                } finally {
+                    loadedGroupsLock.unlock();
                 }
 
             } catch (Exception e) {
                 out.complete(false);
                 e.printStackTrace();
+            } finally {
+                //Release lock
+                ioLock.loadAllUnlock(this::getGroupExact);
             }
             out.complete(true);
         });
@@ -105,7 +118,15 @@ public class GroupManager {
 
 
         PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
+            //Acquire lock
+            CompletableFuture<Group> f = ioLock.loadLock(groupId, new CompletableFuture<>());
+            if (f != null) {
+                f.join();
+                future.complete(true);
+                return;
+            }
             try {
+
                 boolean exists = this.isGroupExactLoaded(groupId);
 
                 CachedSubject cachedSubject = dataManager.getSubject(groupId).get();
@@ -115,37 +136,53 @@ public class GroupManager {
                 }
                 if (!exists) {
                     Group g = new Group(cachedSubject, supplier, this);
-                    synchronized (this) {
+                    loadedGroupsLock.lock();
+                    try {
                         this.loadedGroups.add(g);
+                    } finally {
+                        loadedGroupsLock.unlock();
                     }
                 } else {
-                    synchronized (this) {
+                    loadedGroupsLock.lock();
+                    try {
                         this.getGroupExact(groupId).updateFromCachedSubject(cachedSubject, supplier);
+                    } finally {
+                        loadedGroupsLock.unlock();
                     }
                 }
                 this.eliminateInheritanceMistakes();
                 future.complete(true);
-                beingLoaded.remove(groupId);
             } catch (Exception e) {
                 e.printStackTrace();
                 future.complete(false);
-                beingLoaded.remove(groupId);
+            } finally {
+                ioLock.loadUnlock(groupId, getGroupExact(groupId));
             }
         });
 
         return future;
     }
 
-    public synchronized void eliminateInheritanceMistakes() {
-        List<Subject> grps = new ArrayList<>(this.loadedGroups);
-        Subject.checkForAndRemoveInheritanceMistakes(grps);
-        this.loadedGroups.clear();
-        grps.forEach(s -> this.loadedGroups.add((Group) s));
+    public void eliminateInheritanceMistakes() {
+        loadedGroupsLock.lock();
+        try {
+            List<Subject> grps = new ArrayList<>(this.loadedGroups);
+            Subject.checkForAndRemoveInheritanceMistakes(grps);
+            this.loadedGroups.clear();
+            grps.forEach(s -> this.loadedGroups.add((Group) s));
+        } finally {
+            loadedGroupsLock.unlock();
+        }
     }
 
     public CompletableFuture<Void> saveTo(DataManager dataManager) {
-        ArrayList<Subject> groups = Lists.newArrayList(loadedGroups);
-        return dataManager.addSubjects(groups);
+        this.loadedGroupsLock.lock();
+        try {
+            ArrayList<Subject> groups = Lists.newArrayList(loadedGroups);
+            return dataManager.addSubjects(groups);
+        } finally {
+            this.loadedGroupsLock.unlock();
+        }
     }
 
     /**
@@ -157,7 +194,7 @@ public class GroupManager {
      * @param exactContextMatch If true, then will return a group with the exact context provided
      * @return The group or null if the group is not contained within this group manager
      */
-    private synchronized Group findGroup(String name, ContextSet contexts, boolean exactContextMatch) {
+    private Group findGroup(String name, ContextSet contexts, boolean exactContextMatch) {
         boolean caseSensitive = PermsManager.instance.getImplementation().getConfigSettings().isCaseSensitiveGroups();
         for (Group g : getLoadedGroups()) {
             if (caseSensitive && g.getName().equals(name) || !caseSensitive && g.getName().equalsIgnoreCase(name)) {
@@ -176,7 +213,7 @@ public class GroupManager {
     /**
      * Get groups that match a certain condition
      */
-    public synchronized List<Group> getGroups(Predicate<Group> condition) {
+    public List<Group> getGroups(Predicate<Group> condition) {
         List<Group> list = new ArrayList<>();
         this.getLoadedGroups().forEach(g -> {
             if (condition.test(g))
@@ -192,14 +229,14 @@ public class GroupManager {
      * @param name Name
      * @return Group
      */
-    public synchronized Group getGroupLocal(String name) {
+    public Group getGroupLocal(String name) {
         return this.findGroup(name, new MutableContextSet(Context.CONTEXT_SERVER_LOCAL), true);
     }
 
     /**
      * Get a group by name which is valid on a certain provided server
      */
-    public synchronized Group getGroupOfServer(String name, int serverId) {
+    public Group getGroupOfServer(String name, int serverId) {
         return this.findGroup(name, new MutableContextSet(new Context(Context.SERVER_IDENTIFIER, Integer.toString(serverId))), false);
     }
 
@@ -209,7 +246,7 @@ public class GroupManager {
      * @param name Name
      * @return Group
      */
-    public synchronized Group getGroupGlobal(String name) {
+    public Group getGroupGlobal(String name) {
         return this.findGroup(name, new MutableContextSet(), true);
     }
 
@@ -219,7 +256,7 @@ public class GroupManager {
      * @param name The name of the group
      * @return The group
      */
-    public synchronized Group getVisibleGroup(String name) {
+    public Group getVisibleGroup(String name) {
         Group g = this.getGroupLocal(name);
         if (g == null) {
             g = this.getGroupGlobal(name);
@@ -233,7 +270,7 @@ public class GroupManager {
      * @param groupId The group's subject id
      * @return The group
      */
-    public synchronized Group getGroupExact(UUID groupId) {
+    public Group getGroupExact(UUID groupId) {
         if (!this.isGroupExactLoaded(groupId)) {
             try {
                 this.loadGroup(groupId, (id) -> new SubjectRef(this.getGroupExact(id)));
@@ -254,9 +291,14 @@ public class GroupManager {
      *
      * @return all loaded groups
      */
-    public synchronized ArrayList<Group> getLoadedGroups() {
-        this.loadedGroups.sort(Comparator.comparingInt(Group::getPriority));
-        return Lists.newArrayList(this.loadedGroups);
+    public ArrayList<Group> getLoadedGroups() {
+        this.loadedGroupsLock.lock();
+        try {
+            this.loadedGroups.sort(Comparator.comparingInt(Group::getPriority));
+            return Lists.newArrayList(this.loadedGroups);
+        } finally {
+            this.loadedGroupsLock.unlock();
+        }
     }
 
     /**
@@ -274,7 +316,7 @@ public class GroupManager {
      *
      * @param group The group to delete
      */
-    public synchronized CompletableFuture<Void> removeGroup(Group group) {
+    public CompletableFuture<Void> removeGroup(Group group) {
         if (group == null) {
             CompletableFuture<Void> f = new CompletableFuture<>();
             f.complete(null);
@@ -290,16 +332,20 @@ public class GroupManager {
      * @param group The group to add
      * @return True if the operation was successful and the group was added, or false if the group is already contained within this group manager
      */
-    public synchronized boolean addGroup(Group group) {
+    public boolean addGroup(Group group) {
         if (this.canGroupContextCollideWithAnyLoaded(group.getName(), group.getContext()) || this.isGlobalGroupLoaded(group.getName())
                 || this.isGroupExactLoaded(group.getSubjectId())) {
             return false;
         }
 
-        this.loadedGroups.add(group);
-        this.dataManager.addSubject(group); //Add the subject to the backend
-
-        this.eliminateInheritanceMistakes();
+        this.loadedGroupsLock.lock();
+        try {
+            this.loadedGroups.add(group);
+            this.dataManager.addSubject(group); //Add the subject to the backend
+            this.eliminateInheritanceMistakes();
+        } finally {
+            this.loadedGroupsLock.unlock();
+        }
 
         return true;
     }
@@ -312,8 +358,13 @@ public class GroupManager {
      *
      * @param group The group to unload
      */
-    public synchronized void unloadGroup(Group group) {
-        this.loadedGroups.remove(group);
+    public void unloadGroup(Group group) {
+        this.loadedGroupsLock.lock();
+        try {
+            this.loadedGroups.remove(group);
+        } finally {
+            this.loadedGroupsLock.unlock();
+        }
     }
 
     /**
@@ -323,9 +374,9 @@ public class GroupManager {
      * @param name The group name to check
      * @return True if the group is loaded in this group manager, false otherwise
      */
-    public synchronized boolean isGroupLoaded(String name, ContextSet contexts) {
+    public boolean isGroupLoaded(String name, ContextSet contexts) {
         boolean caseSensitive = PermsManager.instance.getImplementation().getConfigSettings().isCaseSensitiveGroups();
-        for (Group g : loadedGroups) {
+        for (Group g : getLoadedGroups()) {
             if (caseSensitive && g.getName().equals(name) || !caseSensitive && g.getName().equalsIgnoreCase(name)) {
                 if (g.getContext().equals(contexts))
                     continue;
@@ -335,7 +386,7 @@ public class GroupManager {
         return false;
     }
 
-    public synchronized boolean canGroupContextCollideWithAnyLoaded(String name, ContextSet contexts, ContextSet... exclusions) {
+    public boolean canGroupContextCollideWithAnyLoaded(String name, ContextSet contexts, ContextSet... exclusions) {
         boolean caseSensitive = PermsManager.instance.getImplementation().getConfigSettings().isCaseSensitiveGroups();
         List<ContextSet> exclusion = Arrays.asList(exclusions);
         for (Group g : getLoadedGroups()) {
@@ -356,7 +407,7 @@ public class GroupManager {
      * @param name
      * @return
      */
-    public synchronized boolean isLocalGroupLoaded(String name) {
+    public boolean isLocalGroupLoaded(String name) {
         return this.isGroupLoaded(name, new MutableContextSet(Context.CONTEXT_SERVER_LOCAL));
     }
 
@@ -366,7 +417,7 @@ public class GroupManager {
      * @param name
      * @return
      */
-    public synchronized boolean isGlobalGroupLoaded(String name) {
+    public boolean isGlobalGroupLoaded(String name) {
         return this.isGroupLoaded(name, new MutableContextSet());
     }
 
@@ -376,11 +427,11 @@ public class GroupManager {
      * @param name
      * @return
      */
-    public synchronized boolean isVisibleGroupLoaded(String name) {
+    public boolean isVisibleGroupLoaded(String name) {
         return this.isGlobalGroupLoaded(name) || this.isLocalGroupLoaded(name);
     }
 
-    public synchronized boolean isGroupExactLoaded(UUID groupId) {
+    public boolean isGroupExactLoaded(UUID groupId) {
         for (Group g : getLoadedGroups()) {
             if (g.getSubjectId().equals(groupId)) {
                 return true;
@@ -394,20 +445,25 @@ public class GroupManager {
      *
      * @return a new default group
      */
-    private synchronized Group getNewDefaultGroup() {
+    private Group getNewDefaultGroup() {
         return new GroupBuilder("default").setPrefix("[&7Default&f] ").setDescription("The default group")
                 .addPermission(new PPermission("modifyworld.*")).build(); //Server Context is by default local
     }
 
-    public synchronized Group getDefaultGroup() {
-        String groupName = PermsManager.instance.getImplementation().getConfigSettings().getDefaultGroup();
-        Group g = this.getVisibleGroup(groupName);
-        if (g == null) {
-            g = this.getNewDefaultGroup();
-            this.addGroup(g);
-            PermsManager.instance.getImplementation().getConfigSettings().setDefaultGroup(g.getName());
-            PermsManager.instance.getImplementation().addToLog("Unable to find default group, a new default group was created!");
+    public Group getDefaultGroup() {
+        this.loadedGroupsLock.lock();
+        try {
+            String groupName = PermsManager.instance.getImplementation().getConfigSettings().getDefaultGroup();
+            Group g = this.getVisibleGroup(groupName);
+            if (g == null) {
+                g = this.getNewDefaultGroup();
+                this.addGroup(g);
+                PermsManager.instance.getImplementation().getConfigSettings().setDefaultGroup(g.getName());
+                PermsManager.instance.getImplementation().addToLog("Unable to find default group, a new default group was created!");
+            }
+            return g;
+        } finally {
+            this.loadedGroupsLock.unlock();
         }
-        return g;
     }
 }
