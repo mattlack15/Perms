@@ -9,13 +9,15 @@ import org.jetbrains.annotations.NotNull;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class LadderManager {
     public static LadderManager instance;
 
-    private DataManager dataManager;
+    private final DataManager dataManager;
 
     private List<RankLadder> loadedLadders = new ArrayList<>();
+    private final ReentrantLock loadedLaddersLock = new ReentrantLock(true);
 
     public LadderManager(@NotNull DataManager dataManager) {
         instance = this;
@@ -27,29 +29,39 @@ public class LadderManager {
     }
 
     public CompletableFuture<Boolean> addLadder(RankLadder ladder){
-        CompletableFuture<Boolean> future = new CompletableFuture<>();
-        if(isLadderLoaded(ladder.getId()) || getLadderFromName(ladder.getName()) != null){
-            future.complete(false);
-            return future;
-        }
-
-        this.loadedLadders.add(ladder);
-
-        PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
-            try {
-                dataManager.addRankLadder(ladder).get();
-                future.complete(true);
-            } catch (InterruptedException | ExecutionException e) {
-                e.printStackTrace();
+        loadedLaddersLock.lock();
+        try {
+            CompletableFuture<Boolean> future = new CompletableFuture<>();
+            if (isLadderLoaded(ladder.getId()) || getLadderFromName(ladder.getName()) != null) {
                 future.complete(false);
+                return future;
             }
-        });
-        return future;
+
+            this.loadedLadders.add(ladder);
+
+            PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
+                try {
+                    dataManager.addRankLadder(ladder).get();
+                    future.complete(true);
+                } catch (InterruptedException | ExecutionException e) {
+                    e.printStackTrace();
+                    future.complete(false);
+                }
+            });
+            return future;
+        } finally {
+            loadedLaddersLock.unlock();
+        }
     }
 
-    public synchronized CompletableFuture<Void> removeLadder(UUID id){
-        this.unloadLadder(id);
-        return dataManager.removeRankLadder(id);
+    public CompletableFuture<Void> removeLadder(UUID id){
+        loadedLaddersLock.lock();
+        try {
+            this.unloadLadder(id);
+            return dataManager.removeRankLadder(id);
+        } finally {
+            loadedLaddersLock.unlock();
+        }
     }
 
     public RankLadder getLadderFromName(String name){
@@ -61,8 +73,13 @@ public class LadderManager {
         return null;
     }
 
-    public synchronized List<RankLadder> getLoadedLadders() {
-        return new ArrayList<>(this.loadedLadders);
+    public List<RankLadder> getLoadedLadders() {
+        loadedLaddersLock.lock();
+        try {
+            return new ArrayList<>(this.loadedLadders);
+        } finally {
+            loadedLaddersLock.unlock();
+        }
     }
 
 
@@ -72,8 +89,11 @@ public class LadderManager {
                 try {
                     getDataManager().getRankLadders().thenAccept(ladders -> {
                         ladders.forEach(l -> l.setDataManager(this.dataManager));
-                        synchronized (this) {
+                        loadedLaddersLock.lock();
+                        try {
                             this.loadedLadders = ladders;
+                        } finally {
+                            loadedLaddersLock.unlock();
                         }
                         out.complete(true);
                     }).get();
@@ -103,16 +123,24 @@ public class LadderManager {
         return null;
     }
 
-    public synchronized void unloadLadder(UUID id) {
-        loadedLadders.removeIf(ladder -> ladder.getId().equals(id));
+    public void unloadLadder(UUID id) {
+        loadedLaddersLock.lock();
+        try {
+            loadedLadders.removeIf(ladder -> ladder.getId().equals(id));
+        } finally {
+            loadedLaddersLock.unlock();
+        }
     }
 
     public CompletableFuture<Boolean> loadLadder(UUID id) {
         CompletableFuture<Boolean> out = new CompletableFuture<>();
         getDataManager().getRankLadder(id).thenAccept(ladder -> {
-            synchronized (this) {
+            loadedLaddersLock.lock();
+            try {
                 loadedLadders.add(ladder);
                 out.complete(true);
+            } finally {
+                loadedLaddersLock.unlock();
             }
         });
         return out;

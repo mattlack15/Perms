@@ -306,7 +306,7 @@ public class GroupManager {
      *
      * @return A future
      */
-    public synchronized CompletableFuture<Boolean> reloadGroups() {
+    public CompletableFuture<Boolean> reloadGroups() {
         return this.loadGroups();
     }
 
