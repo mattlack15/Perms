@@ -23,14 +23,14 @@ public class UserManager {
 
     public static UserManager instance;
 
-    private DataManager dataManager;
+    private final DataManager dataManager;
 
     private ContextSet defaultGroupContext = new MutableContextSet(Context.CONTEXT_SERVER_LOCAL);
 
-    private List<User> loadedUsers = Collections.synchronizedList(new ArrayList<>());
-    private ReentrantLock loadedUsersLock = new ReentrantLock(true);
+    private final List<User> loadedUsers = Collections.synchronizedList(new ArrayList<>());
+    private final ReentrantLock loadedUsersLock = new ReentrantLock(true);
 
-    private FutureIDLock<Boolean> loadLock = new FutureIDLock<>();
+    private final FutureIDLock<Boolean> loadLock = new FutureIDLock<>();
 
     public UserManager(DataManager dataManager) {
         instance = this;

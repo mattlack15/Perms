@@ -26,10 +26,10 @@ public class GroupManager {
 
     public static GroupManager instance;
 
-    private DataManager dataManager;
-    private ReentrantLock loadedGroupsLock = new ReentrantLock(true);
-    private List<Group> loadedGroups = new ArrayList<>();
-    private SaveLoadLock<UUID, Group> ioLock = new SaveLoadLock<>();
+    private final DataManager dataManager;
+    private final ReentrantLock loadedGroupsLock = new ReentrantLock(true);
+    private final List<Group> loadedGroups = new ArrayList<>();
+    private final SaveLoadLock<UUID, Group> ioLock = new SaveLoadLock<>();
 
     public GroupManager(@NotNull DataManager dataManager) {
         instance = this;
