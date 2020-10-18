@@ -150,7 +150,11 @@ public class SpigotPerms extends JavaPlugin {
 
     public void onDisable() {
         if(Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            placeholderExpansion.unregister();
+            try {
+                placeholderExpansion.unregister();
+            } catch(Exception e) {
+                e.printStackTrace();
+            }
         }
         if(task1Id != -1)
             Bukkit.getScheduler().cancelTask(task1Id);

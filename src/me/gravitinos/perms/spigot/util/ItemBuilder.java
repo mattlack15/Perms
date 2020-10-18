@@ -120,6 +120,8 @@ public class ItemBuilder {
 	}
 
 	public String getName(){
+		if(item.getItemMeta() == null)
+			return "";
 		String name = item.getItemMeta().getDisplayName();
 		if(name == null){
 			return "";

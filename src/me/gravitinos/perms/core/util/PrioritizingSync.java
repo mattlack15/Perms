@@ -15,12 +15,10 @@ public class PrioritizingSync {
     public class Waiter {
         public final Condition condition;
         public final int priority;
-        private final boolean reserver;
 
-        public Waiter(Condition condition, int priority, boolean reserver) {
+        public Waiter(Condition condition, int priority) {
             this.condition = condition;
             this.priority = priority;
-            this.reserver = reserver;
         }
 
         public void await() throws InterruptedException {
@@ -54,13 +52,13 @@ public class PrioritizingSync {
     }
 
 
-    public void acquire() {
+    private void acquire() {
         if (holder.compareAndSet(null, Thread.currentThread()))
             count.getAndIncrement();
     }
 
     public Waiter reserve(int priority) {
-        Waiter waiter = new Waiter(parentLock.newCondition(), priority, true);
+        Waiter waiter = new Waiter(parentLock.newCondition(), priority);
         reservedList.add(waiter);
         return waiter;
     }
@@ -75,7 +73,7 @@ public class PrioritizingSync {
     }
 
     private void await(int priority) throws InterruptedException {
-        Waiter waiter = new Waiter(parentLock.newCondition(), priority, false);
+        Waiter waiter = new Waiter(parentLock.newCondition(), priority);
         waiterList.add(waiter);
         waiter.condition.await();
     }

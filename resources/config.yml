@@ -21,6 +21,7 @@ sql_username: ""
 sql_password: ""
 
 using_this_chat_format: true
+chat-allow-show-item: false
 chat_format:
   - "<prefix>"
   - " <username>"

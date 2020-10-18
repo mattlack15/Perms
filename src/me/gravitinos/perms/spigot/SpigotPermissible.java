@@ -47,6 +47,7 @@ public class SpigotPermissible extends PermissibleBase {
     }
     @Override
     public boolean hasPermission(String requ) {
+        long nano = System.nanoTime();
 
         try {
 
@@ -70,31 +71,37 @@ public class SpigotPermissible extends PermissibleBase {
 
             ContextSet context = new MutableContextSet(Context.CONTEXT_SERVER_LOCAL, new Context(Context.WORLD_IDENTIFIER, player.getWorld().getName()));
 
-//        if(player.isOp()) {
-//            return !user.hasPermission("-op", context);
-//        }
-            long nano = System.nanoTime();
             ArrayList<String> perms = new ArrayList<>();
             user.getAllPermissions(context).forEach(p -> perms.add(p.getPermission()));
 
             if (perms.contains("-" + requ)) {
                 return false;
             }
+            boolean returnValue = false;
             for (String perm : perms) {
                 boolean value = true;
-                if (perm.startsWith("-")) {
+                while (perm.startsWith("-")) {
                     perm = perm.substring(1);
-                    value = false;
+                    value = !value;
+                }
+                if(perm.length() == 0) {
+                    continue;
                 }
                 if (perm.equals("*") || perm.equalsIgnoreCase(requ)) {
-                    return value;
+                    if(!value)
+                        return false;
+                    returnValue = true;
+                    continue;
                 }
                 if (perm.endsWith("*") && requ.startsWith(perm.substring(0, perm.length() - 1))) {
-                    return value;
+                    if(!value)
+                        return false;
+                    returnValue = true;
                 }
             }
-            return false;
+            return returnValue;
         } finally {
+            nano = System.nanoTime() - nano;
         }
     }
     @Override

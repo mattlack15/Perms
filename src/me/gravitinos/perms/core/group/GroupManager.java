@@ -113,7 +113,7 @@ public class GroupManager {
      * @param supplier The inheritance supplier (Usually it is (s) -> GroupManager.instance.getGroupExact(s))
      * @return a Future
      */
-    public synchronized CompletableFuture<Boolean> loadGroup(@NotNull UUID groupId, @NotNull SubjectSupplier supplier) {
+    public CompletableFuture<Boolean> loadGroup(@NotNull UUID groupId, @NotNull SubjectSupplier supplier) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
 

@@ -150,6 +150,10 @@ public class SQLDao implements AutoCloseable {
         return "INSERT INTO " + TABLE_SUBJECTDATA + " (SubjectId, Type, Data) VALUES (?, ?, ?)";
     }
 
+    protected String getUpdateSubjectData() {
+        return "UPDATE " + TABLE_SUBJECTDATA + " SET Type=?, Data=?";
+    }
+
     /**
      * Gets the statement to query inheritance from a specific child
      *
@@ -693,14 +697,21 @@ public class SQLDao implements AutoCloseable {
     //Subject data
 
     public void setSubjectData(@NotNull UUID subjectId, @NotNull SubjectData data, @NotNull String type) throws SQLException {
-        this.removeSubjectData(subjectId);
+        PreparedStatement s;
+        if(subjectExists(subjectId)) {
+            s = prepareStatement(this.getUpdateSubjectData());
 
-        PreparedStatement s = prepareStatement(this.getInsertSubjectDataUpdate());
+            s.setString(1, type);
+            s.setString(2, data.toString());
 
-        s.setString(1, subjectId.toString());
-        s.setString(2, type);
-        s.setString(3, data.toString());
+        } else {
+            s = prepareStatement(this.getInsertSubjectDataUpdate());
 
+            s.setString(1, subjectId.toString());
+            s.setString(2, type);
+            s.setString(3, data.toString());
+
+        }
         s.executeUpdate();
     }
 
