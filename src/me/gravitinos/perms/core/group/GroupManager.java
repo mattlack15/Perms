@@ -295,6 +295,7 @@ public class GroupManager {
         this.loadedGroupsLock.lock();
         try {
             this.loadedGroups.sort(Comparator.comparingInt(Group::getPriority));
+            this.loadedGroups.removeIf(Objects::isNull);
             return Lists.newArrayList(this.loadedGroups);
         } finally {
             this.loadedGroupsLock.unlock();

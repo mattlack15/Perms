@@ -298,9 +298,9 @@ public class ChatListener implements Listener {
                 if (hasCustomHoverEvent) {
                     if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
                         for (int j = 0, hover0Length = hover0.length; j < hover0Length; j++) {
-                            hover0[i] = PlaceholderAPI.setPlaceholders(chattedPlayer, hover0[i]);
+                            hover0[j] = PlaceholderAPI.setPlaceholders(chattedPlayer, hover0[j]);
                             if (player != null)
-                                hover0[i] = PlaceholderAPI.setRelationalPlaceholders(chattedPlayer, player, hover0[i]);
+                                hover0[j] = PlaceholderAPI.setRelationalPlaceholders(chattedPlayer, player, hover0[j]);
                         }
                     }
                     TextComponent newLine = new TextComponent(ComponentSerializer.parse("{text: \"\n\"}"));

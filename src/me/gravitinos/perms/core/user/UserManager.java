@@ -62,6 +62,11 @@ public class UserManager {
     public Future<Boolean> loadUser(@NotNull UUID id, @NotNull String username, boolean addDefaultGroup) {
         CompletableFuture<Boolean> result = new CompletableFuture<>();
 
+        if(dataManager == null) {
+            result.complete(false);
+            return result;
+        }
+
         Future<Boolean> o = loadLock.tryLock(id, result);
         if (o != null) {
             return o;
@@ -105,11 +110,10 @@ public class UserManager {
                 PermsManager.instance.getImplementation().addToLog("Problem loading user " + username + " (" + id + "): " + e.getMessage());
                 e.printStackTrace();
                 result.complete(false);
-                return;
             } finally {
                 loadLock.unlock(id);
+                result.complete(true);
             }
-            result.complete(true);
         });
 
         return result;

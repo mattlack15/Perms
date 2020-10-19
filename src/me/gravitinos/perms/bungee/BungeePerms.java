@@ -113,6 +113,9 @@ public class BungeePerms extends Plugin implements Listener {
         String name = event.getConnection().getName();
         UUID id = event.getConnection().getUniqueId();
 
+        if(UserManager.instance == null)
+            return;
+
         try {
             getLogger().info("Loading userdata for " + name + " (" + id + ")");
 

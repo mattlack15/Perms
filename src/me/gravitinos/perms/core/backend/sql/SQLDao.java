@@ -1,7 +1,6 @@
 package me.gravitinos.perms.core.backend.sql;
 
 import com.google.common.collect.Lists;
-import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.cache.OwnerPermissionPair;
@@ -85,7 +84,7 @@ public class SQLDao implements AutoCloseable {
      * @return String containing the statement
      */
     protected String getSubjectDataTableCreationUpdate() {
-        return "CREATE TABLE IF NOT EXISTS " + TABLE_SUBJECTDATA + " (SubjectId varchar(48), Type varchar(32), Data varchar(8192))";
+        return "CREATE TABLE IF NOT EXISTS " + TABLE_SUBJECTDATA + " (SubjectId varchar(48) UNIQUE, Type varchar(32), Data varchar(8192))";
     }
 
     /**
@@ -151,7 +150,7 @@ public class SQLDao implements AutoCloseable {
     }
 
     protected String getUpdateSubjectData() {
-        return "UPDATE " + TABLE_SUBJECTDATA + " SET Type=?, Data=?";
+        return "UPDATE " + TABLE_SUBJECTDATA + " SET Type=?, Data=? WHERE SubjectId=?";
     }
 
     /**
@@ -508,7 +507,12 @@ public class SQLDao implements AutoCloseable {
                 continue;
             }
 
-            sub.getInheritances().add(new CachedInheritance(UUID.fromString(results.getString("Child")), UUID.fromString(results.getString("Parent")), results.getString("ChildType"), results.getString("ParentType"), ContextSet.fromString(results.getString("Context"))));
+            try {
+                sub.getInheritances().add(new CachedInheritance(UUID.fromString(results.getString("Child")), UUID.fromString(results.getString("Parent")), results.getString("ChildType"), results.getString("ParentType"), ContextSet.fromString(results.getString("Context"))));
+            } catch(Exception e) {
+                e.printStackTrace();
+                System.out.println("COULD NOT ADD INHERITANCE " + results.getString("Parent") + " to " + sub.getData().getName());
+            }
         }
 
         return Lists.newArrayList(subjectMap.values());
@@ -703,6 +707,7 @@ public class SQLDao implements AutoCloseable {
 
             s.setString(1, type);
             s.setString(2, data.toString());
+            s.setString(3, subjectId.toString());
 
         } else {
             s = prepareStatement(this.getInsertSubjectDataUpdate());

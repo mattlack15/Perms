@@ -47,10 +47,6 @@ public class PermsManager {
 
         this.dataManager = dataManager;
 
-        this.groupManager = new GroupManager(dataManager);
-        this.userManager = new UserManager(dataManager);
-        this.ladderManager = new LadderManager(dataManager);
-
         //Config checks
         if (implementation.getConfigSettings().getServerName().equals("")) {
             implementation.getConfigSettings().setServerName("server_" + Math.round(Math.random() * 1000));
@@ -63,6 +59,10 @@ public class PermsManager {
                 return;
             }
         }
+
+        this.groupManager = new GroupManager(dataManager);
+        this.userManager = new UserManager(dataManager);
+        this.ladderManager = new LadderManager(dataManager);
 
         try {
             if (!dataManager.testBackendConnection().get()) {

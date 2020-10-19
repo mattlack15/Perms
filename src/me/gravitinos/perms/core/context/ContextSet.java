@@ -137,21 +137,27 @@ public abstract class ContextSet implements Iterable<Context> {
     }
 
     public static ContextSet fromString(String str) {
-        ContextSet set = new MutableContextSet();
-        GravSerializer serializer = new GravSerializer(str);
-        set.setExpiration(serializer.readLong());
-        int amount = serializer.readInt();
-        for (int i = 0; i < amount; i++) {
-            String s = serializer.readString();
-            try {
-                set.addContext(Context.fromString(s));
-            } catch(Exception e){
-                e.printStackTrace();
-                System.out.println("FAILED TO LOAD CONTEXT RAW STRING: " + s);
-                System.out.println("RAW CONTEXTSET STRING: " + str);
+        try {
+            ContextSet set = new MutableContextSet();
+            GravSerializer serializer = new GravSerializer(str);
+            set.setExpiration(serializer.readLong());
+            int amount = serializer.readInt();
+            for (int i = 0; i < amount; i++) {
+                String s = serializer.readString();
+                try {
+                    set.addContext(Context.fromString(s));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    System.out.println("FAILED TO LOAD CONTEXT RAW STRING: " + s);
+                    System.out.println("RAW CONTEXTSET STRING: " + str);
+                }
             }
+            return set;
+        } catch(Exception e) {
+            e.printStackTrace();
+            System.out.println("RAW CONTEXTSET STRING: " + str);
+            throw e;
         }
-        return set;
     }
 
     @NotNull
