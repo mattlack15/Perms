@@ -93,7 +93,7 @@ public class CommandGroupAdd extends GravSubCommand {
 
         context.setExpiration(expiration);
 
-        group.addOwnPermission(new PPermission(perm, context));
+        group.addPermission(new PPermission(perm, context));
         this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + perm.toLowerCase() + " &7has been &aadded&7 to the group's permissions!");
         return true;
     }

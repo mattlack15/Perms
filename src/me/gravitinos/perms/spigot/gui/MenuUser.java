@@ -1,6 +1,5 @@
 package me.gravitinos.perms.spigot.gui;
 
-import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.context.ContextSet;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.ladders.LadderManager;
@@ -20,7 +19,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 public class MenuUser extends Menu {
 
@@ -51,12 +49,12 @@ public class MenuUser extends Menu {
                 MenuManager.instance.invalidateElementsInInvForMenu(this, e.getSlot());
             } else {
                 (new MenuGroupInheritanceEditor(this.user.getName() + " > Groups", new MenuGroupInheritanceEditor.GroupInheritanceEditorHandler() {
-                    public CompletableFuture<Void> addGroup(Group group, ContextSet context) {
-                        return MenuUser.this.user.addInheritance(group, context);
+                    public void addGroup(Group group, ContextSet context) {
+                        MenuUser.this.user.addInheritance(group, context);
                     }
 
-                    public CompletableFuture<Void> removeGroup(Group group) {
-                        return MenuUser.this.user.removeInheritance(group);
+                    public void removeGroup(Group group) {
+                        MenuUser.this.user.removeInheritance(group);
                     }
 
                     @Override
@@ -74,7 +72,7 @@ public class MenuUser extends Menu {
                         });
                         return groupContextMap;
                     }
-                }, Menu.getBackButton((Menu)this))).open(p, new Object[0]);
+                }, Menu.getBackButton(this))).open(p);
             }
         });
         MenuElement permissionsEditor = (new MenuElement((new ItemBuilder(Material.EMPTY_MAP, 1)).setName("&ePermissions").addLore("&7Click to manage permissions").build())).setClickHandler((e, i) -> {
@@ -84,16 +82,16 @@ public class MenuUser extends Menu {
                 MenuManager.instance.invalidateElementsInInvForMenu(this, e.getSlot());
             } else {
                 (new MenuPermissionEditor("Permissions for " + this.user.getName(), 4, new MenuPermissionEditor.PermissionEditorHandler() {
-                    public CompletableFuture<Void> addPermission(PPermission p) {
-                        return MenuUser.this.user.addOwnPermission(p);
+                    public void addPermission(PPermission p) {
+                        MenuUser.this.user.addPermission(p);
                     }
 
-                    public CompletableFuture<Void> addPermissions(ArrayList<PPermission> permissions) {
-                        return MenuUser.this.user.addOwnPermissions(permissions);
+                    public void addPermissions(ArrayList<PPermission> permissions) {
+                        MenuUser.this.user.addPermissions(permissions);
                     }
 
-                    public CompletableFuture<Void> removePermission(PPermission p) {
-                        return MenuUser.this.user.removeOwnPermission(p);
+                    public void removePermission(PPermission p) {
+                        MenuUser.this.user.removePermission(p);
                     }
 
                     public ImmutablePermissionList getPermissions() {

@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 public class SQLHandler extends DataManager {
@@ -35,7 +36,7 @@ public class SQLHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> addSubject(Subject subject) {
+    public CompletableFuture<Void> addSubject(Subject<?> subject) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
             try (SQLDao dao = getDao()) {
@@ -65,7 +66,7 @@ public class SQLHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> updateSubject(Subject subject) {
+    public CompletableFuture<Void> updateSubject(Subject<?> subject) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
             try (SQLDao dao = getDao()) {
@@ -96,154 +97,7 @@ public class SQLHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<ImmutablePermissionList> getPermissions(UUID subjectId) {
-        CompletableFuture<ImmutablePermissionList> future = new CompletableFuture<>();
-        runAsync(() -> {
-            try (SQLDao dao = getDao()) {
-                future.complete(new ImmutablePermissionList(dao.getPermissions(subjectId)));
-            } catch (Exception e) {
-                e.printStackTrace();
-                future.complete(null);
-            }
-            return null;
-        });
-        return future;
-    }
-
-    @Override
-    public CompletableFuture<Void> updatePermissions(Subject subject) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
-            try (SQLDao dao = getDao()) {
-                dao.removeAllPermissions(subject.getSubjectId());
-                dao.addPermissions(subject.getSubjectId(), Subject.getPermissions(subject));
-                future.complete(null);
-            } catch (Exception e) {
-                e.printStackTrace();
-                future.complete(null);
-            }
-            return null;
-        });
-        return future;
-    }
-
-    @Override
-    public CompletableFuture<Void> addPermission(Subject subject, PPermission permission) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
-            try (SQLDao dao = getDao()) {
-                dao.addPermission(subject.getSubjectId(), permission);
-                future.complete(null);
-            } catch (Exception e) {
-                e.printStackTrace();
-                future.complete(null);
-            }
-            return null;
-        });
-        return future;
-    }
-
-    @Override
-    public CompletableFuture<Void> removePermission(Subject subject, String permission) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
-            try (SQLDao dao = getDao()) {
-                dao.removePermission(subject.getSubjectId(), permission);
-                future.complete(null);
-            } catch (Exception e) {
-                e.printStackTrace();
-                future.complete(null);
-            }
-            return null;
-        });
-        return future;
-    }
-
-    @Override
-    public CompletableFuture<Void> removePermissionExact(Subject subject, PPermission permission) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
-            try (SQLDao dao = getDao()) {
-                dao.removePermission(permission.getPermissionIdentifier());
-                future.complete(null);
-            } catch (Exception e) {
-                e.printStackTrace();
-                future.complete(null);
-            }
-            return null;
-        });
-        return future;
-    }
-
-    @Override
-    public CompletableFuture<List<CachedInheritance>> getInheritances(UUID subjectId) {
-        CompletableFuture<List<CachedInheritance>> future = new CompletableFuture<>();
-        runAsync(() -> {
-            try (SQLDao dao = getDao()) {
-                future.complete(dao.getInheritances(subjectId));
-            } catch (Exception e) {
-                e.printStackTrace();
-                future.complete(null);
-            }
-            return null;
-        });
-        return future;
-    }
-
-    @Override
-    public CompletableFuture<Void> updateInheritances(Subject subject) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
-            try (SQLDao dao = getDao()) {
-                dao.removeAllInheritances(subject.getSubjectId());
-                ArrayList<CachedInheritance> inheritances = new ArrayList<>();
-                Subject.getInheritances(subject).forEach((i -> inheritances.add(new CachedInheritance(i.getChild().getSubjectId(), i.getParent().getSubjectId(), i.getChild().getType(), i.getParent().getType(), i.getContext()))));
-                new UnsupportedOperationException().printStackTrace();
-                dao.addInheritances(inheritances);
-                future.complete(null);
-            } catch (Exception e) {
-                e.printStackTrace();
-                future.complete(null);
-            }
-            return null;
-        });
-        return future;
-    }
-
-    @Override
-    public CompletableFuture<Void> addInheritance(@NotNull CachedInheritance inheritance) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
-            try (SQLDao dao = getDao()) {
-                dao.addInheritance(inheritance.getChild(), inheritance.getParent(), inheritance.getChildType(), inheritance.getParentType(), inheritance.getContext());
-                future.complete(null);
-            } catch (Exception e) {
-                e.printStackTrace();
-                future.complete(null);
-            }
-            return null;
-        });
-        return future;
-    }
-
-    @Override
-    public CompletableFuture<Void> removeInheritance(Subject subjectIdentifier, UUID parent) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
-            try (SQLDao dao = getDao()) {
-                dao.removeInheritance(subjectIdentifier.getSubjectId(), parent);
-                future.complete(null);
-            } catch (Exception e) {
-                e.printStackTrace();
-                future.complete(null);
-            }
-            return null;
-        });
-        return future;
-    }
-
-    @Override
-    public CompletableFuture<Void> updateSubjectData(Subject subject) {
+    public CompletableFuture<Void> updateSubjectData(Subject<?> subject) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
             try (SQLDao dao = getDao()) {
@@ -274,73 +128,35 @@ public class SQLHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> addPermissions(Subject subject, ImmutablePermissionList list) {
+    public CompletableFuture<Void> addOrUpdateSubjects(List<Subject<?>> subjects) {
         CompletableFuture<Void> future = new CompletableFuture<>();
+        AtomicInteger ops = new AtomicInteger(subjects.size()+1);
+        Runnable checker = () -> {
+            if(ops.decrementAndGet() <= 0)
+                future.complete(null);
+        };
         runAsync(() -> {
             try (SQLDao dao = getDao()) {
-                dao.addPermissions(subject.getSubjectId(), list);
-                future.complete(null);
-            } catch (Exception e) {
-                e.printStackTrace();
-                future.complete(null);
+                dao.updateSubjectPermsAndInheritances(subjects);
+            } catch (SQLException throwable) {
+                throwable.printStackTrace();
             }
+            checker.run();
             return null;
+        });
+        subjects.forEach(s -> {
+            try (SQLDao dao = getDao()) {
+                dao.setSubjectData(s.getSubjectId(), s.getData(), s.getType());
+            } catch (SQLException throwable) {
+                throwable.printStackTrace();
+            }
+            checker.run();
         });
         return future;
     }
 
     @Override
-    public CompletableFuture<Void> removePermissions(Subject subject, ArrayList<String> list) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
-            try (SQLDao dao = getDao()) {
-                dao.removePermissions(subject.getSubjectId(), list);
-                future.complete(null);
-            } catch (Exception e) {
-                e.printStackTrace();
-                future.complete(null);
-            }
-            return null;
-        });
-        return future;
-    }
-
-    @Override
-    public CompletableFuture<Void> removePermissionsExact(Subject subject, ArrayList<PPermission> list) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
-            try (SQLDao dao = getDao()) {
-                ArrayList<UUID> ids = new ArrayList<>();
-                list.forEach(p -> ids.add(p.getPermissionIdentifier()));
-                dao.removePermissionsExact(ids);
-                future.complete(null);
-            } catch (Exception e) {
-                e.printStackTrace();
-                future.complete(null);
-            }
-            return null;
-        });
-        return future;
-    }
-
-    @Override
-    public CompletableFuture<Void> addSubjects(ArrayList<Subject> subjects) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
-            try (SQLDao dao = getDao()) {
-                dao.addSubjects(subjects);
-                future.complete(null);
-            } catch (Exception e) {
-                e.printStackTrace();
-                future.complete(null);
-            }
-            return null;
-        });
-        return future;
-    }
-
-    @Override
-    public CompletableFuture<Void> removeSubjects(ArrayList<UUID> subjects) {
+    public CompletableFuture<Void> removeSubjects(List<UUID> subjects) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
             try (SQLDao dao = getDao()) {
@@ -356,7 +172,7 @@ public class SQLHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> removeInheritances(Subject subject, ArrayList<UUID> parents) {
+    public CompletableFuture<Void> removeInheritances(Subject<?> subject, List<UUID> parents) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
             try (SQLDao dao = getDao()) {
@@ -373,7 +189,7 @@ public class SQLHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> addInheritances(ArrayList<Inheritance> inheritances) {
+    public CompletableFuture<Void> addInheritances(List<Inheritance> inheritances) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
             try (SQLDao dao = getDao()) {
@@ -624,4 +440,217 @@ public class SQLHandler extends DataManager {
             return null;
         }
     }
+
+
+//    @Override
+//    public CompletableFuture<Void> addPermissions(Subject<?> subject, ImmutablePermissionList list) {
+//        CompletableFuture<Void> future = new CompletableFuture<>();
+//        runAsync(() -> {
+//            try (SQLDao dao = getDao()) {
+//                dao.addPermissions(subject.getSubjectId(), list);
+//                future.complete(null);
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//                future.complete(null);
+//            }
+//            return null;
+//        });
+//        return future;
+//    }
+//
+//    @Override
+//    public CompletableFuture<Void> removePermissions(Subject<?> subject, List<String> list) {
+//        CompletableFuture<Void> future = new CompletableFuture<>();
+//        runAsync(() -> {
+//            try (SQLDao dao = getDao()) {
+//                dao.removePermissions(subject.getSubjectId(), list);
+//                future.complete(null);
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//                future.complete(null);
+//            }
+//            return null;
+//        });
+//        return future;
+//    }
+//
+//    @Override
+//    public CompletableFuture<Void> removePermissionsExact(Subject<?> subject, List<PPermission> list) {
+//        CompletableFuture<Void> future = new CompletableFuture<>();
+//        runAsync(() -> {
+//            try (SQLDao dao = getDao()) {
+//                ArrayList<UUID> ids = new ArrayList<>();
+//                list.forEach(p -> ids.add(p.getPermissionIdentifier()));
+//                dao.removePermissionsExact(ids);
+//                future.complete(null);
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//                future.complete(null);
+//            }
+//            return null;
+//        });
+//        return future;
+//    }
+//
+    @Override
+    public CompletableFuture<Void> addSubjects(List<Subject<?>> subjects) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        runAsync(() -> {
+            try (SQLDao dao = getDao()) {
+                dao.addSubjects(subjects);
+                future.complete(null);
+            } catch (Exception e) {
+                e.printStackTrace();
+                future.complete(null);
+            }
+            return null;
+        });
+        return future;
+    }
+    //    @Override
+//    public CompletableFuture<ImmutablePermissionList> getPermissions(UUID subjectId) {
+//        CompletableFuture<ImmutablePermissionList> future = new CompletableFuture<>();
+//        runAsync(() -> {
+//            try (SQLDao dao = getDao()) {
+//                future.complete(new ImmutablePermissionList(dao.getPermissions(subjectId)));
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//                future.complete(null);
+//            }
+//            return null;
+//        });
+//        return future;
+//    }
+
+//    @Override
+//    public CompletableFuture<Void> updatePermissions(Subject<?> subject) {
+//        CompletableFuture<Void> future = new CompletableFuture<>();
+//        runAsync(() -> {
+//            try (SQLDao dao = getDao()) {
+//                dao.removeAllPermissions(subject.getSubjectId());
+//                dao.addPermissions(subject.getSubjectId(), Subject.getPermissions(subject));
+//                future.complete(null);
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//                future.complete(null);
+//            }
+//            return null;
+//        });
+//        return future;
+//    }
+
+//    @Override
+//    public CompletableFuture<Void> addPermission(Subject<?> subject, PPermission permission) {
+//        CompletableFuture<Void> future = new CompletableFuture<>();
+//        runAsync(() -> {
+//            try (SQLDao dao = getDao()) {
+//                dao.addPermission(subject.getSubjectId(), permission);
+//                future.complete(null);
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//                future.complete(null);
+//            }
+//            return null;
+//        });
+//        return future;
+//    }
+//
+//    @Override
+//    public CompletableFuture<Void> removePermission(Subject<?> subject, String permission) {
+//        CompletableFuture<Void> future = new CompletableFuture<>();
+//        runAsync(() -> {
+//            try (SQLDao dao = getDao()) {
+//                dao.removePermission(subject.getSubjectId(), permission);
+//                future.complete(null);
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//                future.complete(null);
+//            }
+//            return null;
+//        });
+//        return future;
+//    }
+//
+//    @Override
+//    public CompletableFuture<Void> removePermissionExact(Subject<?> subject, PPermission permission) {
+//        CompletableFuture<Void> future = new CompletableFuture<>();
+//        runAsync(() -> {
+//            try (SQLDao dao = getDao()) {
+//                dao.removePermission(permission.getPermissionIdentifier());
+//                future.complete(null);
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//                future.complete(null);
+//            }
+//            return null;
+//        });
+//        return future;
+//    }
+//
+//    @Override
+//    public CompletableFuture<List<CachedInheritance>> getInheritances(UUID subjectId) {
+//        CompletableFuture<List<CachedInheritance>> future = new CompletableFuture<>();
+//        runAsync(() -> {
+//            try (SQLDao dao = getDao()) {
+//                future.complete(dao.getInheritances(subjectId));
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//                future.complete(null);
+//            }
+//            return null;
+//        });
+//        return future;
+//    }
+//
+//    @Override
+//    public CompletableFuture<Void> updateInheritances(Subject<?> subject) {
+//        CompletableFuture<Void> future = new CompletableFuture<>();
+//        runAsync(() -> {
+//            try (SQLDao dao = getDao()) {
+//                dao.removeAllInheritances(subject.getSubjectId());
+//                ArrayList<CachedInheritance> inheritances = new ArrayList<>();
+//                Subject.getInheritances(subject).forEach((i -> inheritances.add(new CachedInheritance(i.getChild().getSubjectId(), i.getParent().getSubjectId(), i.getChild().getType(), i.getParent().getType(), i.getContext()))));
+//                new UnsupportedOperationException().printStackTrace();
+//                dao.addInheritances(inheritances);
+//                future.complete(null);
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//                future.complete(null);
+//            }
+//            return null;
+//        });
+//        return future;
+//    }
+//
+//    @Override
+//    public CompletableFuture<Void> addInheritance(@NotNull CachedInheritance inheritance) {
+//        CompletableFuture<Void> future = new CompletableFuture<>();
+//        runAsync(() -> {
+//            try (SQLDao dao = getDao()) {
+//                dao.addInheritance(inheritance.getChild(), inheritance.getParent(), inheritance.getChildType(), inheritance.getParentType(), inheritance.getContext());
+//                future.complete(null);
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//                future.complete(null);
+//            }
+//            return null;
+//        });
+//        return future;
+//    }
+//
+//    @Override
+//    public CompletableFuture<Void> removeInheritance(Subject<?> subjectIdentifier, UUID parent) {
+//        CompletableFuture<Void> future = new CompletableFuture<>();
+//        runAsync(() -> {
+//            try (SQLDao dao = getDao()) {
+//                dao.removeInheritance(subjectIdentifier.getSubjectId(), parent);
+//                future.complete(null);
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//                future.complete(null);
+//            }
+//            return null;
+//        });
+//        return future;
+//    }
 }

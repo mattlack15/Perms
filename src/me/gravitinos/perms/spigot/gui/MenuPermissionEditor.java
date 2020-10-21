@@ -37,11 +37,11 @@ import java.util.concurrent.ExecutionException;
 public class MenuPermissionEditor extends UtilMenuActionableList {
 
     public interface PermissionEditorHandler {
-        CompletableFuture<Void> addPermission(PPermission p);
+        void addPermission(PPermission p);
 
-        CompletableFuture<Void> addPermissions(ArrayList<PPermission> permissions);
+        void addPermissions(ArrayList<PPermission> permissions);
 
-        CompletableFuture<Void> removePermission(PPermission p);
+        void removePermission(PPermission p);
 
         ImmutablePermissionList getPermissions();
 
@@ -171,15 +171,11 @@ public class MenuPermissionEditor extends UtilMenuActionableList {
                     return;
                 }
                 new MenuContextEditor(permission.getContext(), (c) -> SpigotPerms.instance.getImpl().getAsyncExecutor().execute(() -> {
-                    try {
-                        permissions.remove(permission);
-                        permissions.add(new PPermission(permission.getPermission(), c, permission.getPermissionIdentifier()));
-                        this.setupPermissions(server, page);
-                        handler.removePermission(permission).get();
-                        handler.addPermission(new PPermission(permission.getPermission(), c, permission.getPermissionIdentifier()));
-                    } catch (InterruptedException | ExecutionException ex) {
-                        ex.printStackTrace();
-                    }
+                    permissions.remove(permission);
+                    permissions.add(new PPermission(permission.getPermission(), c, permission.getPermissionIdentifier()));
+                    this.setupPermissions(server, page);
+                    handler.removePermission(permission);
+                    handler.addPermission(new PPermission(permission.getPermission(), c, permission.getPermissionIdentifier()));
                 }), Menu.getBackButton(this).setClickHandler((e1, i1) -> {
                     this.setupPermissions(server, page);
                     open((Player) e.getWhoClicked());

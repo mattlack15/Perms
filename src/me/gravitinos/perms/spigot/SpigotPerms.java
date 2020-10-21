@@ -31,6 +31,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -61,7 +62,7 @@ public class SpigotPerms extends JavaPlugin {
 
     private Map<String, List<String>> permissionIndex = new HashMap<>();
 
-    private SpigotImpl impl;
+    private SpigotImpl impl = null;
 
     private Placeholders placeholderExpansion;
 
@@ -158,6 +159,7 @@ public class SpigotPerms extends JavaPlugin {
         }
         if(task1Id != -1)
             Bukkit.getScheduler().cancelTask(task1Id);
+        this.manager.getUserManager().getDataManager().flushUpdateQueue().join();
         this.manager.shutdown();
         if (GroupManager.instance.getDataManager() instanceof SQLHandler)
             if(((SQLHandler) GroupManager.instance.getDataManager()).getDataSource() != null)

@@ -4,13 +4,10 @@ import com.google.common.collect.Lists;
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.context.ContextSet;
-import me.gravitinos.perms.core.group.Group;
-import me.gravitinos.perms.core.user.User;
 import net.md_5.bungee.api.ChatColor;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * A class that represents an object that can have permissions, inheritances, and customizable data objects (SubjectData)
@@ -25,8 +22,8 @@ public abstract class Subject<T extends SubjectData> {
 
     private UUID subjectId;
 
-    private List<PPermission> ownPermissions = Collections.synchronizedList(new ArrayList<>());
-    private List<Inheritance> inherited = Collections.synchronizedList(new ArrayList<>());
+    private final ConcurrentLoggedList<PPermission> ownPermissions = new ConcurrentLoggedList<>();
+    private final ConcurrentLoggedList<Inheritance> inheritances = new ConcurrentLoggedList<>();
 
     @NotNull
     private T data;
@@ -47,13 +44,46 @@ public abstract class Subject<T extends SubjectData> {
     }
 
     /**
+     * Gets the type of subject this is
+     *
+     * @return Type
+     */
+    public synchronized String getType() {
+        return type;
+    }
+
+    public ConcurrentLoggedList<PPermission> getOwnLoggedPermissions() {
+        return this.ownPermissions;
+    }
+
+    public ConcurrentLoggedList<Inheritance> getOwnLoggedInheritances() {
+        return this.inheritances;
+    }
+
+    /**
+     * Schedule a save operation for this subject with this subject's data manager
+     */
+    public void queueSave() {
+        if (getDataManager() != null)
+            getDataManager().queueUpdate(this);
+    }
+
+    /**
      * Sets this subject's own permissions
      *
      * @param ownPermissions List of permissions
      */
-    protected synchronized void setOwnPermissions(@NotNull List<PPermission> ownPermissions) {
-        this.ownPermissions = ownPermissions;
-        this.ownPermissions.removeIf(Objects::isNull);
+    protected void setOwnPermissions(@NotNull List<PPermission> ownPermissions, boolean save) {
+        if(save) {
+            this.ownPermissions.set(ownPermissions, true);
+            queueSave();
+        } else {
+            this.ownPermissions.set(ownPermissions, false);
+        }
+    }
+
+    public void setPermissions(@NotNull List<PPermission> permissions) {
+        setOwnPermissions(permissions, true);
     }
 
     /**
@@ -71,30 +101,15 @@ public abstract class Subject<T extends SubjectData> {
     /**
      * Util
      */
-    protected synchronized void removeExpiredPerms() {
-        ImmutablePermissionList list = new ImmutablePermissionList(ownPermissions);
-
+    protected void removeExpiredPerms() {
         long ctm = System.currentTimeMillis();
-
-        ArrayList<PPermission> remove = new ArrayList<>();
-
-        for (PPermission permissions : list) {
-            if (permissions.isExpired(ctm)) {
-                remove.add(permissions);
-            }
-        }
-
-        if (remove.size() > 0) {
-            remove.forEach(this::removeOwnSubjectPermission); //Remove from object
-            if (this.getDataManager() != null) {
-                this.getDataManager().removePermissionsExact(this, remove); //Update backend
-            }
-        }
-
-        this.ownPermissions.removeIf(Objects::isNull);
+        int size = this.ownPermissions.size();
+        this.ownPermissions.removeIf((e) -> Objects.isNull(e) || e.isExpired(ctm));
+        if(size != this.ownPermissions.size())
+            queueSave();
     }
 
-    public static ArrayList<Inheritance> getInheritances(Subject<?> subject) {
+    public static List<Inheritance> getInheritances(Subject<?> subject) {
         return subject.getInheritances();
     }
 
@@ -108,9 +123,9 @@ public abstract class Subject<T extends SubjectData> {
      *
      * @return Immutable set of permissions
      */
-    protected synchronized ImmutablePermissionList getPermissions() {
+    public synchronized ImmutablePermissionList getPermissions() {
         this.removeExpiredPerms();
-        return new ImmutablePermissionList(ownPermissions);
+        return new ImmutablePermissionList(ownPermissions.get());
     }
 
     /**
@@ -126,47 +141,51 @@ public abstract class Subject<T extends SubjectData> {
      *
      * @return list of inheritances
      */
-    protected synchronized ArrayList<Inheritance> getInheritances() {
+    public List<Inheritance> getInheritances() {
         this.removeExpiredInheritances();
-        this.inherited.removeIf((i) -> !i.isValid());
-        return Lists.newArrayList(this.inherited);
+        this.inheritances.removeIf((i) -> !i.isValid());
+        return Lists.newArrayList(this.inheritances.get());
     }
 
-    public synchronized String getName() {
+    public String getName() {
         return this.data.getName();
     }
 
-    public synchronized void setName(String name) {
+    public void setName(String name) {
         this.data.setName(name);
+        queueSave();
     }
 
     /**
      * Util
      */
-    protected synchronized void removeExpiredInheritances() {
-
+    protected void removeExpiredInheritances() {
         long ctm = System.currentTimeMillis();
+        this.inheritances.removeIf((i) -> Objects.isNull(i) || !i.isValid() || i.getContext().isExpired(ctm));
+    }
 
-        ArrayList<Inheritance> remove = new ArrayList<>();
-        ArrayList<UUID> removeParents = new ArrayList<>();
-
-        inherited.removeIf(i -> !i.isValid());
-
-        for (Inheritance in : inherited) {
-            if (in.getContext().isExpired(ctm)) {
-                remove.add(in);
-                removeParents.add(in.getParent().getSubjectId());
+    public boolean hasInheritance(Subject<?> subject, ContextSet context) {
+        for (Inheritance inheritance : getInheritances()) {
+            if (subject.equals(inheritance.getParent()) && inheritance.getContext().equals(context)) {
+                return true;
             }
         }
+        return false;
+    }
 
-        if (remove.size() > 0) {
-            remove.forEach(inherited::remove); //Remove from object
-            if (this.getDataManager() != null) {
-                this.getDataManager().removeInheritances(this, removeParents); //Update backend
+    /**
+     * Checks whether this has the parent/inheritance specified
+     *
+     * @param subject The parent/inheritance to check for
+     * @return true if this subject has the specified inheritance
+     */
+    public boolean hasInheritance(@NotNull Subject<?> subject) {
+        for (Inheritance inheritance : getInheritances()) {
+            if (subject.equals(inheritance.getParent())) {
+                return true;
             }
         }
-
-        this.inherited.removeIf(Objects::isNull);
+        return false;
     }
 
     /**
@@ -174,26 +193,21 @@ public abstract class Subject<T extends SubjectData> {
      *
      * @param parent The specified parent to remove inheritances to
      */
-    protected synchronized void removeOwnSubjectInheritance(Subject<? extends SubjectData> parent) {
+    public void removeOwnSubjectInheritance(Subject<? extends SubjectData> parent) {
         this.removeExpiredInheritances();
-        this.inherited.removeIf(i -> !i.isValid() || parent.equals(i.getParent()));
+        this.inheritances.removeIf(i -> !i.isValid() || parent.equals(i.getParent()));
+        queueSave();
     }
 
     /**
      * Removes all permissions where permission.equals(ownPermission)
      *
      * @param permission The permission to remove
+     * @return the last permission that matches the specified permission
      */
-    protected synchronized PPermission removeOwnSubjectPermission(@NotNull PPermission permission) {
-        AtomicReference<PPermission> p = new AtomicReference<>();
-        this.ownPermissions.removeIf(Objects::isNull);
-        (new ArrayList<>(this.ownPermissions)).forEach(perm -> {
-            if (perm.getPermissionIdentifier().equals(permission.getPermissionIdentifier())) {
-                p.set(perm);
-                ownPermissions.remove(perm);
-            }
-        });
-        return p.get();
+    public void removePermission(@NotNull PPermission permission) {
+        this.ownPermissions.removeIf((perm) -> Objects.isNull(perm) || perm.getPermissionIdentifier().equals(permission.getPermissionIdentifier()));
+        queueSave();
     }
 
     /**
@@ -201,8 +215,9 @@ public abstract class Subject<T extends SubjectData> {
      *
      * @param permission the permission to remove
      */
-    protected synchronized void removeOwnSubjectPermission(@NotNull String permission) {
+    public void removePermission(@NotNull String permission) {
         this.ownPermissions.removeIf(p -> p.getPermission().equalsIgnoreCase(permission));
+        queueSave();
     }
 
     /**
@@ -210,8 +225,11 @@ public abstract class Subject<T extends SubjectData> {
      *
      * @param subject The inheritance to add
      */
-    protected synchronized void addOwnSubjectInheritance(Subject<?> subject, ContextSet context) {
-        this.inherited.add(new Inheritance(new SubjectRef(subject), new SubjectRef(this), context));
+    public void addInheritance(Subject<?> subject, ContextSet context) {
+        if(hasInheritance(subject, context))
+            return;
+        this.inheritances.weakAdd(new Inheritance(new SubjectRef(subject), new SubjectRef(this), context));
+        queueSave();
     }
 
     /**
@@ -219,12 +237,14 @@ public abstract class Subject<T extends SubjectData> {
      *
      * @param subject The inheritance to add
      */
-    protected synchronized void addOwnSubjectInheritance(SubjectRef subject, ContextSet context) {
-        this.inherited.add(new Inheritance(subject, new SubjectRef(this), context));
+    public synchronized void addInheritance(SubjectRef subject, ContextSet context) {
+        this.inheritances.weakAdd(new Inheritance(subject, new SubjectRef(this), context));
+        queueSave();
     }
 
-    protected synchronized void addOwnInheritance(Inheritance inheritance) {
-        this.inherited.add(inheritance);
+    public synchronized void addInheritance(Inheritance inheritance) {
+        this.inheritances.weakAdd(inheritance);
+        queueSave();
     }
 
 
@@ -233,8 +253,9 @@ public abstract class Subject<T extends SubjectData> {
      *
      * @param permission the permission to add
      */
-    protected synchronized void addOwnSubjectPermission(@NotNull PPermission permission) {
-        this.ownPermissions.add(permission);
+    public synchronized void addPermission(@NotNull PPermission permission) {
+        this.ownPermissions.weakAdd(permission);
+        queueSave();
     }
 
     /**
@@ -243,8 +264,8 @@ public abstract class Subject<T extends SubjectData> {
      * @param permission
      * @return
      */
-    protected synchronized boolean hasOwnPermission(PPermission permission) {
-        return this.getPermissions().getPermissions().contains(permission);
+    public synchronized boolean hasOwnPermission(PPermission permission) {
+        return this.ownPermissions.contains(permission);
     }
 
     /**
@@ -253,8 +274,8 @@ public abstract class Subject<T extends SubjectData> {
      * @param permission
      * @return
      */
-    protected synchronized boolean hasOwnPermission(String permission, ContextSet context) {
-        for (PPermission perms : this.getPermissions()) {
+    public boolean hasOwnPermission(String permission, ContextSet context) {
+        for (PPermission perms : this.ownPermissions.get()) {
             if (perms.getPermission().equalsIgnoreCase(permission) && perms.getContext().isSatisfiedBy(context)) {
                 return true;
             }
@@ -262,16 +283,7 @@ public abstract class Subject<T extends SubjectData> {
         return false;
     }
 
-    /**
-     * Gets the type of subject this is
-     *
-     * @return Type
-     */
-    public synchronized String getType() {
-        return type;
-    }
-
-    protected synchronized boolean hasOwnOrInheritedPermission(String permission, ContextSet contexts) {
+    public boolean hasOwnOrInheritedPermission(String permission, ContextSet contexts) {
         if (this.hasOwnPermission(permission, contexts))
             return true;
         for (Inheritance inheritances : getInheritances()) {
@@ -291,7 +303,7 @@ public abstract class Subject<T extends SubjectData> {
      *
      * @return
      */
-    protected synchronized ArrayList<PPermission> getAllPermissions(ContextSet contexts) {
+    public List<PPermission> getAllPermissions(ContextSet contexts) {
 
         ArrayList<PPermission> perms = new ArrayList<>();
         this.getPermissions().forEach(p -> {
@@ -317,7 +329,7 @@ public abstract class Subject<T extends SubjectData> {
      *
      * @return
      */
-    protected synchronized ArrayList<PPermission> getAllPermissions() {
+    public List<PPermission> getAllPermissions() {
         ArrayList<PPermission> perms = new ArrayList<>(this.getPermissions().getPermissions());
 
         for (Inheritance inheritances : getInheritances()) {
@@ -334,30 +346,24 @@ public abstract class Subject<T extends SubjectData> {
      *
      * @param subjects the group of subjects to check
      */
-    public static void checkForAndRemoveInheritanceMistakes(List<Subject> subjects) {
-        for (Subject subject : subjects) {
-            treeSearchThing(subject, new ArrayList<>());
+    public static void checkForAndRemoveInheritanceMistakes(List<Subject<?>> subjects) {
+        for (Subject<?> subject : subjects) {
+            inheritanceSearch(subject, new ArrayList<>());
         }
     }
 
-    private static void treeSearchThing(Subject<?> sub, ArrayList<Subject<?>> prev) {
+    private static void inheritanceSearch(Subject<?> sub, List<Subject<?>> prev) {
         ArrayList<Subject<?>> subs = Lists.newArrayList(prev);
         subs.add(sub);
 
         for (Inheritance i : sub.getInheritances()) {
             Subject<?> subj = i.getParent();
             if (subs.contains(subj)) {
-                if (sub instanceof User) {
-                    ((User) sub).removeInheritance(subj);
-                } else if (sub instanceof Group) {
-                    ((Group) sub).removeInheritance(subj);
-                } else {
-                    sub.removeOwnSubjectInheritance(subj);
-                }
+                sub.removeOwnSubjectInheritance(subj);
                 PermsManager.instance.getImplementation().addToLog(ChatColor.RED + "Mistake in inheritances, removed inheritance \"" +
                         subj.getName() + "\" from subject \"" + i.getChild().getName() + "\"");
             } else {
-                treeSearchThing(subj, subs);
+                inheritanceSearch(subj, subs);
             }
         }
     }

@@ -37,7 +37,7 @@ public class CommandGroupList extends GravSubCommand {
         Group group = (Group)passedArgs[0];
 
         this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + group.getName() + "&f's permissions:");
-        for(PPermission perms : group.getOwnPermissions()){
+        for(PPermission perms : group.getPermissions()){
             this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&f - &e" + perms.getPermission() + " " +
                     ServerContextType.getType(perms.getContext()).getDisplay() + " &fExpiry: &7" + (perms.getExpiry() == 0 ? "&cnever" : ((perms.getExpiry() - System.currentTimeMillis())/1000) + "s"));
         }

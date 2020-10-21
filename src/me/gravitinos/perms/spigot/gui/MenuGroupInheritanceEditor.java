@@ -26,8 +26,8 @@ import java.util.concurrent.ExecutionException;
 public class MenuGroupInheritanceEditor extends UtilMenuActionableList {
 
     public interface GroupInheritanceEditorHandler{
-        CompletableFuture<Void> addGroup(Group group, ContextSet context);
-        CompletableFuture<Void> removeGroup(Group group);
+        void addGroup(Group group, ContextSet context);
+        void removeGroup(Group group);
         boolean isGodLocked();
         Map<Group, ContextSet> getGroups();
     }
@@ -80,7 +80,7 @@ public class MenuGroupInheritanceEditor extends UtilMenuActionableList {
             }
             builder.addLore("&fInheritances: ");
             for(Inheritance inheritance : group.getInheritances()){
-                Subject parent = inheritance.getParent();
+                Subject<?> parent = inheritance.getParent();
                 if(parent instanceof Group){
                     builder.addLore("&7 - " + ((Group) parent).getName());
                 }
@@ -107,14 +107,10 @@ public class MenuGroupInheritanceEditor extends UtilMenuActionableList {
                     new MenuGroup(group, Menu.getBackButton(this)).open((Player) e.getWhoClicked());
                 } else {
                     new MenuContextEditor(contexts.get(group), (c) -> SpigotPerms.instance.getImpl().getAsyncExecutor().execute(() -> {
-                        try {
-                            contexts.put(group, c);
-                            this.setupPage(this.getCurrentPage());
-                            handler.removeGroup(group).get();
-                            handler.addGroup(group, c);
-                        } catch (InterruptedException | ExecutionException ex) {
-                            ex.printStackTrace();
-                        }
+                        contexts.put(group, c);
+                        this.setupPage(this.getCurrentPage());
+                        handler.removeGroup(group);
+                        handler.addGroup(group, c);
                     }), Menu.getBackButton(this)).open((Player) e.getWhoClicked());
                 }
             });

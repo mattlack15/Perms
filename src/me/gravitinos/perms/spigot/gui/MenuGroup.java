@@ -23,7 +23,6 @@ import org.bukkit.inventory.ItemStack;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 public class MenuGroup extends Menu {
 
@@ -202,12 +201,12 @@ public class MenuGroup extends Menu {
                 MenuManager.instance.invalidateElementsInInvForMenu(this, e.getSlot());
             } else {
                 (new MenuGroupInheritanceEditor(this.group.getName() + " > Groups", new MenuGroupInheritanceEditor.GroupInheritanceEditorHandler() {
-                    public CompletableFuture<Void> addGroup(Group group1, ContextSet context) {
-                        return MenuGroup.this.group.addInheritance(group1, context);
+                    public void addGroup(Group group1, ContextSet context) {
+                        MenuGroup.this.group.addInheritance(group1, context);
                     }
 
-                    public CompletableFuture<Void> removeGroup(Group group1) {
-                        return MenuGroup.this.group.removeInheritance(group1);
+                    public void removeGroup(Group group1) {
+                        MenuGroup.this.group.removeInheritance(group1);
                     }
 
                     @Override
@@ -235,20 +234,20 @@ public class MenuGroup extends Menu {
                 MenuManager.instance.invalidateElementsInInvForMenu(this, e.getSlot());
             } else {
                 (new MenuPermissionEditor("Permissions for " + this.group.getName(), 4, new MenuPermissionEditor.PermissionEditorHandler() {
-                    public CompletableFuture<Void> addPermission(PPermission p) {
-                        return MenuGroup.this.group.addOwnPermission(p);
+                    public void addPermission(PPermission p) {
+                        MenuGroup.this.group.addPermission(p);
                     }
 
-                    public CompletableFuture<Void> addPermissions(ArrayList<PPermission> permissions) {
-                        return MenuGroup.this.group.addOwnPermissions(permissions);
+                    public void addPermissions(ArrayList<PPermission> permissions) {
+                        MenuGroup.this.group.addOwnPermissions(permissions);
                     }
 
-                    public CompletableFuture<Void> removePermission(PPermission p) {
-                        return MenuGroup.this.group.removeOwnPermission(p);
+                    public void removePermission(PPermission p) {
+                        MenuGroup.this.group.removePermission(p);
                     }
 
                     public ImmutablePermissionList getPermissions() {
-                        return MenuGroup.this.group.getOwnPermissions();
+                        return MenuGroup.this.group.getPermissions();
                     }
 
                     @Override

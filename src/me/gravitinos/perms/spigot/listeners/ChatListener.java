@@ -1,21 +1,15 @@
 package me.gravitinos.perms.spigot.listeners;
 
 import me.clip.placeholderapi.PlaceholderAPI;
-import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupManager;
-import me.gravitinos.perms.core.subject.Inheritance;
 import me.gravitinos.perms.core.user.User;
-import me.gravitinos.perms.core.user.UserBuilder;
-import me.gravitinos.perms.core.user.UserData;
 import me.gravitinos.perms.core.user.UserManager;
-import me.gravitinos.perms.spigot.SpigotPermissible;
 import me.gravitinos.perms.spigot.SpigotPerms;
 import me.gravitinos.perms.spigot.file.SpigotConf;
 import me.gravitinos.perms.spigot.util.ChatBuilder;
-import me.gravitinos.perms.spigot.util.ItemBuilder;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.HoverEvent;
@@ -158,7 +152,7 @@ public class ChatListener implements Listener {
             //Built-in placeholders
             String prefix = displayGroup.getPrefix();
             if (prefix == null || prefix.equals("")) {
-                ArrayList<Group> groups = user.getGroupsInOrderOfPriority();
+                List<Group> groups = user.getGroupsInOrderOfPriority();
                 for (Group group : groups) {
                     if (!group.serverContextAppliesToThisServer()) {
                         continue;
@@ -172,7 +166,7 @@ public class ChatListener implements Listener {
 
             String suffix = displayGroup.getSuffix();
             if (suffix == null || suffix.equals("")) {
-                ArrayList<Group> groups = user.getGroupsInOrderOfPriority();
+                List<Group> groups = user.getGroupsInOrderOfPriority();
                 for (Group group : groups) {
                     if (!group.serverContextAppliesToThisServer()) {
                         continue;

@@ -92,7 +92,7 @@ public class CommandUserAdd extends GravSubCommand {
 
         context.setExpiration(expiration);
 
-        user.addOwnPermission(new PPermission(perm, context));
+        user.addPermission(new PPermission(perm, context));
         this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + perm.toLowerCase() + " &7has been &aadded&7 to their permissions!");
         return true;
     }

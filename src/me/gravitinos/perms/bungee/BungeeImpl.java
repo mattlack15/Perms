@@ -32,6 +32,11 @@ public class BungeeImpl implements PermsImplementation {
     }
 
     @Override
+    public void scheduleRepeatingTaskAsync(Runnable runnable, int delayTicks, int periodTicks) {
+        BungeePerms.instance.getProxy().getScheduler().schedule(BungeePerms.instance, runnable, delayTicks * 50, periodTicks * 50, TimeUnit.MILLISECONDS);
+    }
+
+    @Override
     public PermsConfiguration getConfigSettings() {
         return settings;
     }

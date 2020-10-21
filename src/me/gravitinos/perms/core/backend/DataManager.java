@@ -9,6 +9,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
 public abstract class DataManager {
@@ -26,51 +27,64 @@ public abstract class DataManager {
         return keepSync.get();
     }
 
-    public abstract CompletableFuture<Void> addSubject(Subject subject);
+    public abstract CompletableFuture<Void> addSubject(Subject<?> subject);
 
     public abstract CompletableFuture<CachedSubject> getSubject(UUID subjectId);
 
-    public abstract CompletableFuture<Void> updateSubject(Subject subject);
+    public abstract CompletableFuture<Void> updateSubject(Subject<?> subject);
 
     public abstract CompletableFuture<Void> removeSubject(UUID subjectId);
 
-    public abstract CompletableFuture<ImmutablePermissionList> getPermissions(UUID subjectId);
-
-    public abstract CompletableFuture<Void> updatePermissions(Subject subject);
-
-    public abstract CompletableFuture<Void> addPermission(Subject subject, PPermission permission);
-
-    public abstract CompletableFuture<Void> removePermission(Subject subject, String permission);
-
-    public abstract CompletableFuture<Void> removePermissionExact(Subject subject, PPermission permission);
-
-    public abstract CompletableFuture<List<CachedInheritance>> getInheritances(UUID subjectId);
-
-    public abstract CompletableFuture<Void> updateInheritances(Subject subject);
-
-    public abstract CompletableFuture<Void> addInheritance(CachedInheritance inheritance);
-
-    public abstract CompletableFuture<Void> removeInheritance(Subject subject, UUID parent);
-
-    public abstract CompletableFuture<Void> updateSubjectData(Subject subject);
+    public abstract CompletableFuture<Void> updateSubjectData(Subject<?> subject);
 
     public abstract CompletableFuture<GenericSubjectData> getSubjectData(UUID subjectId);
 
+    public abstract CompletableFuture<Void> addSubjects(List<Subject<?>> subjects);
+
+
+    //Queue
+
+    private final ReentrantLock queueLock = new ReentrantLock(true);
+    private final List<Subject<?>> queue = new ArrayList<>();
+
+    public void queueUpdate(Subject<?> subject) {
+        queueLock.lock();
+        try {
+            if(queue.contains(subject))
+                return;
+            queue.add(subject);
+        } finally {
+            queueLock.unlock();
+        }
+    }
+
+    public CompletableFuture<Void> flushUpdateQueue() {
+        queueLock.lock();
+        try {
+
+            CompletableFuture<Void> completed = new CompletableFuture<>();
+            completed.complete(null);
+
+            if(queue.isEmpty())
+                return completed;
+
+            List<Subject<?>> q = new ArrayList<>(queue);
+            queue.clear();
+            return addOrUpdateSubjects(q);
+        } finally {
+            queueLock.unlock();
+        }
+    }
+
+    public abstract CompletableFuture<Void> addOrUpdateSubjects(List<Subject<?>> subjects);
 
     //Large Operations
-    public abstract CompletableFuture<Void> addPermissions(Subject subject, ImmutablePermissionList list);
 
-    public abstract CompletableFuture<Void> removePermissions(Subject subject, ArrayList<String> list);
+    public abstract CompletableFuture<Void> removeSubjects(List<UUID> subjects);
 
-    public abstract CompletableFuture<Void> removePermissionsExact(Subject subject, ArrayList<PPermission> list);
+    public abstract CompletableFuture<Void> removeInheritances(Subject<?> subject, List<UUID> parents);
 
-    public abstract CompletableFuture<Void> addSubjects(ArrayList<Subject> subjects);
-
-    public abstract CompletableFuture<Void> removeSubjects(ArrayList<UUID> subjects);
-
-    public abstract CompletableFuture<Void> removeInheritances(Subject subject, ArrayList<UUID> parents);
-
-    public abstract CompletableFuture<Void> addInheritances(ArrayList<Inheritance> inheritances);
+    public abstract CompletableFuture<Void> addInheritances(List<Inheritance> inheritances);
 
     public abstract CompletableFuture<List<CachedSubject>> getAllSubjectsOfType(String type);
 

@@ -18,7 +18,7 @@ public abstract class SubjectData {
     private Map<String, SubjectDataUpdateListener> listeners = new ConcurrentHashMap<>();
     private Map<String, String> data = new ConcurrentHashMap<>();
 
-    public String INTERNAL_DATA_KEY_NAME = "internal.name";
+    public static String INTERNAL_DATA_KEY_NAME = "internal.name";
 
     public SubjectData(SubjectData copy){
         data = copy.data;

@@ -83,7 +83,7 @@ public class MongoHandler extends DataManager {
     public CompletableFuture<Void> addSubject(Subject subject) {
         return runAsync(() -> {
             //Update or Add subject data
-            this.database.getCollection(COLLECTION_SUBJECTDATA).insert(subjectToFullSubjectDataObj(subject));
+            this.database.getCollection(COLLECTION_SUBJECTDATA).update(new BasicDBObject(FIELD_SUBJECT_ID, subject.getSubjectId().toString()), subjectToFullSubjectDataObj(subject), true, false);
 
             //Remove previous (if existing) inheritances
             this.database.getCollection(COLLECTION_INHERITANCE).remove(new BasicDBObject(FIELD_INHERITANCE_CHILD, subject.getSubjectId().toString()));
@@ -155,110 +155,110 @@ public class MongoHandler extends DataManager {
         });
     }
 
-    @Override
-    public CompletableFuture<ImmutablePermissionList> getPermissions(UUID subjectId) {
-        return runAsync(() -> {
+//    @Override
+//    public CompletableFuture<ImmutablePermissionList> getPermissions(UUID subjectId) {
+//        return runAsync(() -> {
+//
+//            //Permissions
+//            ArrayList<PPermission> permissions = new ArrayList<>();
+//            this.database.getCollection(COLLECTION_PERMISSIONS).find(new BasicDBObject(FIELD_PERMISSION_OWNER_SUBJECT_ID, subjectId.toString())).forEach(object -> permissions.add(objToPermission(object)));
+//
+//            return new ImmutablePermissionList(permissions);
+//        });
+//    }
 
-            //Permissions
-            ArrayList<PPermission> permissions = new ArrayList<>();
-            this.database.getCollection(COLLECTION_PERMISSIONS).find(new BasicDBObject(FIELD_PERMISSION_OWNER_SUBJECT_ID, subjectId.toString())).forEach(object -> permissions.add(objToPermission(object)));
+//    @Override
+//    public CompletableFuture<Void> updatePermissions(Subject subject) {
+//        return runAsync(() -> {
+//            //Remove previous (if existing) permissions
+//            this.database.getCollection(COLLECTION_PERMISSIONS).remove(new BasicDBObject(FIELD_PERMISSION_OWNER_SUBJECT_ID, subject.getSubjectId().toString()));
+//
+//            //Add permissions
+//            ArrayList<BasicDBObject> objects = new ArrayList<>();
+//            for (PPermission permissions : Subject.getPermissions(subject)) {
+//                objects.add(permissionToObj(new OwnerPermissionPair(subject.getSubjectId(), permissions)));
+//            }
+//            this.database.getCollection(COLLECTION_PERMISSIONS).insert(objects.toArray(new BasicDBObject[0]));
+//
+//            return null;
+//        });
+//    }
+//
+//    @Override
+//    public CompletableFuture<Void> addPermission(Subject subject, PPermission permission) {
+//        return runAsync(() -> {
+//            this.database.getCollection(COLLECTION_PERMISSIONS).insert(permissionToObj(new OwnerPermissionPair(subject.getSubjectId(), permission)));
+//            return null;
+//        });
+//    }
+//
+//    @Override
+//    public CompletableFuture<Void> removePermission(Subject subject, String permission) {
+//        return runAsync(() -> {
+//            this.database.getCollection(COLLECTION_PERMISSIONS).remove(new BasicDBObject("$and", new ArrayList<BasicDBObject>() {{
+//                add(new BasicDBObject(FIELD_PERMISSION_NAME, permission));
+//                add(new BasicDBObject(FIELD_PERMISSION_OWNER_SUBJECT_ID, subject.getSubjectId().toString()));
+//            }})); //This executes a statement that removes permissions if their permission is permission AND their owner is the subject's subject id
+//            return null;
+//        });
+//    }
 
-            return new ImmutablePermissionList(permissions);
-        });
-    }
+//    @Override
+//    public CompletableFuture<Void> removePermissionExact(Subject subject, PPermission permission) {
+//        return runAsync(() -> {
+//            this.database.getCollection(COLLECTION_PERMISSIONS).remove(new BasicDBObject(FIELD_PERMISSION_ID, permission.getPermissionIdentifier().toString()));
+//            return null;
+//        });
+//    }
+//
+//    @Override
+//    public CompletableFuture<List<CachedInheritance>> getInheritances(UUID subjectId) {
+//        return runAsync(() -> {
+//            //Inheritances
+//            ArrayList<CachedInheritance> inheritances = new ArrayList<>();
+//            this.database.getCollection(COLLECTION_INHERITANCE).find(new BasicDBObject(FIELD_INHERITANCE_CHILD, subjectId.toString())).forEach(object -> inheritances.add(objToInheritance(object)));
+//            return inheritances;
+//        });
+//    }
 
-    @Override
-    public CompletableFuture<Void> updatePermissions(Subject subject) {
-        return runAsync(() -> {
-            //Remove previous (if existing) permissions
-            this.database.getCollection(COLLECTION_PERMISSIONS).remove(new BasicDBObject(FIELD_PERMISSION_OWNER_SUBJECT_ID, subject.getSubjectId().toString()));
+//    @Override
+//    public CompletableFuture<Void> updateInheritances(Subject subject) {
+//        return runAsync(() -> {
+//
+//            //Remove previous
+//            this.database.getCollection(COLLECTION_INHERITANCE).remove(new BasicDBObject(FIELD_INHERITANCE_CHILD, subject.getSubjectId().toString()));
+//
+//            //Add current
+//            ArrayList<DBObject> toAdd = new ArrayList<>();
+//            ArrayList<Inheritance> inheritances = Subject.getInheritances(subject);
+//            inheritances.forEach(i -> toAdd.add(inheritanceToObj(i.toCachedInheritance())));
+//            this.database.getCollection(COLLECTION_INHERITANCE).insert(toAdd.toArray(new DBObject[0]));
+//
+//            return null;
+//        });
+//    }
 
-            //Add permissions
-            ArrayList<BasicDBObject> objects = new ArrayList<>();
-            for (PPermission permissions : Subject.getPermissions(subject)) {
-                objects.add(permissionToObj(new OwnerPermissionPair(subject.getSubjectId(), permissions)));
-            }
-            this.database.getCollection(COLLECTION_PERMISSIONS).insert(objects.toArray(new BasicDBObject[0]));
+//    @Override
+//    public CompletableFuture<Void> addInheritance(@NotNull CachedInheritance inheritance) {
+//        return runAsync(() -> {
+//            this.database.getCollection(COLLECTION_INHERITANCE).insert(inheritanceToObj(inheritance));
+//            return null;
+//        });
+//    }
 
-            return null;
-        });
-    }
-
-    @Override
-    public CompletableFuture<Void> addPermission(Subject subject, PPermission permission) {
-        return runAsync(() -> {
-            this.database.getCollection(COLLECTION_PERMISSIONS).insert(permissionToObj(new OwnerPermissionPair(subject.getSubjectId(), permission)));
-            return null;
-        });
-    }
-
-    @Override
-    public CompletableFuture<Void> removePermission(Subject subject, String permission) {
-        return runAsync(() -> {
-            this.database.getCollection(COLLECTION_PERMISSIONS).remove(new BasicDBObject("$and", new ArrayList<BasicDBObject>() {{
-                add(new BasicDBObject(FIELD_PERMISSION_NAME, permission));
-                add(new BasicDBObject(FIELD_PERMISSION_OWNER_SUBJECT_ID, subject.getSubjectId().toString()));
-            }})); //This executes a statement that removes permissions if their permission is permission AND their owner is the subject's subject id
-            return null;
-        });
-    }
-
-    @Override
-    public CompletableFuture<Void> removePermissionExact(Subject subject, PPermission permission) {
-        return runAsync(() -> {
-            this.database.getCollection(COLLECTION_PERMISSIONS).remove(new BasicDBObject(FIELD_PERMISSION_ID, permission.getPermissionIdentifier().toString()));
-            return null;
-        });
-    }
-
-    @Override
-    public CompletableFuture<List<CachedInheritance>> getInheritances(UUID subjectId) {
-        return runAsync(() -> {
-            //Inheritances
-            ArrayList<CachedInheritance> inheritances = new ArrayList<>();
-            this.database.getCollection(COLLECTION_INHERITANCE).find(new BasicDBObject(FIELD_INHERITANCE_CHILD, subjectId.toString())).forEach(object -> inheritances.add(objToInheritance(object)));
-            return inheritances;
-        });
-    }
-
-    @Override
-    public CompletableFuture<Void> updateInheritances(Subject subject) {
-        return runAsync(() -> {
-
-            //Remove previous
-            this.database.getCollection(COLLECTION_INHERITANCE).remove(new BasicDBObject(FIELD_INHERITANCE_CHILD, subject.getSubjectId().toString()));
-
-            //Add current
-            ArrayList<DBObject> toAdd = new ArrayList<>();
-            ArrayList<Inheritance> inheritances = Subject.getInheritances(subject);
-            inheritances.forEach(i -> toAdd.add(inheritanceToObj(i.toCachedInheritance())));
-            this.database.getCollection(COLLECTION_INHERITANCE).insert(toAdd.toArray(new DBObject[0]));
-
-            return null;
-        });
-    }
-
-    @Override
-    public CompletableFuture<Void> addInheritance(@NotNull CachedInheritance inheritance) {
-        return runAsync(() -> {
-            this.database.getCollection(COLLECTION_INHERITANCE).insert(inheritanceToObj(inheritance));
-            return null;
-        });
-    }
-
-    @Override
-    public CompletableFuture<Void> removeInheritance(Subject subject, UUID parent) {
-        return runAsync(() -> {
-            this.database.getCollection(COLLECTION_INHERITANCE).remove(new BasicDBObject(FIELD_INHERITANCE_CHILD, subject.getSubjectId().toString())
-                    .append(FIELD_INHERITANCE_PARENT, parent.toString()));
-            return null;
-        });
-    }
+//    @Override
+//    public CompletableFuture<Void> removeInheritance(Subject subject, UUID parent) {
+//        return runAsync(() -> {
+//            this.database.getCollection(COLLECTION_INHERITANCE).remove(new BasicDBObject(FIELD_INHERITANCE_CHILD, subject.getSubjectId().toString())
+//                    .append(FIELD_INHERITANCE_PARENT, parent.toString()));
+//            return null;
+//        });
+//    }
 
     @Override
     public CompletableFuture<Void> updateSubjectData(Subject subject) {
         return runAsync(() -> {
-            this.database.getCollection(COLLECTION_SUBJECTDATA).insert(subjectToFullSubjectDataObj(subject));
+            this.database.getCollection(COLLECTION_SUBJECTDATA).update(new BasicDBObject(FIELD_SUBJECT_ID, subject.getSubjectId().toString()), subjectToFullSubjectDataObj(subject), true, false);
             return null;
         });
     }
@@ -276,37 +276,45 @@ public class MongoHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> addPermissions(Subject subject, ImmutablePermissionList list) {
-        return runAsync(() -> {
-            ArrayList<DBObject> objects = new ArrayList<>();
-            list.forEach(p -> objects.add(permissionToObj(new OwnerPermissionPair(subject.getSubjectId(), p))));
-            this.database.getCollection(COLLECTION_PERMISSIONS).insert(objects.toArray(new DBObject[0]));
-            return null;
+    public CompletableFuture<Void> addOrUpdateSubjects(List<Subject<?>> subjects) {
+        subjects.forEach(s -> {
+            s.getOwnLoggedPermissions().resetLog();
+            s.getOwnLoggedInheritances().resetLog();
         });
+        return addSubjects(subjects);
     }
 
-    @Override
-    public CompletableFuture<Void> removePermissions(Subject subject, ArrayList<String> list) {
-        return runAsync(() -> {
-            BulkWriteOperation op = this.database.getCollection(COLLECTION_PERMISSIONS).initializeUnorderedBulkOperation();
-            list.forEach(p -> op.find(new BasicDBObject(FIELD_PERMISSION_NAME, p)).remove());
-            op.execute();
-            return null;
-        });
-    }
+//    @Override
+//    public CompletableFuture<Void> addPermissions(Subject subject, ImmutablePermissionList list) {
+//        return runAsync(() -> {
+//            ArrayList<DBObject> objects = new ArrayList<>();
+//            list.forEach(p -> objects.add(permissionToObj(new OwnerPermissionPair(subject.getSubjectId(), p))));
+//            this.database.getCollection(COLLECTION_PERMISSIONS).insert(objects.toArray(new DBObject[0]));
+//            return null;
+//        });
+//    }
 
-    @Override
-    public CompletableFuture<Void> removePermissionsExact(Subject subject, ArrayList<PPermission> list) {
-        return runAsync(() -> {
-            BulkWriteOperation op = this.database.getCollection(COLLECTION_PERMISSIONS).initializeUnorderedBulkOperation();
-            list.forEach(p -> op.find(new BasicDBObject(FIELD_PERMISSION_ID, p.getPermissionIdentifier())).remove());
-            op.execute();
-            return null;
-        });
-    }
+//    @Override
+//    public CompletableFuture<Void> removePermissions(Subject subject, ArrayList<String> list) {
+//        return runAsync(() -> {
+//            BulkWriteOperation op = this.database.getCollection(COLLECTION_PERMISSIONS).initializeUnorderedBulkOperation();
+//            list.forEach(p -> op.find(new BasicDBObject(FIELD_PERMISSION_NAME, p)).remove());
+//            op.execute();
+//            return null;
+//        });
+//    }
 
-    @Override
-    public CompletableFuture<Void> addSubjects(ArrayList<Subject> subjects) {
+//    @Override
+//    public CompletableFuture<Void> removePermissionsExact(Subject subject, ArrayList<PPermission> list) {
+//        return runAsync(() -> {
+//            BulkWriteOperation op = this.database.getCollection(COLLECTION_PERMISSIONS).initializeUnorderedBulkOperation();
+//            list.forEach(p -> op.find(new BasicDBObject(FIELD_PERMISSION_ID, p.getPermissionIdentifier())).remove());
+//            op.execute();
+//            return null;
+//        });
+//    }
+
+    public CompletableFuture<Void> addSubjects(List<Subject<?>> subjects) {
         return runAsync(() -> {
 
             //Initialize ORDERED (because of removing and THEN adding) bulk operations
@@ -347,7 +355,7 @@ public class MongoHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> removeSubjects(ArrayList<UUID> subjects) {
+    public CompletableFuture<Void> removeSubjects(List<UUID> subjects) {
         return runAsync(() -> {
 
             //Initialized UNORDERED bulk operations
@@ -375,7 +383,7 @@ public class MongoHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> removeInheritances(Subject subject, ArrayList<UUID> parents) {
+    public CompletableFuture<Void> removeInheritances(Subject<?> subject, List<UUID> parents) {
         return runAsync(() -> {
             BulkWriteOperation op = this.database.getCollection(COLLECTION_INHERITANCE).initializeUnorderedBulkOperation();
             parents.forEach(p -> op.find(new BasicDBObject(FIELD_INHERITANCE_CHILD, subject.getSubjectId().toString()).append(FIELD_INHERITANCE_PARENT, p.toString())).remove());
@@ -385,7 +393,7 @@ public class MongoHandler extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> addInheritances(ArrayList<Inheritance> inheritances) {
+    public CompletableFuture<Void> addInheritances(List<Inheritance> inheritances) {
         return runAsync(() -> {
             ArrayList<DBObject> toAdd = new ArrayList<>();
             inheritances.forEach(i -> toAdd.add(inheritanceToObj(i.toCachedInheritance())));
@@ -524,7 +532,7 @@ public class MongoHandler extends DataManager {
     @Override
     public CompletableFuture<Void> addRankLadder(RankLadder ladder) {
         return runAsync(() -> {
-            this.database.getCollection(COLLECTION_RANK_LADDERS).insert(rankLadderToObj(ladder));
+            this.database.getCollection(COLLECTION_RANK_LADDERS).update(new BasicDBObject(FIELD_LADDER_ID, ladder.getId().toString()), rankLadderToObj(ladder), true, false);
             return null;
         });
 
@@ -547,7 +555,7 @@ public class MongoHandler extends DataManager {
     @Override
     public CompletableFuture<Void> putServerIndex(int serverId, String serverName) {
         return runAsync(() -> {
-            this.database.getCollection(COLLECTION_SERVER_INDEX).insert(new BasicDBObject("_id", serverId).append("name", serverName));
+            this.database.getCollection(COLLECTION_SERVER_INDEX).update(new BasicDBObject("_id", serverId), new BasicDBObject("_id", serverId).append("name", serverName), true, false);
             return null;
         });
     }

@@ -55,7 +55,7 @@ public class PermsVault extends Permission {
             if(user == null){
                 return false;
             } else {
-                user.addOwnPermission(new PPermission(s2));
+                user.addPermission(new PPermission(s2));
                 return true;
             }
         }
@@ -71,7 +71,7 @@ public class PermsVault extends Permission {
             if(user == null){
                 return false;
             } else {
-                user.removeOwnPermission(s2);
+                user.removePermission(s2);
                 return true;
             }
         }
@@ -97,7 +97,7 @@ public class PermsVault extends Permission {
         if(group == null){
             return false;
         }
-        group.addOwnPermission(new PPermission(s2));
+        group.addPermission(new PPermission(s2));
         return true;
     }
 
@@ -109,7 +109,7 @@ public class PermsVault extends Permission {
         if(group == null){
             return false;
         }
-        group.removeOwnPermission(s2);
+        group.removePermission(s2);
         return true;
     }
 

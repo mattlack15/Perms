@@ -59,7 +59,7 @@ public class CommandGroupRemove extends GravSubCommand {
         }
 
         PPermission permToRemove = null;
-        for(PPermission perms : group.getOwnPermissions()){
+        for(PPermission perms : group.getPermissions()){
             if(ServerContextType.getType(perms.getContext()).equals(ServerContextType.LOCAL) && gl.equals("local") && perms.getPermission().equals(perm)){
                 permToRemove = perms;
                 break;
@@ -74,7 +74,7 @@ public class CommandGroupRemove extends GravSubCommand {
             return true;
         }
 
-        group.removeOwnPermission(permToRemove);
+        group.removePermission(permToRemove);
         this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + perm.toLowerCase() + " &7has been &cremoved&7 from their permissions!");
         return true;
     }

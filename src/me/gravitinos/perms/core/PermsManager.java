@@ -9,9 +9,15 @@ import me.gravitinos.perms.core.config.PermsConfiguration;
 import me.gravitinos.perms.core.converter.Converter;
 import me.gravitinos.perms.core.converter.converters.ConverterContext;
 import me.gravitinos.perms.core.converter.converters.ConverterIdentifierToSubjectId;
+import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.ladders.LadderManager;
+import me.gravitinos.perms.core.subject.Inheritance;
+import me.gravitinos.perms.core.subject.PPermission;
+import me.gravitinos.perms.core.subject.Subject;
 import me.gravitinos.perms.core.user.UserManager;
+import me.gravitinos.perms.core.util.GravSerializable;
+import me.gravitinos.perms.core.util.GravSerializer;
 import net.md_5.bungee.api.ChatColor;
 import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
@@ -89,16 +95,43 @@ public class PermsManager {
         }
 
         try {
+            System.out.println("Loading groups");
             this.groupManager.loadGroups().get(); //Load groups
+            System.out.println("Loading ladders");
             this.ladderManager.loadLadders().get(); //Load rank ladders
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }
+
+        getImplementation().scheduleRepeatingTaskAsync(dataManager::flushUpdateQueue, 10, 10);
     }
 
     public void shutdown() {
         if (this.dataManager != null)
             this.dataManager.shutdown();
+    }
+
+    public GravSerializer createGroupBackup() {
+        GravSerializer serializer = new GravSerializer();
+        List<Group> groups = GroupManager.instance.getLoadedGroups();
+        serializer.writeInt(groups.size());
+        groups.forEach(g -> {
+            serializer.writeString(g.getData().toString());
+            List<PPermission> permissions = g.getPermissions().getPermissions();
+            serializer.writeInt(permissions.size());
+            for(PPermission permission : permissions) {
+                serializer.writeString(permission.getPermission());
+                serializer.writeString(permission.getContext().toString());
+                serializer.writeUUID(permission.getPermissionIdentifier());
+            }
+            List<Inheritance> inheritances = g.getInheritances();
+            serializer.writeInt(inheritances.size());
+            for(Inheritance inheritance : g.getInheritances()) {
+                serializer.writeUUID(inheritance.getParent().getSubjectId());
+                serializer.writeString(inheritance.getContext().toString());
+            }
+        });
+        return serializer;
     }
 
     private void runConverters(Converter... converters) {

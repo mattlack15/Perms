@@ -1,9 +1,7 @@
 package me.gravitinos.perms.core.group;
 
-import com.google.common.collect.Lists;
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.backend.DataManager;
-import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
 import me.gravitinos.perms.core.context.ContextSet;
@@ -11,12 +9,10 @@ import me.gravitinos.perms.core.subject.*;
 import me.gravitinos.perms.core.util.SubjectSupplier;
 import me.gravitinos.perms.spigot.messaging.MessageManager;
 import me.gravitinos.perms.spigot.messaging.MessageReloadSubject;
-import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -85,10 +81,10 @@ public class Group extends Subject<GroupData> {
         });
 
 
-        super.setOwnPermissions(subject.getPermissions());
-        ArrayList<Inheritance> inheritances = Lists.newArrayList(super.getInheritances());
-        inheritances.forEach(i -> super.removeOwnSubjectInheritance(i.getParent()));
-        subject.getInheritances().forEach(i -> super.addOwnSubjectInheritance(inheritanceSupplier.getSubject(i.getParent()), i.getContext()));
+        super.setOwnPermissions(subject.getPermissions(), save);
+        List<Inheritance> inheritanceList = new ArrayList<>();
+        subject.getInheritances().forEach(i -> inheritanceList.add(new Inheritance(inheritanceSupplier.getSubject(i.getParent()), new SubjectRef(this), i.getContext())));
+        super.getOwnLoggedInheritances().set(inheritanceList, save);
 
         if (save && dataManager != null) {
             dataManager.updateSubject(this);
@@ -133,110 +129,9 @@ public class Group extends Subject<GroupData> {
         return super.hasOwnPermission(permission, context);
     }
 
-    /**
-     * Checks if this group has this group permission (this one also checks for context equality and expiration equality before removing)
-     *
-     * @param permission The permission to check for
-     * @return Whether this group has that permission
-     */
-    public boolean hasOwnPermission(@NotNull PPermission permission) {
-        return super.hasOwnPermission(permission);
-    }
-
-    /**
-     * Adds a group permission to this group
-     *
-     * @param permission the permission to add
-     */
-    public synchronized CompletableFuture<Void> addOwnPermission(@NotNull PPermission permission) {
-        if (this.hasOwnPermission(permission)) {
-            CompletableFuture<Void> future = new CompletableFuture<>();
-            future.complete(null);
-            return future;
-        }
-
-        super.addOwnSubjectPermission(permission);
-
-        //Update backend
-        if (dataManager != null) {
-            CompletableFuture<Void> future = dataManager.addPermission(this, permission);
-            if (MessageManager.instance != null)
-                PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
-                    try {
-                        future.get();
-                    } catch (InterruptedException | ExecutionException e) {
-                        e.printStackTrace();
-                    }
-                    MessageManager.instance.queueMessage(new MessageReloadSubject(this.getSubjectId()));
-                });
-            return future;
-        }
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        future.complete(null);
-        return future;
-    }
-
-    /**
-     * Removes a specific permission from this group
-     *
-     * @param permission the permission to remove
-     */
-    public synchronized CompletableFuture<Void> removeOwnPermission(@NotNull PPermission permission) {
-        PPermission perm = super.removeOwnSubjectPermission(permission);
-
-        //Update backend
-        if (dataManager != null) {
-            CompletableFuture<Void> future = dataManager.removePermissionExact(this, permission);
-            if (MessageManager.instance != null)
-                PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
-                    try {
-                        future.get();
-                    } catch (InterruptedException | ExecutionException e) {
-                        e.printStackTrace();
-                    }
-                    MessageManager.instance.queueMessage(new MessageReloadSubject(this.getSubjectId()));
-                });
-            return future;
-        }
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        future.complete(null);
-        return future;
-    }
-
-    /**
-     * Removes a specific permission from this group
-     *
-     * @param permission the permission to remove
-     */
-    public synchronized CompletableFuture<Void> removeOwnPermission(@NotNull String permission) {
-        super.removeOwnSubjectPermission(permission);
-
-        //Update backend
-        if (dataManager != null) {
-            CompletableFuture<Void> future = dataManager.removePermission(this, permission);
-            if (MessageManager.instance != null)
-                PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
-                    try {
-                        future.get();
-                    } catch (InterruptedException | ExecutionException e) {
-                        e.printStackTrace();
-                    }
-                    MessageManager.instance.queueMessage(new MessageReloadSubject(this.getSubjectId()));
-                });
-            return future;
-        }
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        future.complete(null);
-        return future;
-    }
-
     @Override
     public DataManager getDataManager() {
         return this.dataManager;
-    }
-
-    public ArrayList<Inheritance> getInheritances() {
-        return super.getInheritances();
     }
 
     //Bulk Ops
@@ -244,45 +139,15 @@ public class Group extends Subject<GroupData> {
     /**
      * Adds a lot of permissions in bulk, please use this for large amounts of permissions as Transfers to SQL can be a lot quicker
      */
-    public synchronized CompletableFuture<Void> addOwnPermissions(@NotNull ArrayList<PPermission> permissions) {
-        ArrayList<PPermission> ps = (ArrayList<PPermission>) permissions.clone();
-        permissions.forEach(p -> {
-            if (!this.hasOwnPermission(p)) {
-                super.addOwnSubjectPermission(p);
-            } else {
-                ps.remove(p);
-            }
-        });
-
-        //Update backend
-        if (dataManager != null) {
-            return dataManager.addPermissions(this, new ImmutablePermissionList(ps));
-        }
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        future.complete(null);
-        return future;
+    public void addOwnPermissions(@NotNull List<PPermission> permissions) {
+        permissions.forEach(super::addPermission);
     }
 
     /**
      * Adds a lot of permissions in bulk, please use this for large amounts of permissions as Transfers to SQL can be a lot quicker
      */
-    public synchronized CompletableFuture<Void> addInheritances(@NotNull ArrayList<Inheritance> inheritances) {
-        ArrayList<Inheritance> ps = Lists.newArrayList(inheritances);
-        inheritances.forEach(p -> {
-            if (!this.getInheritances().contains(p)) {
-                super.addOwnInheritance(p);
-            } else {
-                ps.remove(p);
-            }
-        });
-
-        //Update backend
-        if (dataManager != null) {
-            return dataManager.addInheritances(ps);
-        }
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        future.complete(null);
-        return future;
+    public void addInheritances(@NotNull List<Inheritance> inheritances) {
+        inheritances.forEach(super::addInheritance);
     }
 
     /**
@@ -295,43 +160,26 @@ public class Group extends Subject<GroupData> {
     }
 
     /**
-     * Gets a list of all the permissions that are possessed by this group
-     *
-     * @return
+     * removes a lot of permissions in bulk, please use this for large amounts of permissions as Transfers to SQL can be a lot quicker
      */
-    public ImmutablePermissionList getOwnPermissions() {
-        return super.getPermissions();
+    public void removeOwnPermissions(@NotNull List<PPermission> permissions) {
+        permissions.forEach(super::removePermission);
     }
 
     /**
      * removes a lot of permissions in bulk, please use this for large amounts of permissions as Transfers to SQL can be a lot quicker
      */
-    public synchronized CompletableFuture<Void> removeOwnPermissions(@NotNull ArrayList<PPermission> permissions) {
-        permissions.forEach(p -> super.removeOwnSubjectPermission(p));
+    public void removeOwnPermissionsStr(@NotNull List<String> permissions) {
+        List<PPermission> permissions1 = new ArrayList<>();
 
-        //Update backend
-        if (dataManager != null) {
-            return dataManager.removePermissionsExact(this, permissions);
-        }
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        future.complete(null);
-        return future;
-    }
-
-    /**
-     * removes a lot of permissions in bulk, please use this for large amounts of permissions as Transfers to SQL can be a lot quicker
-     */
-    public synchronized CompletableFuture<Void> removeOwnPermissionsStr(@NotNull ArrayList<String> permissions) {
-        ArrayList<PPermission> permissions1 = new ArrayList<>();
-
-        permissions.forEach(p1 -> this.getOwnPermissions().forEach(p -> {
+        permissions.forEach(p1 -> this.getPermissions().forEach(p -> {
                     if (p.getPermission().equalsIgnoreCase(p1)) {
                         permissions1.add(p);
                     }
                 })
         );
 
-        return this.removeOwnPermissions(permissions1);
+        this.removeOwnPermissions(permissions1);
     }
 
 
@@ -341,7 +189,7 @@ public class Group extends Subject<GroupData> {
      * @param subject The parent/inheritance to check for
      * @return true if this user has the specified inheritance
      */
-    public boolean hasInheritance(@NotNull Subject subject) {
+    public boolean hasInheritance(@NotNull Subject<?> subject) {
         if (this.equals(subject)) {
             return true;
         }
@@ -359,31 +207,12 @@ public class Group extends Subject<GroupData> {
      * @param subject The inheritance to add
      * @param context The context that this will apply in
      */
-    public synchronized CompletableFuture<Void> addInheritance(Subject<?> subject, ContextSet context) {
+    public void addInheritance(Subject<?> subject, ContextSet context) {
         if (this.hasInheritance(subject)) {
-            CompletableFuture<Void> future = new CompletableFuture<>();
-            future.complete(null);
-            return future;
+            return;
         }
 
-        super.addOwnSubjectInheritance(new SubjectRef(subject), context);
-
-        if (dataManager != null) {
-            CompletableFuture<Void> future = dataManager.addInheritance(new CachedInheritance(this.getSubjectId(), subject.getSubjectId(), this.getType(), subject.getType(), context));
-            if (MessageManager.instance != null)
-                PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
-                    try {
-                        future.get();
-                    } catch (InterruptedException | ExecutionException e) {
-                        e.printStackTrace();
-                    }
-                    MessageManager.instance.queueMessage(new MessageReloadSubject(this.getSubjectId()));
-                });
-            return future;
-        }
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        future.complete(null);
-        return future;
+        super.addInheritance(new SubjectRef(subject), context);
     }
 
     /**
@@ -391,87 +220,18 @@ public class Group extends Subject<GroupData> {
      *
      * @param subject the parent to remove
      */
-    public synchronized CompletableFuture<Void> removeInheritance(Subject<?> subject) {
+    public void removeInheritance(Subject<?> subject) {
         super.removeOwnSubjectInheritance(subject);
-
-        if (dataManager != null) {
-            CompletableFuture<Void> future = dataManager.removeInheritance(this, subject.getSubjectId());
-            if (MessageManager.instance != null)
-                PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
-                    try {
-                        future.get();
-                    } catch (InterruptedException | ExecutionException e) {
-                        e.printStackTrace();
-                    }
-                    MessageManager.instance.queueMessage(new MessageReloadSubject(this.getSubjectId()));
-                });
-            return future;
-        }
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        future.complete(null);
-        return future;
     }
 
     /**
      * Clears all inheritances from this group
      */
-    public synchronized CompletableFuture<Void> clearInheritances() {
-        ArrayList<UUID> parents = new ArrayList<>();
+    public void clearInheritances() {
 
         for (Inheritance i : super.getInheritances()) {
             super.removeOwnSubjectInheritance(i.getParent());
-            parents.add(i.getParent().getSubjectId());
         }
-
-        if (dataManager != null) {
-            return dataManager.removeInheritances(this, parents);
-        }
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        future.complete(null);
-        return future;
-    }
-
-    /**
-     * Gets all permissions, including inherited
-     */
-    public ArrayList<PPermission> getAllPermissions() {
-        return super.getAllPermissions();
-    }
-
-    /**
-     * Gets all permissions, including inherited
-     */
-    public ArrayList<PPermission> getAllPermissions(ContextSet contexts) {
-        return super.getAllPermissions(contexts);
-    }
-
-    /**
-     * Checks if this group has a permission of its own or inherits a permission
-     */
-    public boolean hasPermission(String permission, ContextSet context) {
-        ArrayList<PPermission> permissions = this.getAllPermissions(context);
-        for (PPermission perms : permissions) {
-            if (perms.getPermission().equalsIgnoreCase(permission) && perms.getContext().isSatisfiedBy(context)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Checks if this group has a permission of its own or inherits a permission
-     */
-    public boolean hasPermission(PPermission perm) {
-        return this.getAllPermissions().contains(perm);
-    }
-
-    /**
-     * Gets the name of this group
-     *
-     * @return
-     */
-    public String getName() {
-        return super.getName();
     }
 
     /**

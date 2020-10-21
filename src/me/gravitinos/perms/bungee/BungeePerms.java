@@ -26,6 +26,7 @@ import net.md_5.bungee.event.EventHandler;
 import java.io.*;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
@@ -33,7 +34,7 @@ public class BungeePerms extends Plugin implements Listener {
     public static BungeePerms instance;
     public static Configuration config;
 
-    private volatile ArrayList<UUID> loggingIn = new ArrayList<>();
+    private volatile List<UUID> loggingIn = new ArrayList<>();
 
     private PermsManager manager;
 
@@ -133,7 +134,14 @@ public class BungeePerms extends Plugin implements Listener {
 
                 //Add default group
                 if(user.getInheritances().size() == 0 && GroupManager.instance.getDefaultGroup().isGlobal()){
-                    user.addInheritance(GroupManager.instance.getDefaultGroup(), new MutableContextSet()).get();
+                    user.getOwnLoggedInheritances().getLock().lock();
+                    try {
+                        user.addInheritance(GroupManager.instance.getDefaultGroup(), new MutableContextSet());
+                        user.getOwnLoggedInheritances().resetLog();
+                    } finally {
+                        user.getOwnLoggedInheritances().getLock().unlock();
+                    }
+                    user.getDataManager().updateSubject(user).join();
                 }
 
                 getLogger().info("Userdata loaded for " + user.getName() + " (" + user.getUniqueID() + ")");

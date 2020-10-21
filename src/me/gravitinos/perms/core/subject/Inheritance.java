@@ -4,9 +4,9 @@ import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.context.ContextSet;
 
 public class Inheritance {
-    private SubjectRef parent;
-    private SubjectRef child;
-    private ContextSet context;
+    private final SubjectRef parent;
+    private final SubjectRef child;
+    private final ContextSet context;
 
     public Inheritance(SubjectRef parent, SubjectRef child, ContextSet context){
         this.parent = parent;

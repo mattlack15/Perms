@@ -1,6 +1,7 @@
 package me.gravitinos.perms.spigot.gui;
 
 import me.gravitinos.perms.core.group.GroupManager;
+import me.gravitinos.perms.core.util.GravSerializer;
 import me.gravitinos.perms.spigot.SpigotPerms;
 import me.gravitinos.perms.spigot.util.ItemBuilder;
 import me.gravitinos.perms.spigot.util.Menus.Menu;
@@ -8,6 +9,12 @@ import me.gravitinos.perms.spigot.util.Menus.MenuElement;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitRunnable;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.Date;
 
 public class MenuMain extends Menu {
 
@@ -90,10 +97,33 @@ public class MenuMain extends Menu {
             }
         });
 
+        MenuElement createBackup = new MenuElement(new ItemBuilder(Material.STAINED_GLASS, 1, (byte) 14)
+        .setName("&6&lBackup Groups")
+        .addLore("&7Click to create a backup of all &6Groups").build()).setClickHandler((e, i) -> {
+            getElement(e.getSlot()).addTempLore(this, "&9Creating...", 60);
+            SpigotPerms.getCurrentInstance().getImpl().getAsyncExecutor().execute(() -> {
+                GravSerializer serializer = SpigotPerms.getCurrentInstance().getManager().createGroupBackup();
+                File file = new File(SpigotPerms.getCurrentInstance().getDataFolder(), "group-backup-" + new Date(System.currentTimeMillis()).toString() + ".backup");
+                try {
+                    file.createNewFile();
+                    serializer.writeToStream(new FileOutputStream(file));
+                } catch (IOException ioException) {
+                    ioException.printStackTrace();
+                }
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        getElement(e.getSlot()).addTempLore(MenuMain.this, "&aBackup created!", 60);
+                    }
+                }.runTask(SpigotPerms.getCurrentInstance());
+            });
+        });
+
         this.setElement(13, rankLadders);
         this.setElement(20, users);
         this.setElement(24, groups);
         this.setElement(31, configEditor);
+        this.setElement(36, createBackup);
 
     }
 

@@ -37,6 +37,11 @@ public class SpigotImpl implements PermsImplementation {
     }
 
     @Override
+    public void scheduleRepeatingTaskAsync(Runnable runnable, int delayTicks, int periodTicks) {
+        Bukkit.getScheduler().scheduleAsyncRepeatingTask(SpigotPerms.instance, runnable, delayTicks, periodTicks);
+    }
+
+    @Override
     public PermsConfiguration getConfigSettings() {
         return conf;
     }

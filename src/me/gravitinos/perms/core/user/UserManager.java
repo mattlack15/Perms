@@ -171,7 +171,7 @@ public class UserManager {
     public synchronized CompletableFuture<Void> saveTo(DataManager dataManager) {
         loadedUsersLock.lock();
         try {
-            ArrayList<Subject> users = Lists.newArrayList(loadedUsers);
+            List<Subject<?>> users = Lists.newArrayList(loadedUsers);
             return dataManager.addSubjects(users);
         } finally {
             loadedUsersLock.unlock();
@@ -290,7 +290,7 @@ public class UserManager {
         loadedUsersLock.lock();
         try {
             this.loadedUsers.addAll(users);
-            ArrayList<Subject> subjects = Lists.newArrayList(users);
+            List<Subject<?>> subjects = Lists.newArrayList(users);
             if (dataManager != null) {
                 dataManager.addSubjects(subjects);
             }

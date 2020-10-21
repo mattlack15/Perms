@@ -11,6 +11,7 @@ public interface PermsImplementation {
     File getDataFolder();
     Executor getAsyncExecutor();
     Executor getSyncExecutor();
+    void scheduleRepeatingTaskAsync(Runnable runnable, int delay, int periodTicks);
     PermsConfiguration getConfigSettings();
     void runTaskTimerAsync(Runnable runnable, int delay, int repeat);
     void runTaskTimerSync(Runnable runnable, int delay, int repeat);

@@ -20,7 +20,7 @@ public abstract class ContextSet implements Iterable<Context> {
     public static final int NO_EXPIRATION = -1;
 
     @Getter
-    private List<Context> contexts = new ArrayList<>();
+    private final List<Context> contexts = new ArrayList<>();
 
     @Getter
     @Setter
@@ -30,11 +30,11 @@ public abstract class ContextSet implements Iterable<Context> {
         Arrays.asList(initial).forEach(this::addContext);
     }
 
-    public boolean isExpired() {
+    public synchronized boolean isExpired() {
         return isExpired(System.currentTimeMillis());
     }
 
-    public boolean isExpired(long time) {
+    public synchronized boolean isExpired(long time) {
         return !(time < expiration || expiration == NO_EXPIRATION);
     }
 
@@ -42,7 +42,7 @@ public abstract class ContextSet implements Iterable<Context> {
      * Checks if each context in this has at least one match in the provided context
      * If the other context has 0 of a type, it will match with all of that type
      */
-    public boolean isSatisfiedBy(ContextSet set) {
+    public synchronized boolean isSatisfiedBy(ContextSet set) {
 
         if(this.size() == 0)
             return true;
@@ -60,7 +60,7 @@ public abstract class ContextSet implements Iterable<Context> {
         return true;
     }
 
-    public boolean oldSatisfiedBy(ContextSet set) {
+    public synchronized boolean oldSatisfiedBy(ContextSet set) {
         if (set.size() == 0 || this.size() == 0)
             return true;
         for (Context context : this) {
@@ -71,14 +71,14 @@ public abstract class ContextSet implements Iterable<Context> {
         return true;
     }
 
-    public boolean containsAny(ContextSet set) {
+    public synchronized boolean containsAny(ContextSet set) {
         for (Context context : set)
             if (this.contains(context))
                 return true;
         return false;
     }
 
-    public List<String> getUniqueKeys() {
+    public synchronized List<String> getUniqueKeys() {
         List<String> keys = new ArrayList<>();
         this.contexts.forEach(c -> {
             if (!keys.contains(c.getKey()))
@@ -87,15 +87,15 @@ public abstract class ContextSet implements Iterable<Context> {
         return keys;
     }
 
-    public int size() {
+    public synchronized int size() {
         return this.getContexts().size();
     }
 
-    public boolean contains(Context context) {
+    public synchronized boolean contains(Context context) {
         return this.getContexts().contains(context);
     }
 
-    public boolean appliesToAny(Context context) {
+    public synchronized boolean appliesToAny(Context context) {
         if (contexts.isEmpty())
             return true;
         boolean a = true;
@@ -110,7 +110,7 @@ public abstract class ContextSet implements Iterable<Context> {
         return a;
     }
 
-    public MutableContextSet filterByKey(String key) {
+    public synchronized MutableContextSet filterByKey(String key) {
         MutableContextSet set = new MutableContextSet();
         for (Context context : getContexts()) {
             if (context.getKey().equals(key))
@@ -119,16 +119,16 @@ public abstract class ContextSet implements Iterable<Context> {
         return set;
     }
 
-    public Context get(int i) {
+    public synchronized Context get(int i) {
         return this.contexts.get(i);
     }
 
-    protected void addContext(Context context) {
+    protected synchronized void addContext(Context context) {
         if (!this.contexts.contains(context))
             this.contexts.add(context);
     }
 
-    public String toString() {
+    public synchronized String toString() {
         GravSerializer serializer = new GravSerializer();
         serializer.writeLong(expiration);
         serializer.writeInt(contexts.size());
@@ -162,29 +162,29 @@ public abstract class ContextSet implements Iterable<Context> {
 
     @NotNull
     @Override
-    public Iterator<Context> iterator() {
+    public synchronized Iterator<Context> iterator() {
         return getContexts().iterator();
     }
 
     public abstract ContextSet clone();
 
-    public ImmutableContextSet toImmutable() {
+    public synchronized ImmutableContextSet toImmutable() {
         return new ImmutableContextSet(this);
     }
 
-    public MutableContextSet toMutable() {
+    public synchronized MutableContextSet toMutable() {
         return new MutableContextSet(this);
     }
 
     /**
      * Basically returns whether either one could satisfy the other
      */
-    public boolean canCollide(ContextSet context) {
+    public synchronized boolean canCollide(ContextSet context) {
         return context.isSatisfiedBy(this) || this.isSatisfiedBy(context);
     }
 
     @Override
-    public boolean equals(Object o) {
+    public synchronized boolean equals(Object o) {
         if (!(o instanceof ContextSet))
             return false;
 

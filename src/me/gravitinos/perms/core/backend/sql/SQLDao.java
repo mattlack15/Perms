@@ -1,5 +1,6 @@
 package me.gravitinos.perms.core.backend.sql;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
@@ -12,7 +13,6 @@ import me.gravitinos.perms.core.ladders.RankLadder;
 import me.gravitinos.perms.core.subject.*;
 import me.gravitinos.perms.core.util.GravSerializer;
 import me.gravitinos.perms.core.util.MapUtil;
-import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.Connection;
@@ -395,7 +395,7 @@ public class SQLDao implements AutoCloseable {
         return new CachedSubject(subjectId, type, data, this.getPermissions(subjectId), this.getInheritances(subjectId));
     }
 
-    public void addSubject(@NotNull Subject subject) throws SQLException {
+    public void addSubject(@NotNull Subject<?> subject) throws SQLException {
         if (subjectExists(subject.getSubjectId())) {
             this.removeSubject(subject.getSubjectId(), false);
         }
@@ -405,6 +405,84 @@ public class SQLDao implements AutoCloseable {
         ArrayList<CachedInheritance> inheritances = new ArrayList<>();
         Subject.getInheritances(subject).forEach(i -> inheritances.add(new CachedInheritance(i.getChild().getSubjectId(), i.getParent().getSubjectId(), i.getChild().getType(), i.getParent().getType(), i.getContext())));
         this.addInheritances(inheritances);
+    }
+
+    public void updateSubjectPermsAndInheritances(List<Subject<?>> subjects) throws SQLException {
+
+        Map<Subject<?>, ImmutableListLog<PPermission>> permissionMap = new HashMap<>();
+        Map<Subject<?>, ImmutableListLog<Inheritance>> inheritancesMap = new HashMap<>();
+
+        subjects.forEach(s -> {
+            permissionMap.put(s, s.getOwnLoggedPermissions().getAndResetModifications());
+            inheritancesMap.put(s, s.getOwnLoggedInheritances().getAndResetModifications());
+        });
+
+
+        //Inserts
+        PreparedStatement sInheritances = prepareStatement(this.getInsertInheritanceUpdate());
+        PreparedStatement sPermissions = prepareStatement(this.getInsertPermissionUpdate());
+
+        //Removes
+        PreparedStatement rInheritances = prepareStatement(this.getDeleteInheritanceByParentUpdate());
+        PreparedStatement rPermissions = prepareStatement(this.getDeletePermissionByPermissionIdentifierUpdate());
+
+        for (Subject<?> subject : subjects) {
+            try {
+                if (subject == null) {
+                    continue;
+                }
+
+                ImmutableListLog<Inheritance> inheritanceLog = inheritancesMap.get(subject);
+                ImmutableListLog<PPermission> permissionLog = permissionMap.get(subject);
+
+                for (Inheritance inheritances : inheritanceLog.getAdded()) {
+                    if (inheritances == null || !inheritances.isValid()) {
+                        continue;
+                    }
+                    sInheritances.setString(1, subject.getSubjectId().toString());
+                    sInheritances.setString(2, inheritances.getParent().getSubjectId().toString());
+                    sInheritances.setString(3, inheritances.getChild().getType());
+                    sInheritances.setString(4, inheritances.getParent().getType());
+                    sInheritances.setString(5, inheritances.getContext().toString());
+                    sInheritances.addBatch();
+                }
+
+                for (Inheritance inheritances : inheritanceLog.getRemoved()) {
+                    if (inheritances == null || !inheritances.isValid()) {
+                        continue;
+                    }
+                    rInheritances.setString(1, inheritances.getParent().getSubjectId().toString());
+                    rInheritances.addBatch();
+                }
+
+                for (PPermission permissions : permissionLog.getAdded()) {
+                    if (permissions == null) {
+                        continue;
+                    }
+                    sPermissions.setString(1, subject.getSubjectId().toString());
+                    sPermissions.setString(2, permissions.getPermission());
+                    sPermissions.setString(3, permissions.getPermissionIdentifier().toString());
+                    sPermissions.setString(4, permissions.getContext().toString());
+                    sPermissions.addBatch();
+                }
+
+                for (PPermission permissions : permissionLog.getRemoved()) {
+                    if (permissions == null) {
+                        continue;
+                    }
+                    rPermissions.setString(1, permissions.getPermissionIdentifier().toString());
+                    rPermissions.addBatch();
+                }
+            } catch(Exception e) {
+                System.out.println("COULD NOT push subject to SQL server!");
+                e.printStackTrace();
+            }
+        }
+
+        sInheritances.executeBatch();
+        rInheritances.executeBatch();
+        sPermissions.executeBatch();
+        rPermissions.executeBatch();
     }
 
     public boolean subjectExists(@NotNull UUID subjectId) throws SQLException {
@@ -509,7 +587,7 @@ public class SQLDao implements AutoCloseable {
 
             try {
                 sub.getInheritances().add(new CachedInheritance(UUID.fromString(results.getString("Child")), UUID.fromString(results.getString("Parent")), results.getString("ChildType"), results.getString("ParentType"), ContextSet.fromString(results.getString("Context"))));
-            } catch(Exception e) {
+            } catch (Exception e) {
                 e.printStackTrace();
                 System.out.println("COULD NOT ADD INHERITANCE " + results.getString("Parent") + " to " + sub.getData().getName());
             }
@@ -541,7 +619,7 @@ public class SQLDao implements AutoCloseable {
         s.executeUpdate();
     }
 
-    public void addSubjects(ArrayList<Subject> subjects) throws SQLException {
+    public void addSubjects(List<Subject<?>> subjects) throws SQLException {
         SQLException e = executeInTransaction(() -> {
             try {
                 PreparedStatement sData = prepareStatement(this.getInsertSubjectDataUpdate());
@@ -561,7 +639,6 @@ public class SQLDao implements AutoCloseable {
                         if (inheritances == null) {
                             continue;
                         }
-                        Bukkit.broadcastMessage("Adding inheritance (in bulk add subjects) " + inheritances.getParent().getSubjectId() + " to " + subject.getSubjectId().toString());
                         sInheritances.setString(1, subject.getSubjectId().toString());
                         sInheritances.setString(2, inheritances.getParent().getSubjectId().toString());
                         sInheritances.setString(3, inheritances.getChild().getType());
@@ -598,7 +675,7 @@ public class SQLDao implements AutoCloseable {
         }
     }
 
-    public void removeSubjects(ArrayList<UUID> subjects) throws SQLException {
+    public void removeSubjects(List<UUID> subjects) throws SQLException {
         SQLException e = executeInTransaction(() -> {
             try {
                 PreparedStatement sData = prepareStatement(this.getDeleteSubjectDataBySubjectIdUpdate());
@@ -702,7 +779,7 @@ public class SQLDao implements AutoCloseable {
 
     public void setSubjectData(@NotNull UUID subjectId, @NotNull SubjectData data, @NotNull String type) throws SQLException {
         PreparedStatement s;
-        if(subjectExists(subjectId)) {
+        if (subjectExists(subjectId)) {
             s = prepareStatement(this.getUpdateSubjectData());
 
             s.setString(1, type);

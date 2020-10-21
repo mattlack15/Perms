@@ -166,7 +166,7 @@ public class GroupManager {
     public void eliminateInheritanceMistakes() {
         loadedGroupsLock.lock();
         try {
-            List<Subject> grps = new ArrayList<>(this.loadedGroups);
+            List<Subject<?>> grps = new ArrayList<>(this.loadedGroups);
             Subject.checkForAndRemoveInheritanceMistakes(grps);
             this.loadedGroups.clear();
             grps.forEach(s -> this.loadedGroups.add((Group) s));
@@ -178,7 +178,7 @@ public class GroupManager {
     public CompletableFuture<Void> saveTo(DataManager dataManager) {
         this.loadedGroupsLock.lock();
         try {
-            ArrayList<Subject> groups = Lists.newArrayList(loadedGroups);
+            List<Subject<?>> groups = Lists.newArrayList(loadedGroups);
             return dataManager.addSubjects(groups);
         } finally {
             this.loadedGroupsLock.unlock();

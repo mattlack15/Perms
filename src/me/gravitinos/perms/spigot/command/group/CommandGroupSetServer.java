@@ -78,7 +78,7 @@ public class CommandGroupSetServer extends GravSubCommand {
                 this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "ERROR: could not change group server context!");
                 return null;
             }
-            ArrayList<PPermission> perms = group.getOwnPermissions().getPermissions();
+            ArrayList<PPermission> perms = group.getPermissions().getPermissions();
             group.removeOwnPermissions(perms);
             ArrayList<PPermission> newPerms = new ArrayList<>();
             perms.forEach(p -> {
