@@ -1,6 +1,8 @@
 package me.gravitinos.perms.core.subject;
 
 import com.google.common.collect.Lists;
+import lombok.Getter;
+import lombok.Setter;
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.context.ContextSet;
@@ -17,6 +19,10 @@ public abstract class Subject<T extends SubjectData> {
     //Types
     public static final String GROUP = "GROUP";
     public static final String USER = "USER";
+
+    @Getter
+    @Setter
+    private volatile boolean autoQueue = true;
 
     private String type;
 
@@ -74,7 +80,7 @@ public abstract class Subject<T extends SubjectData> {
      * @param ownPermissions List of permissions
      */
     protected void setOwnPermissions(@NotNull List<PPermission> ownPermissions, boolean save) {
-        if(save) {
+        if (save) {
             this.ownPermissions.set(ownPermissions, true);
             queueSave();
         } else {
@@ -105,8 +111,9 @@ public abstract class Subject<T extends SubjectData> {
         long ctm = System.currentTimeMillis();
         int size = this.ownPermissions.size();
         this.ownPermissions.removeIf((e) -> Objects.isNull(e) || e.isExpired(ctm));
-        if(size != this.ownPermissions.size())
-            queueSave();
+        if (size != this.ownPermissions.size())
+            if (autoQueue)
+                queueSave();
     }
 
     public static List<Inheritance> getInheritances(Subject<?> subject) {
@@ -153,7 +160,8 @@ public abstract class Subject<T extends SubjectData> {
 
     public void setName(String name) {
         this.data.setName(name);
-        queueSave();
+        if (autoQueue)
+            queueSave();
     }
 
     /**
@@ -162,6 +170,8 @@ public abstract class Subject<T extends SubjectData> {
     protected void removeExpiredInheritances() {
         long ctm = System.currentTimeMillis();
         this.inheritances.removeIf((i) -> Objects.isNull(i) || !i.isValid() || i.getContext().isExpired(ctm));
+        if (autoQueue)
+            queueSave();
     }
 
     public boolean hasInheritance(Subject<?> subject, ContextSet context) {
@@ -196,7 +206,8 @@ public abstract class Subject<T extends SubjectData> {
     public void removeOwnSubjectInheritance(Subject<? extends SubjectData> parent) {
         this.removeExpiredInheritances();
         this.inheritances.removeIf(i -> !i.isValid() || parent.equals(i.getParent()));
-        queueSave();
+        if (autoQueue)
+            queueSave();
     }
 
     /**
@@ -207,7 +218,8 @@ public abstract class Subject<T extends SubjectData> {
      */
     public void removePermission(@NotNull PPermission permission) {
         this.ownPermissions.removeIf((perm) -> Objects.isNull(perm) || perm.getPermissionIdentifier().equals(permission.getPermissionIdentifier()));
-        queueSave();
+        if (autoQueue)
+            queueSave();
     }
 
     /**
@@ -217,7 +229,8 @@ public abstract class Subject<T extends SubjectData> {
      */
     public void removePermission(@NotNull String permission) {
         this.ownPermissions.removeIf(p -> p.getPermission().equalsIgnoreCase(permission));
-        queueSave();
+        if (autoQueue)
+            queueSave();
     }
 
     /**
@@ -226,10 +239,11 @@ public abstract class Subject<T extends SubjectData> {
      * @param subject The inheritance to add
      */
     public void addInheritance(Subject<?> subject, ContextSet context) {
-        if(hasInheritance(subject, context))
+        if (hasInheritance(subject, context))
             return;
         this.inheritances.weakAdd(new Inheritance(new SubjectRef(subject), new SubjectRef(this), context));
-        queueSave();
+        if (autoQueue)
+            queueSave();
     }
 
     /**
@@ -239,12 +253,14 @@ public abstract class Subject<T extends SubjectData> {
      */
     public synchronized void addInheritance(SubjectRef subject, ContextSet context) {
         this.inheritances.weakAdd(new Inheritance(subject, new SubjectRef(this), context));
-        queueSave();
+        if (autoQueue)
+            queueSave();
     }
 
     public synchronized void addInheritance(Inheritance inheritance) {
         this.inheritances.weakAdd(inheritance);
-        queueSave();
+        if (autoQueue)
+            queueSave();
     }
 
 
@@ -255,7 +271,8 @@ public abstract class Subject<T extends SubjectData> {
      */
     public synchronized void addPermission(@NotNull PPermission permission) {
         this.ownPermissions.weakAdd(permission);
-        queueSave();
+        if (autoQueue)
+            queueSave();
     }
 
     /**

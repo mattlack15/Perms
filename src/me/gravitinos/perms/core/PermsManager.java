@@ -116,6 +116,7 @@ public class PermsManager {
         List<Group> groups = GroupManager.instance.getLoadedGroups();
         serializer.writeInt(groups.size());
         groups.forEach(g -> {
+            serializer.writeUUID(g.getSubjectId());
             serializer.writeString(g.getData().toString());
             List<PPermission> permissions = g.getPermissions().getPermissions();
             serializer.writeInt(permissions.size());

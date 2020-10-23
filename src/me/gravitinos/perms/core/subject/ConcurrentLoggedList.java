@@ -199,4 +199,44 @@ public class  ConcurrentLoggedList<T> {
             return (int) Math.signum(num);
         });
     }
+
+    //Non-logging methods
+    public void nonLoggingAdd(T entry) {
+        lock.lock();
+        try {
+            this.base.add(entry);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void nonLoggingRemove(T entry) {
+        lock.lock();
+        try {
+            this.base.remove(entry);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public boolean nonLoggingWeakAdd(T entry) {
+        lock.lock();
+        try {
+            if (contains(entry))
+                return false;
+            base.add(entry);
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void nonLoggingRemoveIf(Predicate<T> predicate) {
+        lock.lock();
+        try {
+            this.base.removeIf(predicate);
+        } finally {
+            lock.unlock();
+        }
+    }
 }
