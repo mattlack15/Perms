@@ -17,7 +17,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Group extends Subject<GroupData> {
-    private DataManager dataManager;
+    private final DataManager dataManager;
 
     private final AtomicBoolean updatingData = new AtomicBoolean(false);
 

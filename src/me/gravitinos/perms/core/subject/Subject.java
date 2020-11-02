@@ -130,7 +130,7 @@ public abstract class Subject<T extends SubjectData> {
      *
      * @return Immutable set of permissions
      */
-    public synchronized ImmutablePermissionList getPermissions() {
+    public ImmutablePermissionList getPermissions() {
         this.removeExpiredPerms();
         return new ImmutablePermissionList(ownPermissions.get());
     }
@@ -251,13 +251,13 @@ public abstract class Subject<T extends SubjectData> {
      *
      * @param subject The inheritance to add
      */
-    public synchronized void addInheritance(SubjectRef subject, ContextSet context) {
+    public void addInheritance(SubjectRef subject, ContextSet context) {
         this.inheritances.weakAdd(new Inheritance(subject, new SubjectRef(this), context));
         if (autoQueue)
             queueSave();
     }
 
-    public synchronized void addInheritance(Inheritance inheritance) {
+    public void addInheritance(Inheritance inheritance) {
         this.inheritances.weakAdd(inheritance);
         if (autoQueue)
             queueSave();
@@ -269,7 +269,7 @@ public abstract class Subject<T extends SubjectData> {
      *
      * @param permission the permission to add
      */
-    public synchronized void addPermission(@NotNull PPermission permission) {
+    public void addPermission(@NotNull PPermission permission) {
         this.ownPermissions.weakAdd(permission);
         if (autoQueue)
             queueSave();
@@ -281,7 +281,7 @@ public abstract class Subject<T extends SubjectData> {
      * @param permission
      * @return
      */
-    public synchronized boolean hasOwnPermission(PPermission permission) {
+    public boolean hasOwnPermission(PPermission permission) {
         return this.ownPermissions.contains(permission);
     }
 

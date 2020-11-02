@@ -60,20 +60,21 @@ public abstract class DataManager {
 
     public CompletableFuture<Void> flushUpdateQueue() {
         queueLock.lock();
+        List<Subject<?>> q;
         try {
 
             CompletableFuture<Void> completed = new CompletableFuture<>();
             completed.complete(null);
 
-            if(queue.isEmpty())
+            if (queue.isEmpty())
                 return completed;
 
-            List<Subject<?>> q = new ArrayList<>(queue);
+            q = new ArrayList<>(queue);
             queue.clear();
-            return addOrUpdateSubjects(q);
         } finally {
             queueLock.unlock();
         }
+        return addOrUpdateSubjects(q);
     }
 
     public abstract CompletableFuture<Void> addOrUpdateSubjects(List<Subject<?>> subjects);

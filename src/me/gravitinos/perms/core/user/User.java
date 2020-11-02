@@ -277,7 +277,7 @@ public class User extends Subject<UserData> {
      * @param subject the parent to remove
      */
     public void removeInheritance(@NotNull Subject<?> subject) {
-        removeInheritance(subject);
+        super.removeOwnSubjectInheritance(subject);
         addDefaultGroupIfNoInheritances();
     }
 

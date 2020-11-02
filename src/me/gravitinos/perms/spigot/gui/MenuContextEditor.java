@@ -90,6 +90,9 @@ public class MenuContextEditor extends Menu {
         long expirSeconds = (contexts.getExpiration() - System.currentTimeMillis()) / 1000;
         String expirTime = expirSeconds > 60 ? expirSeconds > 3600 ? expirSeconds > 86400 ? (expirSeconds / 86400) + " days" :
                 (expirSeconds / 3600) + " hours" : (expirSeconds / 60) + " minutes" : expirSeconds + " seconds";
+        if(expirSeconds <= 0) {
+            expirTime = "&4Expired";
+        }
 
         if(contexts.getExpiration() == ContextSet.NO_EXPIRATION){
             expirTime = "&cNever";
