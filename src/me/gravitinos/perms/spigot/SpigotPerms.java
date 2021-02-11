@@ -243,7 +243,9 @@ public class SpigotPerms extends JavaPlugin {
      * Adds a permission to the permission index, if it doesn't already exist in the permission index
      */
     public synchronized void addPermissionToIndex(String permission) {
-            permission = permission.toLowerCase();
+        if(permission == null)
+            return;
+        permission = permission.toLowerCase();
         ArrayList<String> alreadyKnown = new ArrayList<>();
         for (String keys : permissionIndex.keySet()) {
             alreadyKnown.addAll(permissionIndex.get(keys));

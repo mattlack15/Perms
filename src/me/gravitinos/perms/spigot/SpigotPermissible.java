@@ -47,6 +47,8 @@ public class SpigotPermissible extends PermissibleBase {
     }
     @Override
     public boolean hasPermission(String requ) {
+        if(requ == null)
+            return false;
         long nano = System.nanoTime();
 
         try {
@@ -106,7 +108,7 @@ public class SpigotPermissible extends PermissibleBase {
     }
     @Override
     public boolean hasPermission(Permission requ) {
-        return this.hasPermission(requ.getName());
+        return requ != null && this.hasPermission(requ.getName());
     }
 
     public static Permissible inject(Player p){

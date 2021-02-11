@@ -79,7 +79,7 @@ public class UserManager {
                 User user;
                 if (cachedSubject == null || cachedSubject.getData() == null || cachedSubject.getSubjectId() == null) {
                     if (addDefaultGroup) {
-                        user = new UserBuilder(id, username).addInheritance(GroupManager.instance.getDefaultGroup(), getDefaultGroupInheritanceContext()).build();
+                        user = new UserBuilder(id, username).addInheritance(GroupManager.instance.getDefaultGroup(), GroupManager.instance.getDefaultGroup().getContext()).build();
                     } else {
                         user = new UserBuilder(id, username).build();
                     }

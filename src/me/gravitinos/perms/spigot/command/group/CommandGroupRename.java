@@ -7,29 +7,29 @@ import me.gravitinos.perms.spigot.command.GravSubCommand;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 
-public class CommandGroupSetPrefix extends GravSubCommand {
-    public CommandGroupSetPrefix(GravCommandPermissionable parentCommand, String cmdPath) {
+public class CommandGroupRename extends GravSubCommand {
+    public CommandGroupRename(GravCommandPermissionable parentCommand, String cmdPath) {
         super(parentCommand, cmdPath);
     }
 
     @Override
     public String getPermission() {
-        return SpigotPerms.commandName + ".group.manageoptions";
+        return SpigotPerms.commandName + ".group.rename";
     }
 
     @Override
     public String getDescription() {
-        return "Set the prefix of a group";
+        return "Renames a group";
     }
 
     @Override
     public String getAlias() {
-        return "setprefix";
+        return "rename";
     }
 
     @Override
     public String getArgumentString(){
-        return "<prefix>";
+        return "<new name>";
     }
 
     @Override
@@ -43,20 +43,12 @@ public class CommandGroupSetPrefix extends GravSubCommand {
             return true;
         }
 
-        StringBuilder builder = new StringBuilder();
-        for(int i = 0; i < args.length; i++){
-            builder.append(args[i] + " ");
-        }
-        builder.deleteCharAt(builder.length()-1);
-
-        String prefix = builder.toString();
-        prefix = prefix.replace("'", "").replace("\"", "");
-
         Group group = (Group)passedArgs[0];
+        String newName = args[0];
+        String name = group.getName();
+        group.setName(newName);
 
-        group.setPrefix(prefix);
-
-        this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + group.getName() + "&7's prefix was set to " + prefix);
+        this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + name + "&7's name was set to " + newName);
 
         return true;
     }

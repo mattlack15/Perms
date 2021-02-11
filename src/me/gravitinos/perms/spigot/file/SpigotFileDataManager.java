@@ -102,8 +102,10 @@ public class SpigotFileDataManager extends DataManager {
             saveUsers = true;
             SpigotPerms.instance.getImpl().getAsyncExecutor().execute(() -> {
                 try {
-                    usersConfig.save(Files.USERS_FILE);
-                    setSavingUsers(false);
+                    synchronized (this) {
+                        usersConfig.save(Files.USERS_FILE);
+                        setSavingUsers(false);
+                    }
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -226,42 +228,39 @@ public class SpigotFileDataManager extends DataManager {
     @Override
     public CompletableFuture<GenericSubjectData> getSubjectData(UUID subjectId) {
         CompletableFuture<GenericSubjectData> future = new CompletableFuture<>();
-        runAsync(() -> {
-            if (this.getSubjectType(subjectId).equals(Subject.GROUP)) {
-                GroupData data = new GroupData();
-                synchronized (this) {
-                    ConfigurationSection section = getGroupConfigSection(subjectId);
-                    if (section == null) {
-                        future.complete(null);
-                        return null;
-                    }
-                    data.setChatColour(section.getString(GROUP_DATA_CHATCOLOUR));
-                    data.setDescription(section.getString(GROUP_DATA_DESCRIPTION));
-                    data.setPrefix(section.getString(GROUP_DATA_PREFIX));
-                    data.setSuffix(section.getString(GROUP_DATA_SUFFIX));
-                    data.setPriority(section.getInt(GROUP_DATA_PRIORITY));
-                    data.setName(getGroupName(subjectId));
+        if (this.getSubjectType(subjectId).equals(Subject.GROUP)) {
+            GroupData data = new GroupData();
+            synchronized (this) {
+                ConfigurationSection section = getGroupConfigSection(subjectId);
+                if (section == null) {
+                    future.complete(null);
+                    return future;
                 }
-
-                future.complete(new GenericSubjectData(data));
-            } else {
-                UserData data = new UserData();
-                synchronized (this) {
-                    ConfigurationSection section = usersConfig.getConfigurationSection(USER_SECTION + "." + subjectId.toString());
-                    if (section == null) {
-                        future.complete(null);
-                        return null;
-                    }
-                    data.setName(section.getString(USER_DATA_USERNAME));
-                    data.setNotes(section.getString(USER_DATA_NOTES));
-                    data.setPrefix(section.getString(USER_DATA_PREFIX));
-                    data.setSuffix(section.getString(USER_DATA_SUFFIX));
-                }
-
-                future.complete(new GenericSubjectData(data));
+                data.setChatColour(section.getString(GROUP_DATA_CHATCOLOUR));
+                data.setDescription(section.getString(GROUP_DATA_DESCRIPTION));
+                data.setPrefix(section.getString(GROUP_DATA_PREFIX));
+                data.setSuffix(section.getString(GROUP_DATA_SUFFIX));
+                data.setPriority(section.getInt(GROUP_DATA_PRIORITY));
+                data.setName(getGroupName(subjectId));
             }
-            return null;
-        });
+
+            future.complete(new GenericSubjectData(data));
+        } else {
+            UserData data = new UserData();
+            synchronized (this) {
+                ConfigurationSection section = usersConfig.getConfigurationSection(USER_SECTION + "." + subjectId.toString());
+                if (section == null) {
+                    future.complete(null);
+                    return future;
+                }
+                data.setName(section.getString(USER_DATA_USERNAME));
+                data.setNotes(section.getString(USER_DATA_NOTES));
+                data.setPrefix(section.getString(USER_DATA_PREFIX));
+                data.setSuffix(section.getString(USER_DATA_SUFFIX));
+            }
+
+            future.complete(new GenericSubjectData(data));
+        }
         return future;
     }
 
@@ -287,28 +286,25 @@ public class SpigotFileDataManager extends DataManager {
     @Override
     public CompletableFuture<CachedSubject> getSubject(UUID name) {
         CompletableFuture<CachedSubject> future = new CompletableFuture<>();
-        runAsync(() -> {
-            try {
-                if (!this.subjectExists(name)) {
-                    future.complete(null);
-                    return null;
-                }
-                CachedSubject subject = new CachedSubject(name, this.getSubjectType(name), this.getSubjectData(name).get(), this.getPermissions(name).get().getPermissions(), this.getInheritances(name).get());
-
-
-                if (subject.getData() == null) {
-                    future.complete(null);
-                    return null;
-                }
-                future.complete(subject);
-                return null;
-            } catch (Exception e) {
-                e.printStackTrace();
+        try {
+            if (!this.subjectExists(name)) {
                 future.complete(null);
-                return null;
+                return future;
             }
-        });
-        return future;
+            CachedSubject subject = new CachedSubject(name, this.getSubjectType(name), this.getSubjectData(name).get(), this.getPermissions(name).get().getPermissions(), this.getInheritances(name).get());
+
+
+            if (subject.getData() == null) {
+                future.complete(null);
+                return future;
+            }
+            future.complete(subject);
+            return future;
+        } catch (Exception e) {
+            e.printStackTrace();
+            future.complete(null);
+            return future;
+        }
     }
 
     @Override
@@ -337,56 +333,53 @@ public class SpigotFileDataManager extends DataManager {
 
     public CompletableFuture<ImmutablePermissionList> getPermissions(UUID name) {
         CompletableFuture<ImmutablePermissionList> future = new CompletableFuture<>();
-        runAsync(() -> {
-            ConfigurationSection section;
-            synchronized (this) {
-                if (this.getSubjectType(name).equals(Subject.USER)) {
-                    section = usersConfig.getConfigurationSection(USER_SECTION + "." + name);
-                } else {
-                    section = getGroupConfigSection(name);
+        ConfigurationSection section;
+        synchronized (this) {
+            if (this.getSubjectType(name).equals(Subject.USER)) {
+                section = usersConfig.getConfigurationSection(USER_SECTION + "." + name);
+            } else {
+                section = getGroupConfigSection(name);
+            }
+        }
+        if (section == null) {
+            future.complete(null);
+            return future;
+        }
+        List<PPermission> perms;
+        synchronized (this) {
+            List<String> permStrings = Lists.newArrayList(section.getStringList(SUBJECT_PERMISSIONS));
+            perms = new ArrayList<>();
+
+            for (String permString : permStrings) {
+                if (!permString.contains(" ")) {
+                    perms.add(new PPermission(permString));
+                    continue;
                 }
-            }
-            if (section == null) {
-                future.complete(null);
-                return null;
-            }
-            List<PPermission> perms;
-            synchronized (this) {
-                List<String> permStrings = Lists.newArrayList(section.getStringList(SUBJECT_PERMISSIONS));
-                perms = new ArrayList<>();
-
-                for (String permString : permStrings) {
-                    if (!permString.contains(" ")) {
-                        perms.add(new PPermission(permString));
-                        continue;
+                Map<String, String> deserialized = MapUtil.stringToMap(permString.substring(permString.indexOf(" ") + 1));
+                ContextSet context = new MutableContextSet();
+                long expiration = ContextSet.NO_EXPIRATION;
+                if (deserialized.get("context") != null) {
+                    try {
+                        context = ContextSet.fromString(deserialized.get("context"));
+                    } catch (Exception e) {
+                        System.out.println("Could not deserialize contextset");
+                        context = new MutableContextSet();
                     }
-                    Map<String, String> deserialized = MapUtil.stringToMap(permString.substring(permString.indexOf(" ") + 1));
-                    ContextSet context = new MutableContextSet();
-                    long expiration = ContextSet.NO_EXPIRATION;
-                    if (deserialized.get("context") != null) {
-                        try {
-                            context = ContextSet.fromString(deserialized.get("context"));
-                        } catch (Exception e) {
-                            System.out.println("Could not deserialize contextset");
-                            context = new MutableContextSet();
-                        }
-                    }
-                    if (deserialized.get("expiration") != null) {
-                        try {
-                            expiration = Long.parseLong(deserialized.get("expiration"));
-                        } catch (Exception ignored) {
-                        }
-                    }
-
-                    context.setExpiration(expiration);
-
-                    perms.add(new PPermission(permString.substring(0, permString.indexOf(" ")), context));
                 }
-            }
+                if (deserialized.get("expiration") != null) {
+                    try {
+                        expiration = Long.parseLong(deserialized.get("expiration"));
+                    } catch (Exception ignored) {
+                    }
+                }
 
-            future.complete(new ImmutablePermissionList(perms));
-            return null;
-        });
+                context.setExpiration(expiration);
+
+                perms.add(new PPermission(permString.substring(0, permString.indexOf(" ")), context));
+            }
+        }
+
+        future.complete(new ImmutablePermissionList(perms));
         return future;
     }
 
@@ -508,49 +501,46 @@ public class SpigotFileDataManager extends DataManager {
 
     public CompletableFuture<List<CachedInheritance>> getInheritances(UUID name) {
         CompletableFuture<List<CachedInheritance>> future = new CompletableFuture<>();
-        runAsync(() -> {
-            ConfigurationSection section = getSection(name);
-            if (section == null) {
-                future.complete(null);
-                return null;
-            }
+        ConfigurationSection section = getSection(name);
+        if (section == null) {
+            future.complete(null);
+            return future;
+        }
 
-            String type = this.getSubjectType(name);
+        String type = this.getSubjectType(name);
 
-            String inheritanceType = Subject.GROUP;
+        String inheritanceType = Subject.GROUP;
 
-            List<CachedInheritance> out = new ArrayList<>();
+        List<CachedInheritance> out = new ArrayList<>();
 
-            List<String> inheritance;
-            synchronized (this) {
-                inheritance = section.getStringList(SUBJECT_INHERITANCES);
-            }
-            for (String inheritanceString : inheritance) {
-                String inheritanceName;
-                ContextSet context = new MutableContextSet();
-                if (!inheritanceString.contains(" ")) {
-                    inheritanceName = inheritanceString;
-                } else {
-                    Map<String, String> deserialized = MapUtil.stringToMap(inheritanceString.substring(inheritanceString.indexOf(" ") + 1));
+        List<String> inheritance;
+        synchronized (this) {
+            inheritance = section.getStringList(SUBJECT_INHERITANCES);
+        }
+        for (String inheritanceString : inheritance) {
+            String inheritanceName;
+            ContextSet context = new MutableContextSet();
+            if (!inheritanceString.contains(" ")) {
+                inheritanceName = inheritanceString;
+            } else {
+                Map<String, String> deserialized = MapUtil.stringToMap(inheritanceString.substring(inheritanceString.indexOf(" ") + 1));
 
-                    if (deserialized.containsKey("context")) {
-                        try {
-                            context = ContextSet.fromString(deserialized.get("context"));
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
+                if (deserialized.containsKey("context")) {
+                    try {
+                        context = ContextSet.fromString(deserialized.get("context"));
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
-                    inheritanceName = inheritanceString.substring(0, inheritanceString.indexOf(" "));
                 }
-
-                Group group = GroupManager.instance.getVisibleGroup(inheritanceName);
-                if (group != null)
-                    out.add(new CachedInheritance(name, group.getSubjectId(), type, inheritanceType, context));
+                inheritanceName = inheritanceString.substring(0, inheritanceString.indexOf(" "));
             }
 
-            future.complete(out);
-            return null;
-        });
+            Group group = GroupManager.instance.getVisibleGroup(inheritanceName);
+            if (group != null)
+                out.add(new CachedInheritance(name, group.getSubjectId(), type, inheritanceType, context));
+        }
+
+        future.complete(out);
         return future;
     }
 

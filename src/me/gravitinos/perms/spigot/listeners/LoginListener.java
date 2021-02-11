@@ -2,7 +2,9 @@ package me.gravitinos.perms.spigot.listeners;
 
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.ContextSet;
 import me.gravitinos.perms.core.context.MutableContextSet;
+import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.user.User;
 import me.gravitinos.perms.core.user.UserManager;
@@ -74,49 +76,57 @@ public class LoginListener implements Listener {
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         if (!UserManager.instance.isUserLoaded(event.getPlayer().getUniqueId())) {
+
+            //User data wasn't loaded properly, retry asynchronously
             PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
                 event.getPlayer().sendMessage(ChatColor.translateAlternateColorCodes('&', SpigotPerms.pluginPrefix + ChatColor.RED + "Your userdata wasn't loaded properly, please wait a couple seconds..."));
                 try {
                     UserManager.instance.loadUser(event.getPlayer().getUniqueId(), event.getPlayer().getName()).get();
                     User user = UserManager.instance.getUser(event.getPlayer().getUniqueId());
                     if (user != null) {
-                        if (user.getData().getFirstJoined() == -1) {
-                            user.getData().setFirstJoined(System.currentTimeMillis());
-                        }
-
-                        //Add local default groups
-                        if(!user.getData().hasExtraData(PermsManager.instance.getImplementation().getConfigSettings().getServerId() + "-FJLDG")) {
-                            user.getData().setExtraData(PermsManager.instance.getImplementation().getConfigSettings().getServerId() + "-FJLDG", Long.toString(System.currentTimeMillis()));
-                            for (String localDefGroup : PermsManager.instance.getImplementation().getConfigSettings().getLocalDefaultGroups()) {
-                                if (GroupManager.instance.isVisibleGroupLoaded(localDefGroup)) {
-                                    user.addInheritance(GroupManager.instance.getVisibleGroup(localDefGroup), new MutableContextSet(Context.CONTEXT_SERVER_LOCAL));
-                                }
-                            }
-                        }
+                        handleUserJoin(user, event.getPlayer().getName());
+                        event.getPlayer().sendMessage(ChatColor.translateAlternateColorCodes('&', SpigotPerms.pluginPrefix + ChatColor.GREEN + "Your userdata was loaded successfully!"));
+                    } else {
+                        System.out.println("!! !! !! !! ERROR WHILE LOADING USERDATA FOR " + event.getPlayer());
+                        event.getPlayer().sendMessage(ChatColor.RED + "There was a big big problem loading your user data, sorry, please message an admin or developer about this.");
                     }
-                    event.getPlayer().sendMessage(ChatColor.translateAlternateColorCodes('&', SpigotPerms.pluginPrefix + ChatColor.GREEN + "Your userdata was loaded successfully!"));
                 } catch (InterruptedException | ExecutionException e) {
                     e.printStackTrace();
                 }
             });
         }
+
+        //Inject the custom permissible
         SpigotPermissible.inject(event.getPlayer());
+
+        //Try to handle user join
         User user = UserManager.instance.getUser(event.getPlayer().getUniqueId());
-        if (user != null) {
+        assert user != null;
+        handleUserJoin(user, event.getPlayer().getName());
+    }
 
-            if(!user.getName().equals(event.getPlayer().getName()))
-                user.setName(event.getPlayer().getName());
+    public void handleUserJoin(User user, String playerName) {
 
-            if (user.getData().getFirstJoined() == -1) {
-                user.getData().setFirstJoined(System.currentTimeMillis());
-            }
-            //Add local default groups
-            if(!user.getData().hasExtraData(PermsManager.instance.getImplementation().getConfigSettings().getServerId() + "-FJLDG")) {
-                user.getData().setExtraData(PermsManager.instance.getImplementation().getConfigSettings().getServerId() + "-FJLDG", Long.toString(System.currentTimeMillis()));
-                for (String localDefGroup : PermsManager.instance.getImplementation().getConfigSettings().getLocalDefaultGroups()) {
-                    if (GroupManager.instance.isVisibleGroupLoaded(localDefGroup)) {
-                        user.addInheritance(GroupManager.instance.getVisibleGroup(localDefGroup), new MutableContextSet(Context.CONTEXT_SERVER_LOCAL));
-                    }
+        //Re-assign user's name if needed
+        if(!user.getName().equals(playerName))
+            user.setName(playerName);
+
+        //Set the time of first joining if it has not already been set
+        if (user.getData().getFirstJoined() == -1)
+            user.getData().setFirstJoined(System.currentTimeMillis());
+
+        //Check for 0 inheritances that apply to this server, if true then add default group
+        if(user.getInheritances().stream().noneMatch(i -> i.getContext().appliesToAny(Context.CONTEXT_SERVER_LOCAL))) {
+            Group defaultGroup = GroupManager.instance.getDefaultGroup();
+            user.addInheritance(defaultGroup, defaultGroup.getContext());
+        }
+
+        //Add local default groups
+        if(!user.getData().hasExtraData(PermsManager.instance.getImplementation().getConfigSettings().getServerId() + "-FJLDG")) {
+            user.getData().setExtraData(PermsManager.instance.getImplementation().getConfigSettings().getServerId() + "-FJLDG", Long.toString(System.currentTimeMillis()));
+            for (String localDefGroup : PermsManager.instance.getImplementation().getConfigSettings().getLocalDefaultGroups()) {
+                if (GroupManager.instance.isVisibleGroupLoaded(localDefGroup)) {
+                    user.addInheritance(GroupManager.instance.getVisibleGroup(localDefGroup), new MutableContextSet(Context.CONTEXT_SERVER_LOCAL));
                 }
             }
         }

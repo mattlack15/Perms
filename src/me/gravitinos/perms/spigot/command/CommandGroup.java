@@ -27,6 +27,7 @@ public class CommandGroup extends GravSubCommand {
         this.addSubCommand(new CommandGroupList(this, this.getSubCommandCmdPath()));
         this.addSubCommand(new CommandGroupSetServer(this, this.getSubCommandCmdPath()));
         this.addSubCommand(new CommandLoadPermsFrom(this, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandGroupRename(this, this.getSubCommandCmdPath()));
     }
 
     @Override
