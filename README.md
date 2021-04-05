@@ -17,3 +17,10 @@ user.addPermission(new PPermission("hey.wassup", contextSet);
 ```java
 Group group = GroupManager.instance.getVisibleGroup("myGroupName");
 ```
+
+### Creating a group
+```java
+Group g = new GroupBuilder("default").setPrefix("[&7Default&f] ").setDescription("The default group")
+                .addPermission(new PPermission("modifyworld.*")).build();
+GroupManager.instance.addGroup(g);
+```
