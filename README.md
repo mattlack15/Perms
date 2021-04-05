@@ -6,7 +6,7 @@ This is a permissions plugin.
 ## API
 ### Getting a user object
 ```java
-User user = UserManager.getUser(player.getUniqueId());
+User user = UserManager.instance.getUser(player.getUniqueId());
 ```
 ### Adding a permission
 ```java
