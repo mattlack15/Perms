@@ -32,6 +32,11 @@ public class BungeeImpl implements PermsImplementation {
     }
 
     @Override
+    public void scheduleRepeatingTaskAsync(Runnable runnable, int delayTicks, int periodTicks) {
+        BungeePerms.instance.getProxy().getScheduler().schedule(BungeePerms.instance, runnable, delayTicks * 50, periodTicks * 50, TimeUnit.MILLISECONDS);
+    }
+
+    @Override
     public PermsConfiguration getConfigSettings() {
         return settings;
     }
@@ -79,5 +84,15 @@ public class BungeeImpl implements PermsImplementation {
     @Override
     public void consoleLog(String message) {
         BungeePerms.instance.getLogger().info(message);
+    }
+
+    @Override
+    public void sendDebugMessage(String message) {
+
+    }
+
+    @Override
+    public String getPluginName() {
+        return "Perms";
     }
 }

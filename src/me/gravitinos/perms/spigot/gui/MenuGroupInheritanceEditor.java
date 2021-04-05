@@ -1,13 +1,14 @@
 package me.gravitinos.perms.spigot.gui;
 
 import com.google.common.collect.Lists;
+import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.ContextSet;
+import me.gravitinos.perms.core.context.ServerContextType;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.group.GroupManager;
-import me.gravitinos.perms.core.subject.ImmutablePermissionList;
 import me.gravitinos.perms.core.subject.Inheritance;
-import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.subject.Subject;
 import me.gravitinos.perms.spigot.SpigotPerms;
 import me.gravitinos.perms.spigot.util.ItemBuilder;
@@ -25,9 +26,10 @@ import java.util.concurrent.ExecutionException;
 public class MenuGroupInheritanceEditor extends UtilMenuActionableList {
 
     public interface GroupInheritanceEditorHandler{
-        CompletableFuture<Void> addGroup(Group group, Context context);
-        CompletableFuture<Void> removeGroup(Group group);
-        Map<Group, Context> getGroups();
+        void addGroup(Group group, ContextSet context);
+        void removeGroup(Group group);
+        boolean isGodLocked();
+        Map<Group, ContextSet> getGroups();
     }
 
     private GroupInheritanceEditorHandler handler;
@@ -42,7 +44,7 @@ public class MenuGroupInheritanceEditor extends UtilMenuActionableList {
 
     public void setup(){
 
-        Map<Group, Context> contexts = handler.getGroups();
+        Map<Group, ContextSet> contexts = handler.getGroups();
 
         ArrayList<Group> groups = Lists.newArrayList(contexts.keySet());
 
@@ -54,10 +56,19 @@ public class MenuGroupInheritanceEditor extends UtilMenuActionableList {
 
             Group group = groups.get(num);
 
-            ItemBuilder builder = new ItemBuilder(Material.BOOK, 1);
+            long expirSeconds = (contexts.get(group).getExpiration() - System.currentTimeMillis()) / 1000;
+            String expirTime = expirSeconds > 60 ? expirSeconds > 3600 ? expirSeconds > 86400 ? (expirSeconds / 86400) + " days" :
+                    (expirSeconds / 3600) + " hours" : (expirSeconds / 60) + " minutes" : expirSeconds + " seconds";
+
+            if(contexts.get(group).getExpiration() == -1){
+                expirTime = "&cNever";
+            }
+
+            ItemBuilder builder = new ItemBuilder(Material.getMaterial(group.getIconCombinedId() >> 4), 1, (byte) (group.getIconCombinedId() & 15));
             builder.setName("&e" + group.getName());
-            builder.addLore("&6Inheritance Context: &6" + (contexts.get(group).getServerName().equals(GroupData.SERVER_GLOBAL) ? "&cGLOBAL" : (contexts.get(group).getServerName().equals(GroupData.SERVER_LOCAL) ? "&aLOCAL" : contexts.get(group).getServerName())));
-            builder.addLore("&fGroup Server Context: &6" + (group.getServerContext().equals(GroupData.SERVER_GLOBAL) ? "&cGLOBAL" : (group.getServerContext().equals(GroupData.SERVER_LOCAL) ? "&aLOCAL" : group.getServerContext())));
+            builder.addLore("&9Expiration: &f" + expirTime);
+            builder.addLore("&6Inheritance Context: &6" + ServerContextType.getType(contexts.get(group)).getDisplay());
+            builder.addLore("&fGroup Server Context: &6" + ServerContextType.getType(group.getContext()).getDisplay());
             builder.addLore("&fDefault Group: " + (GroupManager.instance.getDefaultGroup().equals(group) ? "&atrue" : "&cfalse"));
             builder.addLore("&fPriority: &a" + group.getPriority());
             builder.addLore("&fPrefix: " + group.getPrefix());
@@ -69,7 +80,7 @@ public class MenuGroupInheritanceEditor extends UtilMenuActionableList {
             }
             builder.addLore("&fInheritances: ");
             for(Inheritance inheritance : group.getInheritances()){
-                Subject parent = inheritance.getParent();
+                Subject<?> parent = inheritance.getParent();
                 if(parent instanceof Group){
                     builder.addLore("&7 - " + ((Group) parent).getName());
                 }
@@ -81,6 +92,10 @@ public class MenuGroupInheritanceEditor extends UtilMenuActionableList {
             builder.addLore("&eShift Left Click &f- &dOpen Group");
 
             return new MenuElement(builder.build()).setClickHandler((e, i) -> {
+                if(handler.isGodLocked() && !PermsManager.instance.getGodUsers().contains(e.getWhoClicked().getName())) {
+                    getElement(e.getSlot()).addTempLore(this, "&cThis subject is &4God Locked!", 60);
+                    return;
+                }
                 if(e.getClick().isRightClick()){
                     handler.removeGroup(group);
                     groups.clear();
@@ -92,14 +107,10 @@ public class MenuGroupInheritanceEditor extends UtilMenuActionableList {
                     new MenuGroup(group, Menu.getBackButton(this)).open((Player) e.getWhoClicked());
                 } else {
                     new MenuContextEditor(contexts.get(group), (c) -> SpigotPerms.instance.getImpl().getAsyncExecutor().execute(() -> {
-                        try {
-                            contexts.put(group, c);
-                            this.setupPage(this.getCurrentPage());
-                            handler.removeGroup(group).get();
-                            handler.addGroup(group, c);
-                        } catch (InterruptedException | ExecutionException ex) {
-                            ex.printStackTrace();
-                        }
+                        contexts.put(group, c);
+                        this.setupPage(this.getCurrentPage());
+                        handler.removeGroup(group);
+                        handler.addGroup(group, c);
                     }), Menu.getBackButton(this)).open((Player) e.getWhoClicked());
                 }
             });
@@ -109,7 +120,10 @@ public class MenuGroupInheritanceEditor extends UtilMenuActionableList {
         .setClickHandler((e, i) -> {
             ArrayList<Group> groupList = GroupManager.instance.getLoadedGroups();
             groupList.removeIf(g -> !g.serverContextAppliesToThisServer());
-
+            if(handler.isGodLocked() && !PermsManager.instance.getGodUsers().contains(e.getWhoClicked().getName())) {
+                getElement(e.getSlot()).addTempLore(this, "&cThis subject is &4God Locked!", 60);
+                return;
+            }
             new UtilMenuActionableList("Add Group", 4, (num) -> {
                 if(num >= groupList.size()){
                     return null;
@@ -122,7 +136,8 @@ public class MenuGroupInheritanceEditor extends UtilMenuActionableList {
                 .addLore("&fPrefix: " + g.getPrefix())
                 .addLore("&fSuffix: " + g.getSuffix()).build())
                         .setClickHandler((e1, i1) -> {
-                            handler.addGroup(g, new Context(g.getServerContext(), Context.VAL_ALL));
+                            handler.addGroup(g, g.getContext());
+                            GroupManager.instance.eliminateInheritanceMistakes();
                             groups.clear();
                             contexts.clear();
                             contexts.putAll(handler.getGroups());

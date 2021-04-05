@@ -50,6 +50,7 @@ public class CommandGroupSetPrefix extends GravSubCommand {
         builder.deleteCharAt(builder.length()-1);
 
         String prefix = builder.toString();
+        prefix = prefix.replace("'", "").replace("\"", "");
 
         Group group = (Group)passedArgs[0];
 

@@ -1,7 +1,8 @@
 package me.gravitinos.perms.spigot.util.Menus;
 
-import javafx.scene.control.MenuItem;
+import lombok.Getter;
 import me.gravitinos.perms.spigot.SpigotPerms;
+import me.gravitinos.perms.spigot.gui.UtilMenuActionableList;
 import me.gravitinos.perms.spigot.util.ItemBuilder;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -53,8 +54,7 @@ public abstract class Menu {
         return title;
     }
 
-    //private
-    private Inventory buildInventory(){
+    public Inventory buildInventory(){
         Inventory inv = Bukkit.createInventory(null, this.getSize(), title);
         for(int i = 0; i < this.getSize(); i++){
             MenuElement e = this.getElement(i);
@@ -79,14 +79,23 @@ public abstract class Menu {
         Inventory inv = this.buildInventory();
         InvInfo info = new InvInfo(inv, this, data);
 
+        InvInfo pastInfo = MenuManager.instance.getInfo(p.getUniqueId());
+
         //For immediate effect
         MenuManager.instance.addMenu(this); //Make sure this menu is added to the list
         MenuManager.instance.setInfo(p.getUniqueId(), info);
         doInMainThread(() -> {
             //To make sure it is set when the inv is opened
-            MenuManager.instance.addMenu(this); //Make sure this menu is added to the list
-            MenuManager.instance.setInfo(p.getUniqueId(), info);
-            p.openInventory(inv);
+            if (pastInfo != null && pastInfo.getCurrentInv() != null && pastInfo.getCurrentInv().getSize() == inv.getSize() && pastInfo.getCurrentInv().getTitle().equals(inv.getTitle())) {
+                pastInfo.getCurrentInv().setContents(inv.getContents());
+                info.setCurrentInv(pastInfo.getCurrentInv());
+                MenuManager.instance.addMenu(this); //Make sure this menu is added to the list
+                MenuManager.instance.setInfo(p.getUniqueId(), info);
+            } else {
+                p.openInventory(inv);
+                MenuManager.instance.addMenu(this); //Make sure this menu is added to the list
+                MenuManager.instance.setInfo(p.getUniqueId(), info);
+            }
         });
     }
 
@@ -197,7 +206,57 @@ public abstract class Menu {
         }
     }
 
+    public void setTitle(String title){
+        this.title = title;
+    }
+
     public Map<Integer, MenuElement> getElements() {
         return elements;
     }
+
+    @Getter
+    private int currentPage = 0;
+
+    public void setupActionableList(int startPos, int endPos, int backPos, int nextPos, UtilMenuActionableList.MenuElementSupplier elementSupplier, int page) {
+        //Pageable list
+        currentPage = page;
+
+        int calculatedMarginLeft = startPos % 9;
+        int calculatedMarginRight = 8 - endPos % 9;
+
+        int elementIndex = page * (9-calculatedMarginLeft-calculatedMarginRight) * (((endPos - (endPos % 9)) / 9) - ((startPos - (startPos % 9)) / 9) + 1);
+        boolean placing = true;
+        for (int slot = startPos; slot <= endPos; slot++) {
+            if (8 - slot % 9 < calculatedMarginRight) {
+                slot += calculatedMarginLeft + calculatedMarginRight;
+            }
+
+            if (placing) {
+                MenuElement element = elementSupplier.getElement(elementIndex);
+                if (element == null) {
+                    placing = false;
+                    this.setElement(slot, null);
+                } else {
+                    this.setElement(slot, element);
+                }
+            } else {
+                this.setElement(slot, null);
+            }
+            elementIndex++;
+        }
+
+        MenuElement back = new MenuElement(new ItemBuilder(Material.ARROW, 1).setName("&fBack").build()).setClickHandler((e, i) -> this.setupActionableList(startPos, endPos, backPos
+                , nextPos, elementSupplier, page - 1));
+        MenuElement next = new MenuElement(new ItemBuilder(Material.ARROW, 1).setName("&fNext").build()).setClickHandler((e, i) -> this.setupActionableList(startPos, endPos, backPos
+                , nextPos, elementSupplier, page + 1));
+
+        if (page != 0) {
+            this.setElement(backPos, back);
+        }
+        if (elementSupplier.getElement(elementIndex + 1) != null) {
+            this.setElement(nextPos, next);
+        }
+        MenuManager.instance.invalidateInvsForMenu(this);
+    }
+
 }

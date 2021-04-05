@@ -1,6 +1,7 @@
 package me.gravitinos.perms.spigot.command.group;
 
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.ServerContextType;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.user.UserData;
@@ -58,8 +59,8 @@ public class CommandGroupRemove extends GravSubCommand {
         }
 
         PPermission permToRemove = null;
-        for(PPermission perms : group.getOwnPermissions()){
-            if(perms.getContext().getServerName().equals(UserData.SERVER_LOCAL) && gl.equals("local") && perms.getPermission().equals(perm)){
+        for(PPermission perms : group.getPermissions()){
+            if(ServerContextType.getType(perms.getContext()).equals(ServerContextType.LOCAL) && gl.equals("local") && perms.getPermission().equals(perm)){
                 permToRemove = perms;
                 break;
             } else if(gl.equals("global") && perms.getPermission().equals(perm)){
@@ -73,7 +74,7 @@ public class CommandGroupRemove extends GravSubCommand {
             return true;
         }
 
-        group.removeOwnPermission(permToRemove);
+        group.removePermission(permToRemove);
         this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + perm.toLowerCase() + " &7has been &cremoved&7 from their permissions!");
         return true;
     }

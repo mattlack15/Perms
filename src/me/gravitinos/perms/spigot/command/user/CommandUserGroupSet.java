@@ -1,7 +1,7 @@
 package me.gravitinos.perms.spigot.command.user;
 
-import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.group.GroupManager;
@@ -57,7 +57,7 @@ public class CommandUserGroupSet extends GravSubCommand {
             return true;
         }
 
-        Context context = Context.CONTEXT_SERVER_LOCAL;
+        MutableContextSet context = new MutableContextSet(Context.CONTEXT_SERVER_LOCAL);
 
         if(args.length > 1){
             StringBuilder builder = new StringBuilder();
@@ -67,20 +67,20 @@ public class CommandUserGroupSet extends GravSubCommand {
             builder.deleteCharAt(builder.length()-1);
             String contextStr = builder.toString();
             if(contextStr.equalsIgnoreCase("global")){ //If the argument says global
-                context = Context.CONTEXT_SERVER_GLOBAL;
+                context.removeContexts(Context.SERVER_IDENTIFIER);
             } else if(!contextStr.equalsIgnoreCase("local")) { //If the argument doesn't say global (else) and doesn't say local (!)
-                context = Context.fromString(builder.toString());
+                context.removeContexts(Context.SERVER_IDENTIFIER);
+                context.addContext(Context.fromStringChatFormat(builder.toString()));
             }
         }
 
-        Context finalContext = context;
         UserManager.instance.getDataManager().performOrderedOpAsync(() -> {
-            if(finalContext.getServerName().equals(GroupData.SERVER_GLOBAL)){
+            if(context.filterByKey(Context.SERVER_IDENTIFIER).size() == 0){
                 user.clearInheritancesGlobal();
             } else {
                 user.clearInheritancesLocal();
             }
-            user.addInheritance(group, finalContext);
+            user.addInheritance(group, context);
             return null;
         });
         this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + group.getName() + " &7was set as &b" + user.getName() + "&7's &conly&7 inheritance");

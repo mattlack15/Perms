@@ -1,11 +1,11 @@
 package me.gravitinos.perms.spigot.command;
 
+import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.MutableContextSet;
+import me.gravitinos.perms.core.context.ServerContextType;
 import me.gravitinos.perms.core.group.Group;
-import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.spigot.SpigotPerms;
-import me.gravitinos.perms.spigot.command.GravCommandPermissionable;
-import me.gravitinos.perms.spigot.command.GravSubCommand;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 
@@ -41,11 +41,10 @@ public class CommandGroups extends GravSubCommand {
             this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&a&lLOCAL &fExisting Groups:");
 
             for(Group groups : GroupManager.instance.getLoadedGroups()){
-                if(!groups.getServerContext().equals(GroupData.SERVER_LOCAL)){
+                if(!groups.isGlobal() && groups.getContext().appliesToAny(Context.CONTEXT_SERVER_LOCAL))
                     continue;
-                }
 
-                this.sendErrorMessage(sender, "&7 - &f" + groups.getName() + " (" + groups.getPrefix() + "&f) (&e" + groups.getServerContext() + "&f) &a" + groups.getPriority());
+                this.sendErrorMessage(sender, "&7 - &f" + groups.getName() + " (" + groups.getPrefix() + "&f) (&e" + ServerContextType.getType(groups.getContext()) + "&f) &a" + groups.getPriority());
             }
 
         } else if(args.length > 0 && args[0].equalsIgnoreCase("global")){
@@ -53,28 +52,26 @@ public class CommandGroups extends GravSubCommand {
             this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&c&lGLOBAL &fExisting Groups:");
 
             for(Group groups : GroupManager.instance.getLoadedGroups()){
-                if(!groups.getServerContext().equals(GroupData.SERVER_GLOBAL)){
+                if(!groups.isGlobal())
                     continue;
-                }
 
-                this.sendErrorMessage(sender, "&7 - &f" + groups.getName() + " (" + groups.getPrefix() + "&f) (&e" + groups.getServerContext() + "&f) &a" + groups.getPriority());
+                this.sendErrorMessage(sender, "&7 - &f" + groups.getName() + " (" + groups.getPrefix() + "&f) (&e" + ServerContextType.getType(groups.getContext()) + "&f) &a" + groups.getPriority());
             }
 
         } else if (args.length > 0 && args[0].equalsIgnoreCase("all")){
             this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&4&lALL &fExisting Groups:");
 
             for(Group groups : GroupManager.instance.getLoadedGroups()){
-                this.sendErrorMessage(sender, "&7 - &f" + groups.getName() + " (" + groups.getPrefix() + "&f) (&e" + groups.getServerContext() + "&f) &a" + groups.getPriority());
+                this.sendErrorMessage(sender, "&7 - &f" + groups.getName() + " (" + groups.getPrefix() + "&f) (&e" + ServerContextType.getType(groups.getContext()) + "&f) &a" + groups.getPriority());
             }
         } else {
             this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&6&lVisible &fExisting Groups:");
 
             for(Group groups : GroupManager.instance.getLoadedGroups()){
-                if(!groups.getServerContext().equals(GroupData.SERVER_GLOBAL) && !groups.getServerContext().equals(GroupData.SERVER_LOCAL)){
+                if(!groups.serverContextAppliesToThisServer())
                     continue;
-                }
 
-                this.sendErrorMessage(sender, "&7 - &f" + groups.getName() + " (" + groups.getPrefix() + "&f) (&e" + groups.getServerContext() + "&f) &a" + groups.getPriority());
+                this.sendErrorMessage(sender, "&7 - &f" + groups.getName() + " (" + groups.getPrefix() + "&f) (&e" + ServerContextType.getType(groups.getContext()) + "&f) &a" + groups.getPriority());
             }
         }
 

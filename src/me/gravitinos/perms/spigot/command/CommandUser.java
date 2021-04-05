@@ -1,8 +1,8 @@
 package me.gravitinos.perms.spigot.command;
 
-import me.gravitinos.perms.core.PermsManager;
-import me.gravitinos.perms.core.group.Group;
-import me.gravitinos.perms.core.group.GroupData;
+import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.MutableContextSet;
+import me.gravitinos.perms.core.context.ServerContextType;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.subject.Inheritance;
 import me.gravitinos.perms.core.user.User;
@@ -10,13 +10,11 @@ import me.gravitinos.perms.core.user.UserManager;
 import me.gravitinos.perms.spigot.SpigotPerms;
 import me.gravitinos.perms.spigot.command.user.*;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 
 public class CommandUser extends GravSubCommand {
@@ -128,13 +126,11 @@ public class CommandUser extends GravSubCommand {
                 sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fUUID &6> &7" + user.getUniqueID());
                 sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fPrefix &6> " + user.getPrefix());
                 sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fSuffix &6> " + user.getSuffix());
-                sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fDisplay Group &6> &7" + user.getDisplayGroup());
+                sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fDisplay Group &6> &7" + GroupManager.instance.getGroupExact(user.getDisplayGroup()).getName());
 
                 sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&fInheritances (Groups) &6>");
-                for (Inheritance inheritance : user.getInheritances()) {
-                    boolean applies = inheritance.getContext().getServerName().equals(GroupData.SERVER_GLOBAL) || inheritance.getContext().getServerName().equals(GroupData.SERVER_LOCAL);
-                    sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&7- &e" + PermsManager.removeServerFromIdentifier(inheritance.getParent().getIdentifier()) + (applies ? "" : " &cDoes not apply here &7(&f" + inheritance.getContext().getServerName() + "&7)"));
-                }
+                for (Inheritance inheritance : user.getInheritances())
+                    sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&7- &e" + inheritance.getParent().getName() + " " + ServerContextType.getType(inheritance.getContext()).getDisplay());
 
             }
         });

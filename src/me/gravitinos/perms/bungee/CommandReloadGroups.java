@@ -2,6 +2,7 @@ package me.gravitinos.perms.bungee;
 
 import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.group.GroupManager;
+import me.gravitinos.perms.core.user.UserManager;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.CommandSender;
 import net.md_5.bungee.api.plugin.Command;
@@ -12,7 +13,7 @@ import java.util.concurrent.ExecutionException;
 public class CommandReloadGroups extends Command {
 
     protected CommandReloadGroups() {
-        super("ranksbung");
+        super("ppbung");
     }
 
     @Override
@@ -29,6 +30,7 @@ public class CommandReloadGroups extends Command {
         if(args[0].equalsIgnoreCase("reloadgroups")){
             CompletableFuture<Boolean> future = GroupManager.instance.reloadGroups();
             commandSender.sendMessage("Reloading groups...");
+            PermsManager.instance.reloadGodUsers();
             PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
                 try {
                     future.get();

@@ -1,5 +1,6 @@
 package me.gravitinos.perms.spigot.command.group;
 
+import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.spigot.SpigotPerms;
@@ -37,9 +38,13 @@ public class CommandGroupDelete extends GravSubCommand {
 
         Group group = (Group)passedArgs[0];
 
+        if(group.isGodLocked() && !PermsManager.instance.getGodUsers().contains(sender.getName())) {
+            return sendErrorMessage(sender, SpigotPerms.pluginPrefix + "You must be a god user to do this!");
+        }
+
         GroupManager.instance.removeGroup(group);
 
-        this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Group &cdeleted&7 successfully");
+        this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Group&c deleted&7 successfully");
 
         return true;
     }

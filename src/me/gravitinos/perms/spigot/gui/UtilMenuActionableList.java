@@ -4,6 +4,7 @@ import me.gravitinos.perms.spigot.util.ItemBuilder;
 import me.gravitinos.perms.spigot.util.Menus.Menu;
 import me.gravitinos.perms.spigot.util.Menus.MenuElement;
 import me.gravitinos.perms.spigot.util.Menus.MenuManager;
+import org.bukkit.event.inventory.ClickType;
 import org.jetbrains.annotations.NotNull;
 
 public class UtilMenuActionableList extends Menu {
@@ -126,18 +127,28 @@ public class UtilMenuActionableList extends Menu {
 
         //Prev page
         if (page > 0) {
-            this.setElement(endPos + 1, new MenuElement(new ItemBuilder(Menu.PAGE_CONTROL_ITEM, 1).setName("&f&lPrevious Page").build()).setStaticItem(true)
-                    .setClickHandler((e, i) -> this.setupPage(page - 1)));
+            this.setElement(endPos + margin + 1, new MenuElement(new ItemBuilder(Menu.PAGE_CONTROL_ITEM, 1).setName("&f&lPrevious Page")
+                    .addLore("&7You are on page &e" + (page+1)).build()).setStaticItem(true)
+                    .setClickHandler((e, i) -> {
+                        if(e.getClick().equals(ClickType.DOUBLE_CLICK))
+                            return;
+                        this.setupPage(page - 1);
+                    }));
         } else {
-            this.setElement(endPos + 1, null);
+            this.setElement(endPos + margin + 1, null);
         }
 
         //Next page
-        if (supplier.getElement(endPos + pageBuffer + 1) != null && supplier.getElement(endPos + pageBuffer + 1).getItem() != null) {
-            this.setElement(endPos + 9, new MenuElement(new ItemBuilder(Menu.PAGE_CONTROL_ITEM, 1).setName("&f&lNext Page").build()).setStaticItem(true)
-                    .setClickHandler((e, i) -> this.setupPage(page + 1)));
+        if (supplier.getElement(elementNum + pageBuffer) != null && supplier.getElement(elementNum + pageBuffer).getItem() != null) {
+            this.setElement(endPos + 9 + margin, new MenuElement(new ItemBuilder(Menu.PAGE_CONTROL_ITEM, 1).setName("&f&lNext Page")
+                    .addLore("&7You are on page &e" + (page+1)).build()).setStaticItem(true)
+                    .setClickHandler((e, i) -> {
+                        if(e.getClick().equals(ClickType.DOUBLE_CLICK))
+                            return;
+                        this.setupPage(page + 1);
+                    }));
         } else {
-            this.setElement(endPos + 9, null);
+            this.setElement(endPos + 9 + margin, null);
         }
 
         this.fillElement(filler);

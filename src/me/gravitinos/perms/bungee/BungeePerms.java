@@ -1,18 +1,21 @@
 package me.gravitinos.perms.bungee;
 
-import me.gravitinos.perms.core.PermsImplementation;
+import com.zaxxer.hikari.HikariDataSource;
 import me.gravitinos.perms.core.PermsManager;
+import me.gravitinos.perms.core.backend.DataManager;
+import me.gravitinos.perms.core.backend.StorageCredentials;
+import me.gravitinos.perms.core.backend.mongo.MongoHandler;
 import me.gravitinos.perms.core.backend.sql.SQLHandler;
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.MutableContextSet;
+import me.gravitinos.perms.core.group.GroupManager;
+import me.gravitinos.perms.core.subject.SubjectRef;
 import me.gravitinos.perms.core.user.User;
 import me.gravitinos.perms.core.user.UserManager;
-import me.gravitinos.perms.spigot.SpigotPerms;
 import net.md_5.bungee.api.CommandSender;
-import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.api.event.PermissionCheckEvent;
-import net.md_5.bungee.api.event.PostLoginEvent;
-import net.md_5.bungee.api.event.PreLoginEvent;
-import net.md_5.bungee.api.event.ServerConnectEvent;
+import net.md_5.bungee.api.config.ServerInfo;
+import net.md_5.bungee.api.connection.ProxiedPlayer;
+import net.md_5.bungee.api.event.*;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.api.plugin.Plugin;
 import net.md_5.bungee.config.Configuration;
@@ -20,11 +23,10 @@ import net.md_5.bungee.config.ConfigurationProvider;
 import net.md_5.bungee.config.YamlConfiguration;
 import net.md_5.bungee.event.EventHandler;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
@@ -32,7 +34,7 @@ public class BungeePerms extends Plugin implements Listener {
     public static BungeePerms instance;
     public static Configuration config;
 
-    private volatile ArrayList<UUID> loggingIn = new ArrayList<>();
+    private volatile List<UUID> loggingIn = new ArrayList<>();
 
     private PermsManager manager;
 
@@ -63,12 +65,37 @@ public class BungeePerms extends Plugin implements Listener {
         }
 
 
-        SQLHandler handler = new SQLHandler();
-        manager = new PermsManager(new BungeeImpl(), handler);
+        BungeeImpl bi = new BungeeImpl();
+        DataManager dataManager;
+        if (bi.getConfigSettings().isUsingSQL()) {
+            String type = bi.getConfigSettings().getDatabaseType();
+            if(type.equalsIgnoreCase("mongo")) {
+                dataManager = new MongoHandler(new StorageCredentials(bi.getConfigSettings().getSQLUsername(), bi.getConfigSettings().getSQLPassword(),
+                        bi.getConfigSettings().getSQLHost(), bi.getConfigSettings().getSQLPort()), bi.getConfigSettings().getSQLDatabase());
+            } else {
+                dataManager = new SQLHandler();
+            }
+        } else {
+            getLogger().severe("PERMS > SQL must be set to true and configured in config.yml");
+            return;
+        }
+        manager = new PermsManager(bi, dataManager);
+
+        UserManager.instance.setDefaultGroupInheritanceContext(new MutableContextSet());
 
         getProxy().getPluginManager().registerListener(this, this);
         getProxy().getPluginManager().registerCommand(this, new CommandReloadGroups());
+
+        getProxy().getPluginManager().registerListener(this, this);
+        getProxy().registerChannel("BungeeCord");
     }
+
+    @Override
+    public void onDisable(){
+        if (GroupManager.instance.getDataManager() instanceof SQLHandler)
+            if(((HikariDataSource) ((SQLHandler) GroupManager.instance.getDataManager()).getDataSource()) != null)
+                ((HikariDataSource) ((SQLHandler) GroupManager.instance.getDataManager()).getDataSource()).close();
+}
 
     @EventHandler
     public void onPermCheck(PermissionCheckEvent event){
@@ -87,36 +114,63 @@ public class BungeePerms extends Plugin implements Listener {
         String name = event.getConnection().getName();
         UUID id = event.getConnection().getUniqueId();
 
+        if(UserManager.instance == null)
+            return;
+
         try {
-            UserManager.instance.loadUser(id, name).get();
+            getLogger().info("Loading userdata for " + name + " (" + id + ")");
+
+            if(!UserManager.instance.loadUser(id, name, false).get()){
+                getLogger().info("There was an error while loading userdata for " + name);
+                return;
+            }
             User user = UserManager.instance.getUser(id);
-            getLogger().info("Userdata loaded for " + user.getName() + " (" + user.getUniqueID() + ")");
+            if(!UserManager.instance.isUserLoaded(id)){
+                getLogger().info("There was an error while loading userdata for " + name + ", could not find user in UserManager!");
+            } else {
+                if(user.getData().getFirstJoined() == -1){
+                    user.getData().setFirstJoined(System.currentTimeMillis());
+                }
+
+                //Add default group
+                if(user.getInheritances().size() == 0 && GroupManager.instance.getDefaultGroup().isGlobal()){
+                    user.getOwnLoggedInheritances().getLock().lock();
+                    try {
+                        user.addInheritance(GroupManager.instance.getDefaultGroup(), new MutableContextSet());
+                        user.getOwnLoggedInheritances().resetLog();
+                    } finally {
+                        user.getOwnLoggedInheritances().getLock().unlock();
+                    }
+                    user.getDataManager().updateSubject(user).join();
+                }
+
+                getLogger().info("Userdata loaded for " + user.getName() + " (" + user.getUniqueID() + ")");
+            }
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }
     }
 
+    @EventHandler
     public void onSwitchServers(ServerConnectEvent event){
         UserManager.instance.loadUser(event.getPlayer().getUniqueId(), event.getPlayer().getName()); //reload the user again (the load operation is async since .get() is not called)
     }
 
     public boolean hasPermission(CommandSender sender, String requ) {
         User user = UserManager.instance.getUserFromName(sender.getName());
-        if((BungeeConfigSettings.instance.getGodUsers().contains(sender.getName()))) {
+        if(PermsManager.instance.getGodUsers().contains(sender.getName())) {
             return true;
         }
         if(user == null){
             return false;
         }
 
-        Context context = new Context(BungeeConfigSettings.instance.getServerName(), Context.VAL_ALL);
+        MutableContextSet contexts = new MutableContextSet();
+        contexts.addContext(new Context(Context.SERVER_IDENTIFIER, Integer.toString(BungeeConfigSettings.instance.getServerId())));
+        //contexts.addContext(new Context(Context.WORLD_IDENTIFIER, ));
 
         ArrayList<String> perms = new ArrayList<>();
-        user.getAllPermissions(context).forEach(p -> {
-            if(p.getContext().applies(context)) { //Check context
-                perms.add(p.getPermission());
-            }
-        });
+        user.getAllPermissions(contexts).forEach(p -> perms.add(p.getPermission()));
         if(perms.contains("-" + requ)) {
             return false;
         }
@@ -134,5 +188,50 @@ public class BungeePerms extends Plugin implements Listener {
             }
         }
         return false;
+    }
+
+    @EventHandler
+    public void onPluginMessage(PluginMessageEvent event) {
+        if (event.getTag().equals("BungeeCord")) {
+            DataInputStream stream = new DataInputStream(new ByteArrayInputStream(event.getData()));
+
+            try {
+                String cmd = stream.readUTF();
+
+                ProxiedPlayer sender = getProxy().getPlayer(event.getReceiver().toString());
+
+                if (cmd.equals("perms::reloadsubject")) {
+                    event.setCancelled(true);
+
+                    String idStr = stream.readUTF();
+
+                    //Update
+                    UUID id = UUID.fromString(idStr);
+                    PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
+                        if(UserManager.instance.isUserLoaded(id)){
+                            User user = UserManager.instance.getUser(id);
+                            String username = user.getName();
+                            UserManager.instance.loadUser(id, username);
+                        } else if(GroupManager.instance.isGroupExactLoaded(id)){
+                            GroupManager.instance.loadGroup(id, (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s)));
+                        }
+                    });
+
+                    for(ServerInfo servers : getProxy().getServers().values()){
+
+                        if(sender.getServer().getInfo().getName().equals(servers.getName()))
+                            continue;
+
+                        ByteArrayOutputStream b = new ByteArrayOutputStream();
+                        DataOutputStream stream1 = new DataOutputStream(b);
+                        stream1.writeUTF("perms::reloadsubject");
+                        stream1.writeUTF(idStr);
+                        servers.sendData("BungeeCord", b.toByteArray());
+                    }
+                }
+            } catch(Exception e){
+                e.printStackTrace();
+            }
+        }
     }
 }

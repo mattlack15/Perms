@@ -1,6 +1,8 @@
 package me.gravitinos.perms.spigot.command.group;
 
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.ContextSet;
+import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.user.User;
@@ -51,9 +53,9 @@ public class CommandGroupAdd extends GravSubCommand {
 
         Group group = (Group) passedArgs[0];
 
-        Context context = new Context(group.getServerContext(), Context.VAL_ALL);
+        MutableContextSet context = new MutableContextSet(group.getContext());
 
-        long expiration = 0;
+        long expiration = ContextSet.NO_EXPIRATION;
 
         if(args.length > 1){
             try{
@@ -78,16 +80,20 @@ public class CommandGroupAdd extends GravSubCommand {
             }
             builder.deleteCharAt(builder.length()-1);
             String contextStr = builder.toString();
+            context.removeContexts(Context.SERVER_IDENTIFIER);
             if(contextStr.equalsIgnoreCase("global")){ //If the argument says global
-                context = Context.CONTEXT_SERVER_GLOBAL;
+                //Do nothing, blank is global
             } else if(!contextStr.equalsIgnoreCase("local")) { //If the argument doesn't say global (else) and doesn't say local (!)
-                context = Context.fromString(builder.toString());
-            } else {
-                context = Context.CONTEXT_SERVER_LOCAL;
+                Context c = Context.fromStringChatFormat(builder.toString());
+                context.addContext(c != null ? c : Context.CONTEXT_SERVER_LOCAL);
+            } else { //If it does say local
+                context.addContext(Context.CONTEXT_SERVER_LOCAL);
             }
         }
 
-        group.addOwnPermission(new PPermission(perm, context, expiration));
+        context.setExpiration(expiration);
+
+        group.addPermission(new PPermission(perm, context));
         this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + perm.toLowerCase() + " &7has been &aadded&7 to the group's permissions!");
         return true;
     }

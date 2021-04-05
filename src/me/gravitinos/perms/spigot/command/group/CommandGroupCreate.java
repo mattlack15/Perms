@@ -1,5 +1,7 @@
 package me.gravitinos.perms.spigot.command.group;
 
+import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupBuilder;
 import me.gravitinos.perms.core.group.GroupData;
@@ -54,9 +56,9 @@ public class CommandGroupCreate extends GravSubCommand {
         GroupBuilder builder = new GroupBuilder(groupName);
         Group group = builder.build();
         if(serverContext.equals("local")){
-            group.setServerContext(GroupData.SERVER_LOCAL);
+            group.setContext(new MutableContextSet(Context.CONTEXT_SERVER_LOCAL));
         } else {
-            group.setServerContext(GroupData.SERVER_GLOBAL);
+            group.setContext(new MutableContextSet());
         }
         GroupManager.instance.addGroup(group);
 

@@ -20,6 +20,7 @@ public class CommandPerms extends GravCommand {
         this.addSubCommand(new CommandLoadToFiles(this, this.getSubCommandCmdPath()));
         this.addSubCommand(new CommandLoadToSQL(this, this.getSubCommandCmdPath()));
         this.addSubCommand(new CommandReload(this, this.getSubCommandCmdPath()));
+        this.addSubCommand(new CommandVerbose(this, this.getSubCommandCmdPath()));
     }
 
     @Override

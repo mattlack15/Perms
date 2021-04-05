@@ -44,6 +44,7 @@ public class CommandReload extends GravSubCommand {
 
         PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> {
             SpigotPerms.instance.reloadConfig();
+            PermsManager.instance.reloadGodUsers();
             try {
                 GroupManager.instance.reloadGroups().get();
                 UserManager.instance.reloadUsers().get();

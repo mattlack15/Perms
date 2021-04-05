@@ -1,65 +1,30 @@
 package me.gravitinos.perms.core.cache;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.subject.SubjectData;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * Immutable
  */
+@Getter
+@AllArgsConstructor
 public final class CachedSubject {
+    private UUID subjectId;
+
+    @Setter
     private String type;
-    private String identifier;
+
+    @Setter
     private SubjectData data;
-    private ArrayList<PPermission> permissions;
-    private ArrayList<CachedInheritance> inheritances;
-
-    public CachedSubject(String identifier, String type, SubjectData data, ArrayList<PPermission> permissions, ArrayList<CachedInheritance> inheritances) {
-        this.identifier = identifier;
-        this.type = type;
-        this.data = data;
-        this.permissions = permissions;
-        this.inheritances = inheritances;
-    }
-
-    public ArrayList<CachedInheritance> getInheritances() {
-        return inheritances;
-    }
-
-    public ArrayList<PPermission> getPermissions() {
-        return permissions;
-    }
-
-    public String getIdentifier() {
-        return identifier;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public SubjectData getData() {
-        return data;
-    }
-
-    public void setPermissions(ArrayList<PPermission> permissions) {
-        this.permissions = permissions;
-    }
-
-    public void setIdentifier(String identifier) {
-        this.identifier = identifier;
-    }
-
-    public void setInheritances(ArrayList<CachedInheritance> inheritances) {
-        this.inheritances = inheritances;
-    }
-
-    public void setData(SubjectData data) {
-        this.data = data;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
+    @Setter
+    private List<PPermission> permissions;
+    @Setter
+    private List<CachedInheritance> inheritances;
 }

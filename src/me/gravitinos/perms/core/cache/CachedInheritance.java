@@ -1,70 +1,33 @@
 package me.gravitinos.perms.core.cache;
 
-import me.gravitinos.perms.core.context.Context;
+import lombok.Getter;
+import lombok.Setter;
+import me.gravitinos.perms.core.context.ContextSet;
 
-/**
- * Immutable
- */
+import java.util.UUID;
+
+@Getter
+@Setter
 public final class CachedInheritance {
-    private String child;
-    private String parent;
+    private UUID child;
+    private UUID parent;
     private String childType;
     private String parentType;
-    private Context context;
+    private ContextSet context;
 
-    public CachedInheritance(String child, String parent, String childType, String parentType, String context){
+    public CachedInheritance(UUID child, UUID parent, String childType, String parentType, String context){
         this.child = child;
         this.parent = parent;
         this.childType = childType;
         this.parentType = parentType;
-        this.context = Context.fromString(context);
+        this.context = ContextSet.fromString(context);
     }
 
-    public CachedInheritance(String child, String parent, String childType, String parentType, Context context){
+    public CachedInheritance(UUID child, UUID parent, String childType, String parentType, ContextSet context){
         this.child = child;
         this.parent = parent;
         this.childType = childType;
         this.parentType = parentType;
         this.context = context;
-    }
-
-    public Context getContext() {
-        return context;
-    }
-
-    public String getChildType() {
-        return childType;
-    }
-
-    public String getChild() {
-        return child;
-    }
-
-    public String getParent() {
-        return parent;
-    }
-
-    public String getParentType() {
-        return parentType;
-    }
-
-    public void setChild(String child) {
-        this.child = child;
-    }
-
-    public void setChildType(String childType) {
-        this.childType = childType;
-    }
-
-    public void setContext(Context context) {
-        this.context = context;
-    }
-
-    public void setParent(String parent) {
-        this.parent = parent;
-    }
-
-    public void setParentType(String parentType) {
-        this.parentType = parentType;
     }
 }

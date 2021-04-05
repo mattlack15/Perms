@@ -1,18 +1,14 @@
 package me.gravitinos.perms.core.subject;
 
-import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.cache.CachedInheritance;
-import me.gravitinos.perms.core.context.Context;
-import me.gravitinos.perms.core.subject.Subject;
-
-import java.lang.ref.WeakReference;
+import me.gravitinos.perms.core.context.ContextSet;
 
 public class Inheritance {
-    private SubjectRef parent;
-    private SubjectRef child;
-    private Context context;
+    private final SubjectRef parent;
+    private final SubjectRef child;
+    private final ContextSet context;
 
-    public Inheritance(SubjectRef parent, SubjectRef child, Context context){
+    public Inheritance(SubjectRef parent, SubjectRef child, ContextSet context){
         this.parent = parent;
         this.child = child;
         this.context = context;
@@ -38,14 +34,14 @@ public class Inheritance {
         if(!this.isValid()) {
             return null;
         }
-        return new CachedInheritance(this.getChild().getIdentifier(), this.getParent().getIdentifier(), this.getChild().getType(), this.getParent().getType(), this.getContext());
+        return new CachedInheritance(this.getChild().getSubjectId(), this.getParent().getSubjectId(), this.getChild().getType(), this.getParent().getType(), this.getContext());
     }
 
     /**
-     * Gets context
+     * Gets contexts in which this inheritance should apply
      * @return the context
      */
-    public Context getContext(){
+    public ContextSet getContext(){
         return this.context;
     }
 
@@ -55,5 +51,20 @@ public class Inheritance {
      */
     public boolean isValid(){
         return this.child != null && this.parent != null && this.child.get() != null && this.parent.get() != null && this.context != null;
+    }
+
+    @Override
+    public boolean equals(Object o){
+        if(o == this) return true;
+        if(o instanceof Inheritance){
+            if(!((Inheritance) o).isValid()){
+                return !this.isValid();
+            }
+
+            if(((Inheritance) o).getChild().getSubjectId().equals(this.getChild().getSubjectId())){
+                return ((Inheritance) o).getParent().getSubjectId().equals(this.getParent().getSubjectId());
+            }
+        }
+        return false;
     }
 }

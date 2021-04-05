@@ -1,8 +1,10 @@
 package me.gravitinos.perms.spigot.command.group;
 
+import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.MutableContextSet;
+import me.gravitinos.perms.core.context.ServerContextType;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.subject.PPermission;
-import me.gravitinos.perms.core.user.User;
 import me.gravitinos.perms.core.user.UserData;
 import me.gravitinos.perms.spigot.SpigotPerms;
 import me.gravitinos.perms.spigot.command.GravCommandPermissionable;
@@ -17,7 +19,7 @@ public class CommandGroupList extends GravSubCommand {
 
     @Override
     public String getPermission() {
-        return this.getParentCommand().getPermission();
+        return SpigotPerms.commandName + ".group.list";
     }
 
     @Override
@@ -35,8 +37,9 @@ public class CommandGroupList extends GravSubCommand {
         Group group = (Group)passedArgs[0];
 
         this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + group.getName() + "&f's permissions:");
-        for(PPermission perms : group.getOwnPermissions()){
-            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&f - &e" + perms.getPermission() + " " + (perms.getContext().getServerName().equals(UserData.SERVER_LOCAL) ? "&a&lLOCAL" : (perms.getContext().getServerName().equals(UserData.SERVER_GLOBAL) ? "&c&lGLOBAL" : "&6&lFOREIGN&7 (" + perms.getContext().getServerName() + ")")) + " &fExpiry: &7" + (perms.getExpiry() == 0 ? "&cnever" : ((perms.getExpiry() - System.currentTimeMillis())/1000) + "s"));
+        for(PPermission perms : group.getPermissions()){
+            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&f - &e" + perms.getPermission() + " " +
+                    ServerContextType.getType(perms.getContext()).getDisplay() + " &fExpiry: &7" + (perms.getExpiry() == 0 ? "&cnever" : ((perms.getExpiry() - System.currentTimeMillis())/1000) + "s"));
         }
         return true;
     }

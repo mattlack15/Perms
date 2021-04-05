@@ -7,7 +7,6 @@ import me.gravitinos.perms.spigot.command.GravSubCommand;
 import me.gravitinos.perms.spigot.file.SpigotConf;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import sun.security.provider.ConfigFile;
 
 public class CommandUserGroup extends GravSubCommand {
     public CommandUserGroup(GravCommandPermissionable parent, String cmdPath) {

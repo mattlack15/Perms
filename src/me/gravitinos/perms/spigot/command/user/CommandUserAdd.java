@@ -1,6 +1,8 @@
 package me.gravitinos.perms.spigot.command.user;
 
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.ContextSet;
+import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.user.User;
 import me.gravitinos.perms.spigot.SpigotPerms;
@@ -50,9 +52,9 @@ public class CommandUserAdd extends GravSubCommand {
 
         User user = (User) passedArgs[0];
 
-        Context context = Context.CONTEXT_SERVER_LOCAL;
+        MutableContextSet context = new MutableContextSet(Context.CONTEXT_SERVER_LOCAL);
 
-        long expiration = 0;
+        long expiration = ContextSet.NO_EXPIRATION;
 
         if(args.length > 1){
             try{
@@ -77,14 +79,20 @@ public class CommandUserAdd extends GravSubCommand {
             }
             builder.deleteCharAt(builder.length()-1);
             String contextStr = builder.toString();
+            context.removeContexts(Context.SERVER_IDENTIFIER);
             if(contextStr.equalsIgnoreCase("global")){ //If the argument says global
-                context = Context.CONTEXT_SERVER_GLOBAL;
+                //Do nothing, blank is global
             } else if(!contextStr.equalsIgnoreCase("local")) { //If the argument doesn't say global (else) and doesn't say local (!)
-                context = Context.fromString(builder.toString());
+                Context c = Context.fromStringChatFormat(builder.toString());
+                context.addContext(c != null ? c : Context.CONTEXT_SERVER_LOCAL);
+            } else { //If it does say local
+                context.addContext(Context.CONTEXT_SERVER_LOCAL);
             }
         }
 
-        user.addOwnPermission(new PPermission(perm, context, expiration));
+        context.setExpiration(expiration);
+
+        user.addPermission(new PPermission(perm, context));
         this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + perm.toLowerCase() + " &7has been &aadded&7 to their permissions!");
         return true;
     }

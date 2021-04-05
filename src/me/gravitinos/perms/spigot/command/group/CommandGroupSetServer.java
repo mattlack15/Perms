@@ -1,8 +1,9 @@
 package me.gravitinos.perms.spigot.command.group;
 
-import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.*;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupData;
+import me.gravitinos.perms.core.group.GroupManager;
 import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.spigot.SpigotPerms;
 import me.gravitinos.perms.spigot.command.GravCommandPermissionable;
@@ -48,37 +49,47 @@ public class CommandGroupSetServer extends GravSubCommand {
             return true;
         }
 
+        Group group = (Group)passedArgs[0];
+
         StringBuilder builder = new StringBuilder();
         for(int i = 0; i < args.length; i++){
-            builder.append(args[i] + " ");
+            builder.append(args[i]).append(" ");
         }
         builder.deleteCharAt(builder.length()-1);
 
-        String server = builder.toString();
-        if(server.equalsIgnoreCase("local")){
-            server = GroupData.SERVER_LOCAL;
-        } else if(server.equalsIgnoreCase("global")){
-            server = GroupData.SERVER_GLOBAL;
+        MutableContextSet contexts = new MutableContextSet(group.getContext());
+        String serverInput = builder.toString();
+        if(serverInput.equalsIgnoreCase("local")){
+            contexts.addContext(Context.CONTEXT_SERVER_LOCAL);
+        } else if(serverInput.equalsIgnoreCase("global")){
+            //Do nothing
         } else {
             this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "Last argument must be local or global");
             return true;
         }
 
-        Group group = (Group)passedArgs[0];
-
-        String finalServer = server;
+        if (GroupManager.instance.canGroupContextCollideWithAnyLoaded(group.getName(), contexts, group.getContext())) {
+            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "ERROR: A group already exists with a colliding server context and this group's name");
+            return true;
+        }
 
         group.getDataManager().performOrderedOpAsync(() -> {
-            group.setServerContext(finalServer);
-            ArrayList<PPermission> perms = group.getOwnPermissions().getPermissions();
+            if(!group.setContext(contexts)) {
+                this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "ERROR: could not change group server context!");
+                return null;
+            }
+            ArrayList<PPermission> perms = group.getPermissions().getPermissions();
             group.removeOwnPermissions(perms);
             ArrayList<PPermission> newPerms = new ArrayList<>();
-            perms.forEach(p -> newPerms.add(new PPermission(p.getPermission(), new Context(finalServer, p.getContext().getWorldName()), p.getExpiry(), p.getPermissionIdentifier())));
+            perms.forEach(p -> {
+                ContextSet set = new MutableContextSet(p.getContext());
+                set.setExpiration(p.getExpiry());
+                newPerms.add(new PPermission(p.getPermission(), set, p.getPermissionIdentifier()));
+            });
             group.addOwnPermissions(newPerms);
+            this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + group.getName() + "&7's server context was set to &e" + ServerContextType.getType(contexts).getDisplay());
             return null;
         });
-
-        this.sendErrorMessage(sender, SpigotPerms.pluginPrefix + "&e" + group.getName() + "&7's server context was set to &e" + server);
 
         return true;
     }

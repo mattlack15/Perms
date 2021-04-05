@@ -1,6 +1,9 @@
 package me.gravitinos.perms.core.cache;
 
+import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.subject.PPermission;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
 
@@ -9,20 +12,21 @@ import java.util.UUID;
  */
 public class OwnerPermissionPair {
     private PPermission permission;
-    private String ownerIdentifier;
+    private UUID ownerSubjectId;
     private UUID identifier;
     private String perm;
 
-    public OwnerPermissionPair(String ownerIdentifier, PPermission permission) {
-        this.ownerIdentifier = ownerIdentifier;
+    public OwnerPermissionPair(@NotNull UUID ownerSubjectId, PPermission permission) {
+        this.ownerSubjectId = ownerSubjectId;
         this.permission = permission;
         this.perm = permission.getPermission();
         this.identifier = permission.getPermissionIdentifier();
     }
-    public OwnerPermissionPair(String ownerIdentifier, String perm, UUID permissionIdentifier){
+    public OwnerPermissionPair(@NotNull UUID ownerSubjectId, @NotNull String perm, @NotNull UUID permissionIdentifier){
         this.perm = perm;
-        this.ownerIdentifier = ownerIdentifier;
+        this.ownerSubjectId = ownerSubjectId;
         this.identifier = permissionIdentifier;
+        this.permission = new PPermission(perm, new MutableContextSet(Context.CONTEXT_SERVER_LOCAL), permissionIdentifier);
     }
 
     public String getPermissionString(){
@@ -35,7 +39,7 @@ public class OwnerPermissionPair {
         return permission;
     }
 
-    public String getOwnerIdentifier() {
-        return ownerIdentifier;
+    public UUID getOwnerSubjectId() {
+        return ownerSubjectId;
     }
 }

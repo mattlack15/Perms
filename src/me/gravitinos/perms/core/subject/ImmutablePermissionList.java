@@ -4,21 +4,22 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 public final class ImmutablePermissionList implements Iterable<PPermission>{
-    private final ArrayList<PPermission> perms;
+    private final List<PPermission> perms;
 
-    public ImmutablePermissionList(ArrayList<PPermission> perms){
+    public ImmutablePermissionList(List<PPermission> perms){
         this.perms = perms;
     }
 
     public ArrayList<PPermission> getPermissions() {
-        return (ArrayList<PPermission>) perms.clone();
+        return new ArrayList<>(perms);
     }
 
     @NotNull
     @Override
     public Iterator<PPermission> iterator() {
-        return perms.iterator();
+        return getPermissions().iterator();
     }
 }

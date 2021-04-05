@@ -1,5 +1,6 @@
 package me.gravitinos.perms.spigot.command.user;
 
+import me.gravitinos.perms.core.context.ServerContextType;
 import me.gravitinos.perms.core.subject.PPermission;
 import me.gravitinos.perms.core.user.User;
 import me.gravitinos.perms.core.user.UserData;
@@ -63,7 +64,7 @@ public class CommandUserRemove extends GravSubCommand {
         ArrayList<PPermission> permsToRemove = new ArrayList<>();
 
         for (PPermission perms : user.getOwnPermissions()) {
-            if (perms.getContext().getServerName().equals(UserData.SERVER_LOCAL) && gl.equals("local") && perms.getPermission().equals(perm)) {
+            if (ServerContextType.getType(perms.getContext()).equals(ServerContextType.LOCAL) && gl.equals("local") && perms.getPermission().equals(perm)) {
                 permsToRemove.add(perms);
             } else if (gl.equals("global") && perms.getPermission().equals(perm)) {
                 permsToRemove.add(perms);

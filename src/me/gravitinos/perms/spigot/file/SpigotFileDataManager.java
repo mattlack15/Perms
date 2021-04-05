@@ -1,40 +1,38 @@
 package me.gravitinos.perms.spigot.file;
 
 import com.google.common.collect.Lists;
-import me.gravitinos.perms.core.PermsManager;
 import me.gravitinos.perms.core.backend.DataManager;
 import me.gravitinos.perms.core.cache.CachedInheritance;
 import me.gravitinos.perms.core.cache.CachedSubject;
 import me.gravitinos.perms.core.context.Context;
+import me.gravitinos.perms.core.context.ContextSet;
+import me.gravitinos.perms.core.context.MutableContextSet;
 import me.gravitinos.perms.core.group.Group;
 import me.gravitinos.perms.core.group.GroupData;
 import me.gravitinos.perms.core.group.GroupManager;
+import me.gravitinos.perms.core.ladders.RankLadder;
 import me.gravitinos.perms.core.subject.*;
-import me.gravitinos.perms.core.user.User;
-import me.gravitinos.perms.core.user.UserBuilder;
 import me.gravitinos.perms.core.user.UserData;
 import me.gravitinos.perms.core.user.UserManager;
 import me.gravitinos.perms.core.util.MapUtil;
 import me.gravitinos.perms.spigot.SpigotPerms;
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.function.Supplier;
 
 /**
  * Spigot data manager
  */
 public class SpigotFileDataManager extends DataManager {
-    private FileConfiguration groupsConfig = YamlConfiguration.loadConfiguration(Files.GROUPS_FILE);
-    private FileConfiguration usersConfig = YamlConfiguration.loadConfiguration(Files.USERS_FILE);
+    private final FileConfiguration groupsConfig = YamlConfiguration.loadConfiguration(Files.GROUPS_FILE);
+    private final FileConfiguration usersConfig = YamlConfiguration.loadConfiguration(Files.USERS_FILE);
 
     private static final String GROUP_SECTION = "groups";
     private static final String USER_SECTION = "users";
@@ -49,9 +47,11 @@ public class SpigotFileDataManager extends DataManager {
     private static final String USER_DATA_USERNAME = "username";
 
     private static final String GROUP_DATA_PREFIX = "prefix";
+    private static final String GROUP_DATA_ID = "group_id_dont_change";
     private static final String GROUP_DATA_SUFFIX = "suffix";
     private static final String GROUP_DATA_CHATCOLOUR = "chatcolour";
     private static final String GROUP_DATA_DESCRIPTION = "description";
+    private static final String GROUP_DATA_PRIORITY = "priority";
 
     private volatile boolean saveGroups = false;
     private volatile boolean saveUsers = false;
@@ -72,8 +72,8 @@ public class SpigotFileDataManager extends DataManager {
         return true;
     }
 
-    public SpigotFileDataManager(){
-        if(!groupsConfig.isConfigurationSection(GROUP_SECTION)) {
+    public SpigotFileDataManager() {
+        if (!groupsConfig.isConfigurationSection(GROUP_SECTION)) {
             groupsConfig.createSection(GROUP_SECTION);
         }
         if (!usersConfig.isConfigurationSection(USER_SECTION)) {
@@ -81,7 +81,7 @@ public class SpigotFileDataManager extends DataManager {
         }
     }
 
-    private synchronized void setSavingGroups(boolean value){
+    private synchronized void setSavingGroups(boolean value) {
         if (!saveGroups && value) {
             saveGroups = true;
             SpigotPerms.instance.getImpl().getAsyncExecutor().execute(() -> {
@@ -92,23 +92,25 @@ public class SpigotFileDataManager extends DataManager {
                     e.printStackTrace();
                 }
             });
-        } else if(!value){
+        } else if (!value) {
             saveGroups = false;
         }
     }
 
-    private synchronized void setSavingUsers(boolean value){
+    private synchronized void setSavingUsers(boolean value) {
         if (!saveUsers && value) {
             saveUsers = true;
             SpigotPerms.instance.getImpl().getAsyncExecutor().execute(() -> {
                 try {
-                    usersConfig.save(Files.USERS_FILE);
-                    setSavingUsers(false);
+                    synchronized (this) {
+                        usersConfig.save(Files.USERS_FILE);
+                        setSavingUsers(false);
+                    }
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             });
-        } else if(!value){
+        } else if (!value) {
             saveUsers = false;
         }
     }
@@ -121,6 +123,7 @@ public class SpigotFileDataManager extends DataManager {
 
     /**
      * Adds a subject to the files
+     *
      * @param subject
      * @return
      */
@@ -129,9 +132,9 @@ public class SpigotFileDataManager extends DataManager {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
             //If it already exists, remove it, then continue execution
-            if (this.subjectExists(subject.getIdentifier())) {
+            if (this.subjectExists(subject.getSubjectId())) {
                 try {
-                    this.removeSubject(subject.getIdentifier()).get();
+                    this.removeSubject(subject.getSubjectId()).get();
                 } catch (InterruptedException | ExecutionException e) {
                     e.printStackTrace();
                 }
@@ -141,9 +144,8 @@ public class SpigotFileDataManager extends DataManager {
             if (subject.getType().equals(Subject.USER)) {
                 //User Data
                 UserData data = new UserData(subject.getData());
-                ConfigurationSection section = usersConfig.createSection(USER_SECTION + "." + subject.getIdentifier());
+                ConfigurationSection section = usersConfig.createSection(USER_SECTION + "." + subject.getSubjectId());
                 section.set(USER_DATA_USERNAME, data.getName());
-                section.set(USER_DATA_DISPLAYGROUP, data.getDisplayGroup(SpigotPerms.instance.getImpl().getConfigSettings().getServerName()));
                 section.set(USER_DATA_NOTES, data.getNotes());
                 section.set(USER_DATA_PREFIX, data.getPrefix());
                 section.set(USER_DATA_SUFFIX, data.getSuffix());
@@ -156,11 +158,13 @@ public class SpigotFileDataManager extends DataManager {
             } else if (subject.getType().equals(Subject.GROUP)) {
                 //Group Data
                 GroupData data = new GroupData(subject.getData());
-                ConfigurationSection section = groupsConfig.createSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(subject.getIdentifier()));
+                ConfigurationSection section = groupsConfig.createSection(GROUP_SECTION + "." + subject.getName());
                 section.set(GROUP_DATA_PREFIX, data.getPrefix());
                 section.set(GROUP_DATA_SUFFIX, data.getSuffix());
                 section.set(GROUP_DATA_CHATCOLOUR, data.getChatColour());
                 section.set(GROUP_DATA_DESCRIPTION, data.getDescription());
+                section.set(GROUP_DATA_PRIORITY, data.getPriority());
+                section.set(GROUP_DATA_ID, subject.getSubjectId().toString());
 
                 //Other Data
                 saveGroupsConfig();
@@ -175,77 +179,104 @@ public class SpigotFileDataManager extends DataManager {
         return future;
     }
 
-    private boolean subjectExists(String identifier) {
-        return this.groupsConfig.isConfigurationSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(identifier)) ||
-                this.usersConfig.isConfigurationSection(USER_SECTION + "." + identifier);
+    private synchronized boolean subjectExists(UUID subjectId) {
+        return getGroupName(subjectId) != null || usersConfig.isConfigurationSection(USER_SECTION + "." + subjectId);
     }
 
-    public CompletableFuture<GenericSubjectData> getSubjectData(String identifier) {
+    public synchronized ConfigurationSection getGroupConfigSection(UUID subjectId) {
+        for (String keys : groupsConfig.getConfigurationSection(GROUP_SECTION).getKeys(false)) {
+            if (groupsConfig.isString(GROUP_SECTION + "." + keys + "." + GROUP_DATA_ID)) {
+                UUID id = UUID.fromString(groupsConfig.getString(GROUP_SECTION + "." + keys + "." + GROUP_DATA_ID));
+                if (id.equals(subjectId)) {
+                    return groupsConfig.getConfigurationSection(GROUP_SECTION + "." + keys);
+                }
+            }
+        }
+        return null;
+    }
+
+    public synchronized String getGroupName(UUID subjectId) {
+        for (String keys : groupsConfig.getConfigurationSection(GROUP_SECTION).getKeys(false)) {
+            if (groupsConfig.isString(GROUP_SECTION + "." + keys + "." + GROUP_DATA_ID)) {
+                UUID id = UUID.fromString(groupsConfig.getString(GROUP_SECTION + "." + keys + "." + GROUP_DATA_ID));
+                if (id.equals(subjectId)) {
+                    return keys;
+                }
+            }
+        }
+        return null;
+    }
+
+    public synchronized boolean checkConverterIdentifierToSubjectId() {
+        for (String keys : groupsConfig.getConfigurationSection(GROUP_SECTION).getKeys(false)) {
+            if (!groupsConfig.isString(GROUP_SECTION + "." + keys + "." + GROUP_DATA_ID)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public synchronized boolean convertIdentifierToSubjectId() {
+        for (String keys : groupsConfig.getConfigurationSection(GROUP_SECTION).getKeys(false)) {
+            if (!groupsConfig.isString(GROUP_SECTION + "." + keys + "." + GROUP_DATA_ID)) {
+                groupsConfig.set(GROUP_SECTION + "." + keys + "." + GROUP_DATA_ID, UUID.randomUUID().toString());
+            }
+        }
+        return !checkConverterIdentifierToSubjectId();
+    }
+
+    @Override
+    public CompletableFuture<GenericSubjectData> getSubjectData(UUID subjectId) {
         CompletableFuture<GenericSubjectData> future = new CompletableFuture<>();
-        runAsync(() -> {
-            if (this.getSubjectType(identifier).equals(Subject.GROUP)) {
-                GroupData data = new GroupData();
-                ConfigurationSection section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(identifier));
+        if (this.getSubjectType(subjectId).equals(Subject.GROUP)) {
+            GroupData data = new GroupData();
+            synchronized (this) {
+                ConfigurationSection section = getGroupConfigSection(subjectId);
                 if (section == null) {
                     future.complete(null);
-                    return null;
+                    return future;
                 }
                 data.setChatColour(section.getString(GROUP_DATA_CHATCOLOUR));
                 data.setDescription(section.getString(GROUP_DATA_DESCRIPTION));
                 data.setPrefix(section.getString(GROUP_DATA_PREFIX));
                 data.setSuffix(section.getString(GROUP_DATA_SUFFIX));
+                data.setPriority(section.getInt(GROUP_DATA_PRIORITY));
+                data.setName(getGroupName(subjectId));
+            }
 
-                future.complete(new GenericSubjectData(data));
-            } else {
-                UserData data = new UserData();
-                ConfigurationSection section = usersConfig.getConfigurationSection(USER_SECTION + "." + identifier);
+            future.complete(new GenericSubjectData(data));
+        } else {
+            UserData data = new UserData();
+            synchronized (this) {
+                ConfigurationSection section = usersConfig.getConfigurationSection(USER_SECTION + "." + subjectId.toString());
                 if (section == null) {
                     future.complete(null);
-                    return null;
+                    return future;
                 }
-                data.setDisplayGroup(section.getString(USER_DATA_DISPLAYGROUP), SpigotPerms.instance.getImpl().getConfigSettings().getServerName());
                 data.setName(section.getString(USER_DATA_USERNAME));
                 data.setNotes(section.getString(USER_DATA_NOTES));
                 data.setPrefix(section.getString(USER_DATA_PREFIX));
                 data.setSuffix(section.getString(USER_DATA_SUFFIX));
-
-                future.complete(new GenericSubjectData(data));
             }
-            return null;
-        });
+
+            future.complete(new GenericSubjectData(data));
+        }
         return future;
     }
 
     @Override
-    public CompletableFuture<Void> renameSubject(Subject subject, String identifier, String newIdentifier) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
-            try {
-                this.removeSubject(identifier).get();
-                ArrayList<CachedInheritance> inheritances = new ArrayList<>();
-                Subject.getInheritances(subject).forEach(i -> inheritances.add(i.toCachedInheritance()));
-                CachedSubject csub = new CachedSubject(subject.getIdentifier(), subject.getType(), subject.getData(), Subject.getPermissions(subject).getPermissions(), inheritances);
-                if(subject.getType().equals(Subject.USER)){
-                    User user = new User(csub, (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s)), UserManager.instance);
-                    Subject.setIdentifier(user, newIdentifier);
-                } else {
-                    Group group = new Group(csub, (s) -> new SubjectRef(GroupManager.instance.getGroupExact(s)), GroupManager.instance);
-                    Subject.setIdentifier(group, newIdentifier);
-                }
-                this.addSubject(subject).get();
-                future.complete(null);
-            }catch(Exception ignored){
-                future.complete(null);
-            }
-            return null;
+    public CompletableFuture<Void> addOrUpdateSubjects(List<Subject<?>> subjects) {
+        subjects.forEach(s -> {
+            s.getOwnLoggedInheritances().resetLog();
+            s.getOwnLoggedPermissions().resetLog();
         });
-        return future;
+        return addSubjects(subjects);
     }
 
-    private String getSubjectType(String identifier) {
-        if (this.groupsConfig.isConfigurationSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(identifier))) {
+    private synchronized String getSubjectType(UUID subjectId) {
+        if (getGroupName(subjectId) != null) {
             return Subject.GROUP;
-        } else if (this.usersConfig.isConfigurationSection(USER_SECTION + "." + identifier)) {
+        } else if (this.usersConfig.isConfigurationSection(USER_SECTION + "." + subjectId.toString())) {
             return Subject.USER;
         } else {
             return "GENERIC";
@@ -253,28 +284,27 @@ public class SpigotFileDataManager extends DataManager {
     }
 
     @Override
-    public CompletableFuture<CachedSubject> getSubject(String name) {
+    public CompletableFuture<CachedSubject> getSubject(UUID name) {
         CompletableFuture<CachedSubject> future = new CompletableFuture<>();
-        runAsync(() -> {
-            try {
-                if (!this.subjectExists(name)) {
-                    future.complete(null);
-                    return null;
-                }
-                CachedSubject subject = new CachedSubject(name, this.getSubjectType(name), this.getSubjectData(name).get(), this.getPermissions(name).get().getPermissions(), this.getInheritances(name).get());
-
-                if (subject.getData() == null) {
-                    future.complete(null);
-                    return null;
-                }
-                future.complete(subject);
-                return null;
-            } catch (Exception e) {
+        try {
+            if (!this.subjectExists(name)) {
                 future.complete(null);
-                return null;
+                return future;
             }
-        });
-        return future;
+            CachedSubject subject = new CachedSubject(name, this.getSubjectType(name), this.getSubjectData(name).get(), this.getPermissions(name).get().getPermissions(), this.getInheritances(name).get());
+
+
+            if (subject.getData() == null) {
+                future.complete(null);
+                return future;
+            }
+            future.complete(subject);
+            return future;
+        } catch (Exception e) {
+            e.printStackTrace();
+            future.complete(null);
+            return future;
+        }
     }
 
     @Override
@@ -283,15 +313,17 @@ public class SpigotFileDataManager extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> removeSubject(String name) {
+    public CompletableFuture<Void> removeSubject(UUID name) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
-            if (this.getSubjectType(name).equals(Subject.USER)) {
-                usersConfig.set(USER_SECTION + "." + name, null);
-                saveUsersConfig();
-            } else {
-                groupsConfig.set(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(name), null);
-                saveGroupsConfig();
+            synchronized (this) {
+                if (this.getSubjectType(name).equals(Subject.USER)) {
+                    usersConfig.set(USER_SECTION + "." + name, null);
+                    saveUsersConfig();
+                } else {
+                    groupsConfig.set(GROUP_SECTION + "." + getGroupName(name), null);
+                    saveGroupsConfig();
+                }
             }
             future.complete(null);
             return null;
@@ -299,22 +331,24 @@ public class SpigotFileDataManager extends DataManager {
         return future;
     }
 
-    @Override
-    public CompletableFuture<ImmutablePermissionList> getPermissions(String name) {
+    public CompletableFuture<ImmutablePermissionList> getPermissions(UUID name) {
         CompletableFuture<ImmutablePermissionList> future = new CompletableFuture<>();
-        runAsync(() -> {
-            ConfigurationSection section;
+        ConfigurationSection section;
+        synchronized (this) {
             if (this.getSubjectType(name).equals(Subject.USER)) {
                 section = usersConfig.getConfigurationSection(USER_SECTION + "." + name);
             } else {
-                section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(name));
+                section = getGroupConfigSection(name);
             }
-            if (section == null) {
-                future.complete(null);
-                return null;
-            }
-            ArrayList<String> permStrings = Lists.newArrayList(section.getStringList(SUBJECT_PERMISSIONS));
-            ArrayList<PPermission> perms = new ArrayList<>();
+        }
+        if (section == null) {
+            future.complete(null);
+            return future;
+        }
+        List<PPermission> perms;
+        synchronized (this) {
+            List<String> permStrings = Lists.newArrayList(section.getStringList(SUBJECT_PERMISSIONS));
+            perms = new ArrayList<>();
 
             for (String permString : permStrings) {
                 if (!permString.contains(" ")) {
@@ -322,10 +356,15 @@ public class SpigotFileDataManager extends DataManager {
                     continue;
                 }
                 Map<String, String> deserialized = MapUtil.stringToMap(permString.substring(permString.indexOf(" ") + 1));
-                Context context = Context.CONTEXT_ALL;
-                Long expiration = 0L;
+                ContextSet context = new MutableContextSet();
+                long expiration = ContextSet.NO_EXPIRATION;
                 if (deserialized.get("context") != null) {
-                    context = Context.fromString(deserialized.get("context"));
+                    try {
+                        context = ContextSet.fromString(deserialized.get("context"));
+                    } catch (Exception e) {
+                        System.out.println("Could not deserialize contextset");
+                        context = new MutableContextSet();
+                    }
                 }
                 if (deserialized.get("expiration") != null) {
                     try {
@@ -333,107 +372,76 @@ public class SpigotFileDataManager extends DataManager {
                     } catch (Exception ignored) {
                     }
                 }
-                perms.add(new PPermission(permString.substring(0, permString.indexOf(" ")), context, expiration));
-            }
 
-            future.complete(new ImmutablePermissionList(perms));
-            return null;
-        });
+                context.setExpiration(expiration);
+
+                perms.add(new PPermission(permString.substring(0, permString.indexOf(" ")), context));
+            }
+        }
+
+        future.complete(new ImmutablePermissionList(perms));
         return future;
     }
 
-    @Override
-    public CompletableFuture<Void> updatePermissions(Subject subject) {
+//    @Override
+//    public CompletableFuture<Void> updatePermissions(Subject<?> subject) {
+//        CompletableFuture<Void> future = new CompletableFuture<>();
+//        runAsync(() -> {
+//            ConfigurationSection section;
+//            if (subject.getType().equals(Subject.USER)) {
+//                section = usersConfig.getConfigurationSection(USER_SECTION + "." + subject.getSubjectId());
+//            } else {
+//                section = getGroupConfigSection(subject.getSubjectId());
+//            }
+//            if (section == null) {
+//                future.complete(null);
+//                return null;
+//            }
+//            section.set(SUBJECT_PERMISSIONS, new ArrayList<String>());
+//            try {
+//                this.addPermissions(subject, Subject.getPermissions(subject)).get();
+//            } catch (InterruptedException | ExecutionException e) {
+//                e.printStackTrace();
+//            }
+//            future.complete(null);
+//            return null;
+//        });
+//        return future;
+//    }
+
+    public CompletableFuture<Void> addPermission(Subject<?> subject, PPermission permission) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
             ConfigurationSection section;
-            if (subject.getType().equals(Subject.USER)) {
-                section = usersConfig.getConfigurationSection(USER_SECTION + "." + subject.getIdentifier());
-            } else {
-                section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(subject.getIdentifier()));
-            }
-            if (section == null) {
-                future.complete(null);
-                return null;
-            }
-            section.set(SUBJECT_PERMISSIONS, new ArrayList<String>());
-            try {
-                this.addPermissions(subject, Subject.getPermissions(subject)).get();
-            } catch (InterruptedException | ExecutionException e) {
-                e.printStackTrace();
-            }
-            future.complete(null);
-            return null;
-        });
-        return future;
-    }
-
-    @Override
-    public CompletableFuture<Void> addPermission(Subject subject, PPermission permission) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
-            ConfigurationSection section;
-            if (subject.getType().equals(Subject.USER)) {
-                section = usersConfig.getConfigurationSection(USER_SECTION + "." + subject.getIdentifier());
-            } else {
-                section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(subject.getIdentifier()));
-            }
-            if (section == null) {
-                future.complete(null);
-                return null;
-            }
-            Map<String, String> contextExpirationMap = new HashMap<>();
-            if (!Context.CONTEXT_ALL.equals(permission.getContext())) {
-                contextExpirationMap.put("context", permission.getContext().toString());
-            }
-            if (permission.getExpiry() != 0) {
-                contextExpirationMap.put("expiration", Long.toString(permission.getExpiry()));
-            }
-            String dataStr = contextExpirationMap.size() > 0 ? " " + MapUtil.mapToString(contextExpirationMap) : "";
-            String permString = permission.getPermission() + dataStr;
-
-            ArrayList<String> current = Lists.newArrayList(section.getStringList(SUBJECT_PERMISSIONS));
-            current.add(permString);
-            section.set(SUBJECT_PERMISSIONS, current);
-
-            saveUsersConfig();
-            saveGroupsConfig();
-
-            future.complete(null);
-            return null;
-        });
-        return future;
-    }
-
-    @Override
-    public CompletableFuture<Void> removePermission(Subject subject, String permission) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
-            ConfigurationSection section;
-            if (subject.getType().equals(Subject.USER)) {
-                section = usersConfig.getConfigurationSection(USER_SECTION + "." + subject.getIdentifier());
-            } else {
-                section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(subject.getIdentifier()));
-            }
-            if (section == null) {
-                future.complete(null);
-                return null;
-            }
-            ArrayList<String> current = Lists.newArrayList(section.getStringList(SUBJECT_PERMISSIONS));
-            current.removeIf(s -> {
-                if (s.equals(" ") && permission.equals(" ")) {
-                    return true;
+            synchronized (this) {
+                if (subject.getType().equals(Subject.USER)) {
+                    section = usersConfig.getConfigurationSection(USER_SECTION + "." + subject.getSubjectId());
+                } else {
+                    section = getGroupConfigSection(subject.getSubjectId());
                 }
-                String[] split = s.split(" ");
-                if (split.length == 0) {
-                    return false;
+            }
+            if (section == null) {
+                future.complete(null);
+                return null;
+            }
+            synchronized (this) {
+                Map<String, String> contextExpirationMap = new HashMap<>();
+                if (permission.getContext().size() != 0) {
+                    contextExpirationMap.put("context", permission.getContext().toString());
                 }
-                return split[0].equals(permission);
-            });
-            section.set(SUBJECT_PERMISSIONS, current);
+                if (permission.getExpiry() != 0) {
+                    contextExpirationMap.put("expiration", Long.toString(permission.getExpiry()));
+                }
+                String dataStr = contextExpirationMap.size() > 0 ? " " + MapUtil.mapToString(contextExpirationMap) : "";
+                String permString = permission.getPermission() + dataStr;
 
-            saveUsersConfig();
-            saveGroupsConfig();
+                List<String> current = Lists.newArrayList(section.getStringList(SUBJECT_PERMISSIONS));
+                current.add(permString);
+                section.set(SUBJECT_PERMISSIONS, current);
+
+                saveUsersConfig();
+                saveGroupsConfig();
+            }
 
             future.complete(null);
             return null;
@@ -441,185 +449,233 @@ public class SpigotFileDataManager extends DataManager {
         return future;
     }
 
-    @Override
-    public CompletableFuture<Void> removePermissionExact(Subject subject, String permission, UUID permIdentifier) {
-        return this.removePermission(subject, permission);
-    }
+//    @Override
+//    public CompletableFuture<Void> removePermission(Subject<?> subject, String permission) {
+//        CompletableFuture<Void> future = new CompletableFuture<>();
+//        runAsync(() -> {
+//            ConfigurationSection section;
+//            if (subject.getType().equals(Subject.USER)) {
+//                section = usersConfig.getConfigurationSection(USER_SECTION + "." + subject.getSubjectId());
+//            } else {
+//                section = getGroupConfigSection(subject.getSubjectId());
+//            }
+//            if (section == null) {
+//                future.complete(null);
+//                return null;
+//            }
+//            List<String> current = Lists.newList(section.getStringList(SUBJECT_PERMISSIONS));
+//            current.removeIf(s -> {
+//                if (s.equals(" ") && permission.equals(" ")) {
+//                    return true;
+//                }
+//                String[] split = s.split(" ");
+//                if (split.length == 0) {
+//                    return false;
+//                }
+//                return split[0].equals(permission);
+//            });
+//            section.set(SUBJECT_PERMISSIONS, current);
+//
+//            saveUsersConfig();
+//            saveGroupsConfig();
+//
+//            future.complete(null);
+//            return null;
+//        });
+//        return future;
+//    }
 
-    private ConfigurationSection getSection(String identifier) {
-        if (this.getSubjectType(identifier).equals(Subject.USER)) {
-            return usersConfig.getConfigurationSection(USER_SECTION + "." + identifier);
+//    @Override
+//    public CompletableFuture<Void> removePermissionExact(Subject subject, PPermission permission) {
+//        return this.removePermission(subject, permission.getPermission());
+//    }
+
+
+    private synchronized ConfigurationSection getSection(UUID id) {
+        if (this.getSubjectType(id).equals(Subject.USER)) {
+            return usersConfig.getConfigurationSection(USER_SECTION + "." + id);
         } else {
-            return groupsConfig.getConfigurationSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(identifier));
+            return getGroupConfigSection(id);
         }
     }
 
-    @Override
-    public CompletableFuture<ArrayList<CachedInheritance>> getInheritances(String name) {
-        CompletableFuture<ArrayList<CachedInheritance>> future = new CompletableFuture<>();
-        runAsync(() -> {
-            ConfigurationSection section = getSection(name);
-            if (section == null) {
-                future.complete(null);
-                return null;
-            }
+    public CompletableFuture<List<CachedInheritance>> getInheritances(UUID name) {
+        CompletableFuture<List<CachedInheritance>> future = new CompletableFuture<>();
+        ConfigurationSection section = getSection(name);
+        if (section == null) {
+            future.complete(null);
+            return future;
+        }
 
-            String type = this.getSubjectType(name);
+        String type = this.getSubjectType(name);
 
-            String inheritanceType = Subject.GROUP;
+        String inheritanceType = Subject.GROUP;
 
-            ArrayList<CachedInheritance> out = new ArrayList<>();
+        List<CachedInheritance> out = new ArrayList<>();
 
-            for (String inheritanceString : section.getStringList(SUBJECT_INHERITANCES)) {
-                String inheritance;
-                Context context = Context.CONTEXT_ALL;
-                if (!inheritanceString.contains(" ")) {
-                    inheritance = inheritanceString;
-                } else {
-                    Map<String, String> deserialized = MapUtil.stringToMap(inheritanceString.substring(inheritanceString.indexOf(" ") + 1));
+        List<String> inheritance;
+        synchronized (this) {
+            inheritance = section.getStringList(SUBJECT_INHERITANCES);
+        }
+        for (String inheritanceString : inheritance) {
+            String inheritanceName;
+            ContextSet context = new MutableContextSet();
+            if (!inheritanceString.contains(" ")) {
+                inheritanceName = inheritanceString;
+            } else {
+                Map<String, String> deserialized = MapUtil.stringToMap(inheritanceString.substring(inheritanceString.indexOf(" ") + 1));
 
-                    if (deserialized.containsKey("context")) {
-                        context = Context.fromString(deserialized.get("context"));
+                if (deserialized.containsKey("context")) {
+                    try {
+                        context = ContextSet.fromString(deserialized.get("context"));
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
-                    inheritance = inheritanceString.substring(0, inheritanceString.indexOf(" "));
                 }
-                out.add(new CachedInheritance(name, PermsManager.addServerToIdentifier(inheritance, GroupData.SERVER_LOCAL), type, inheritanceType, context));
+                inheritanceName = inheritanceString.substring(0, inheritanceString.indexOf(" "));
             }
 
-            future.complete(out);
-            return null;
-        });
+            Group group = GroupManager.instance.getVisibleGroup(inheritanceName);
+            if (group != null)
+                out.add(new CachedInheritance(name, group.getSubjectId(), type, inheritanceType, context));
+        }
+
+        future.complete(out);
         return future;
     }
 
-    @Override
-    public CompletableFuture<Void> updateInheritances(Subject subject) {
+//    @Override
+//    public CompletableFuture<Void> updateInheritances(Subject<?> subject) {
+//        CompletableFuture<Void> future = new CompletableFuture<>();
+//        runAsync(() -> {
+//            ConfigurationSection section = getSection(subject.getSubjectId());
+//            if (section == null) {
+//                future.complete(null);
+//                return null;
+//            }
+//            section.set(SUBJECT_INHERITANCES, new ArrayList<String>());
+//            try {
+//                this.addInheritances(Subject.getInheritances(subject)).get();
+//            } catch (InterruptedException | ExecutionException e) {
+//                e.printStackTrace();
+//            }
+//            future.complete(null);
+//            return null;
+//        });
+//        return future;
+//    }
+
+    public CompletableFuture<Void> addInheritance(@NotNull CachedInheritance inheritance) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
-            ConfigurationSection section;
-            if (subject.getType().equals(Subject.USER)) {
-                section = usersConfig.getConfigurationSection(USER_SECTION + "." + subject.getIdentifier());
-            } else {
-                section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(subject.getIdentifier()));
-            }
+            ConfigurationSection section = getSection(inheritance.getChild());
+
             if (section == null) {
                 future.complete(null);
                 return null;
             }
-            section.set(SUBJECT_INHERITANCES, new ArrayList<String>());
-            try {
-                this.addInheritances(Subject.getInheritances(subject)).get();
-            } catch (InterruptedException | ExecutionException e) {
-                e.printStackTrace();
+
+            synchronized (this) {
+                List<String> current = Lists.newArrayList(section.getStringList(SUBJECT_INHERITANCES));
+                Map<String, String> contextMap = new HashMap<>();
+
+                if (inheritance.getContext().size() != 0) {
+                    contextMap.put("context", inheritance.getContext().toString());
+                }
+
+                String contextString = contextMap.size() > 0 ? " " + MapUtil.mapToString(contextMap) : "";
+                String inheritanceString = (UserManager.instance.getUser(inheritance.getParent()) != null ? UserManager.instance.getUser(inheritance.getParent()).getName() : GroupManager.instance.getGroupExact(inheritance.getParent()).getName()) + contextString;
+                current.add(inheritanceString);
+
+                section.set(SUBJECT_INHERITANCES, current);
+                saveUsersConfig();
+                saveGroupsConfig();
             }
+
             future.complete(null);
             return null;
         });
         return future;
     }
 
+
+//    @Override
+//    public CompletableFuture<Void> removeInheritance(Subject<?> subject, UUID parent) {
+//        CompletableFuture<Void> future = new CompletableFuture<>();
+//        runAsync(() -> {
+//            ConfigurationSection section = getSection(subject.getSubjectId());
+//
+//            if (section == null || GroupManager.instance.getGroupExact(parent) == null) {
+//                future.complete(null);
+//                return null;
+//            }
+//            List<String> current = Lists.newList(section.getStringList(SUBJECT_INHERITANCES));
+//            String editedParent = GroupManager.instance.getGroupExact(parent).getName();
+//            current.removeIf(s -> {
+//                if (s.equals(" ") && editedParent.equals(" ")) {
+//                    return true;
+//                }
+//                String[] split = s.split(" ");
+//                if (split.length == 0) {
+//                    return false;
+//                }
+//                return split[0].equals(editedParent);
+//            });
+//            section.set(SUBJECT_INHERITANCES, current);
+//            saveUsersConfig();
+//            saveGroupsConfig();
+//            future.complete(null);
+//            return null;
+//        });
+//        return future;
+//    }
+
     @Override
-    public CompletableFuture<Void> addInheritance(Subject subject, Subject inheritance, Context context) {
+    public CompletableFuture<Void> updateSubjectData(Subject<?> subject) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
-            ConfigurationSection section;
-            if (subject.getType().equals(Subject.USER)) {
-                section = usersConfig.getConfigurationSection(USER_SECTION + "." + subject.getIdentifier());
-            } else {
-                section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(subject.getIdentifier()));
-            }
+            ConfigurationSection section = getSection(subject.getSubjectId());
+
             if (section == null) {
                 future.complete(null);
                 return null;
             }
 
-            ArrayList<String> current = Lists.newArrayList(section.getStringList(SUBJECT_INHERITANCES));
-            Map<String, String> contextMap = new HashMap<>();
-
-            if (!Context.CONTEXT_ALL.equals(context)) {
-                contextMap.put("context", context.toString());
-            }
-
-            String contextString = contextMap.size() > 0 ? " " + MapUtil.mapToString(contextMap) : "";
-            String inheritanceString = PermsManager.removeServerFromIdentifier(inheritance.getIdentifier()) + contextString;
-            current.add(inheritanceString);
-
-            section.set(SUBJECT_INHERITANCES, current);
-            saveUsersConfig();
-            saveGroupsConfig();
-
-            future.complete(null);
-            return null;
-        });
-        return future;
-    }
-
-    @Override
-    public CompletableFuture<Void> removeInheritance(Subject subject, String parent) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
-            ConfigurationSection section;
-            if (subject.getType().equals(Subject.USER)) {
-                section = usersConfig.getConfigurationSection(USER_SECTION + "." + subject.getIdentifier());
-            } else {
-                section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + PermsManager.removeServerFromIdentifier(subject.getIdentifier()));
-            }
-            if (section == null) {
-                future.complete(null);
-                return null;
-            }
-            ArrayList<String> current = Lists.newArrayList(section.getStringList(SUBJECT_INHERITANCES));
-            String editedParent = PermsManager.removeServerFromIdentifier(parent);
-            current.removeIf(s -> {
-                if (s.equals(" ") && editedParent.equals(" ")) {
-                    return true;
-                }
-                String[] split = s.split(" ");
-                if (split.length == 0) {
-                    return false;
-                }
-                return split[0].equals(editedParent);
-            });
-            section.set(SUBJECT_INHERITANCES, current);
-            saveUsersConfig();
-            saveGroupsConfig();
-            future.complete(null);
-            return null;
-        });
-        return future;
-    }
-
-    @Override
-    public CompletableFuture<Void> updateSubjectData(Subject subject) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
             if (subject.getType().equals(Subject.USER)) {
                 //User Data
                 UserData data = new UserData(subject.getData());
-                ConfigurationSection section = getSection(subject.getIdentifier());
-                if (section == null) {
-                    future.complete(null);
-                    return null;
+
+                synchronized (this) {
+
+                    section.set(USER_DATA_USERNAME, data.getName());
+//                section.set(USER_DATA_DISPLAYGROUP, data.getDisplayGroup());
+                    section.set(USER_DATA_NOTES, data.getNotes());
+                    section.set(USER_DATA_PREFIX, data.getPrefix());
+                    section.set(USER_DATA_SUFFIX, data.getSuffix());
+                    saveUsersConfig();
                 }
-                section.set(USER_DATA_USERNAME, data.getName());
-                section.set(USER_DATA_DISPLAYGROUP, data.getDisplayGroup(GroupData.SERVER_LOCAL));
-                section.set(USER_DATA_NOTES, data.getNotes());
-                section.set(USER_DATA_PREFIX, data.getPrefix());
-                section.set(USER_DATA_SUFFIX, data.getSuffix());
-                saveUsersConfig();
             } else if (subject.getType().equals(Subject.GROUP)) {
                 //Group Data
                 GroupData data = new GroupData(subject.getData());
-                ConfigurationSection section = getSection(subject.getIdentifier());
-                if (section == null) {
+
+                //If group was renamed
+                if (!getGroupName(subject.getSubjectId()).equals(data.getName())) {
+                    synchronized (this) {
+                        groupsConfig.set(section.getCurrentPath(), null);
+                    }
+                    this.addSubject(subject);
                     future.complete(null);
                     return null;
                 }
-                section.set(GROUP_DATA_PREFIX, data.getPrefix());
-                section.set(GROUP_DATA_SUFFIX, data.getSuffix());
-                section.set(GROUP_DATA_CHATCOLOUR, data.getChatColour());
-                section.set(GROUP_DATA_DESCRIPTION, data.getDescription());
-                saveGroupsConfig();
+
+                synchronized (this) {
+                    section.set(GROUP_DATA_PREFIX, data.getPrefix());
+                    section.set(GROUP_DATA_SUFFIX, data.getSuffix());
+                    section.set(GROUP_DATA_CHATCOLOUR, data.getChatColour());
+                    section.set(GROUP_DATA_DESCRIPTION, data.getDescription());
+                    section.set(GROUP_DATA_PRIORITY, data.getPriority());
+                    saveGroupsConfig();
+                }
             } else {
                 SpigotPerms.instance.getManager().getImplementation().addToLog("Tried to update subject data of unknown type " + subject.getType());
             }
@@ -629,8 +685,7 @@ public class SpigotFileDataManager extends DataManager {
         return future;
     }
 
-    @Override
-    public CompletableFuture<Void> addPermissions(Subject subject, ImmutablePermissionList list) {
+    public CompletableFuture<Void> addPermissions(Subject<?> subject, ImmutablePermissionList list) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
             for (PPermission p : list) {
@@ -644,44 +699,43 @@ public class SpigotFileDataManager extends DataManager {
         });
         return future;
     }
+//
+//    @Override
+//    public CompletableFuture<Void> removePermissions(Subject<?> subject, List<String> list) {
+//        CompletableFuture<Void> future = new CompletableFuture<>();
+//        runAsync(() -> {
+//            for (String p : list) {
+//                try {
+//                    this.removePermission(subject, p).get();
+//                } catch (InterruptedException | ExecutionException ignored) {
+//                }
+//            }
+//            future.complete(null);
+//            return null;
+//        });
+//        return future;
+//    }
+//
+//    @Override
+//    public CompletableFuture<Void> removePermissionsExact(Subject<?> subject, List<PPermission> list) {
+//        CompletableFuture<Void> future = new CompletableFuture<>();
+//        runAsync(() -> {
+//            for (PPermission p : list) {
+//                try {
+//                    this.removePermission(subject, p.getPermission()).get();
+//                } catch (InterruptedException | ExecutionException ignored) {
+//                }
+//            }
+//            future.complete(null);
+//            return null;
+//        });
+//        return future;
+//    }
 
-    @Override
-    public CompletableFuture<Void> removePermissions(Subject subject, ArrayList<String> list) {
+    public CompletableFuture<Void> addSubjects(List<Subject<?>> subjects) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
-            for (String p : list) {
-                try {
-                    this.removePermission(subject, p).get();
-                } catch (InterruptedException | ExecutionException ignored) {
-                }
-            }
-            future.complete(null);
-            return null;
-        });
-        return future;
-    }
-
-    @Override
-    public CompletableFuture<Void> removePermissionsExact(Subject subject, ArrayList<PPermission> list) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
-            for (PPermission p : list) {
-                try {
-                    this.removePermission(subject, p.getPermission()).get();
-                } catch (InterruptedException | ExecutionException ignored) {
-                }
-            }
-            future.complete(null);
-            return null;
-        });
-        return future;
-    }
-
-    @Override
-    public CompletableFuture<Void> addSubjects(ArrayList<Subject> subjects) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
-            for (Subject subject : subjects) {
+            for (Subject<?> subject : subjects) {
                 try {
                     this.addSubject(subject).get();
                 } catch (InterruptedException | ExecutionException ignored) {
@@ -694,10 +748,10 @@ public class SpigotFileDataManager extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> removeSubjects(ArrayList<String> subjects) {
+    public CompletableFuture<Void> removeSubjects(List<UUID> subjects) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
-            for (String subject : subjects) {
+            for (UUID subject : subjects) {
                 try {
                     this.removeSubject(subject).get();
                 } catch (InterruptedException | ExecutionException ignored) {
@@ -710,28 +764,33 @@ public class SpigotFileDataManager extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> removeInheritances(Subject subject, ArrayList<String> parents) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
-            for (String parent : parents) {
-                try {
-                    this.removeInheritance(subject, parent).get();
-                } catch (InterruptedException | ExecutionException ignored) {
-                }
-            }
-            future.complete(null);
-            return null;
-        });
-        return future;
+    public CompletableFuture<Void> removeInheritances(Subject<?> subject, List<UUID> parents) {
+        return null;
     }
 
+//    @Override
+//    public CompletableFuture<Void> removeInheritances(Subject<?> subject, List<UUID> parents) {
+//        CompletableFuture<Void> future = new CompletableFuture<>();
+//        runAsync(() -> {
+//            for (UUID parent : parents) {
+//                try {
+//                    this.removeInheritance(subject, parent).get();
+//                } catch (InterruptedException | ExecutionException ignored) {
+//                }
+//            }
+//            future.complete(null);
+//            return null;
+//        });
+//        return future;
+//    }
+
     @Override
-    public CompletableFuture<Void> addInheritances(ArrayList<Inheritance> inheritances) {
+    public CompletableFuture<Void> addInheritances(List<Inheritance> inheritances) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
             for (Inheritance inheritance : inheritances) {
                 try {
-                    this.addInheritance(inheritance.getChild(), inheritance.getParent(), inheritance.getContext()).get();
+                    this.addInheritance(inheritance.toCachedInheritance()).get();
                 } catch (InterruptedException | ExecutionException ignored) {
                 }
             }
@@ -742,22 +801,26 @@ public class SpigotFileDataManager extends DataManager {
     }
 
     @Override
-    public CompletableFuture<ArrayList<CachedSubject>> getAllSubjectsOfType(String type) {
-        CompletableFuture<ArrayList<CachedSubject>> future = new CompletableFuture<>();
+    public CompletableFuture<List<CachedSubject>> getAllSubjectsOfType(String type) {
+        CompletableFuture<List<CachedSubject>> future = new CompletableFuture<>();
         runAsync(() -> {
-            ArrayList<CachedSubject> subjects = new ArrayList<>();
+            List<CachedSubject> subjects = new ArrayList<>();
             if (Subject.USER.equals(type)) {
-                for (String keys : usersConfig.getConfigurationSection(USER_SECTION).getKeys(false)) {
-                    try {
-                        subjects.add(this.getSubject(keys).get());
-                    } catch (Exception ignored) {
+                synchronized (this) {
+                    for (String keys : usersConfig.getConfigurationSection(USER_SECTION).getKeys(false)) {
+                        try {
+                            subjects.add(this.getSubject(UUID.fromString(keys)).get());
+                        } catch (Exception ignored) {
+                        }
                     }
                 }
             } else if (Subject.GROUP.equals(type)) {
-                for (String keys : groupsConfig.getConfigurationSection(GROUP_SECTION).getKeys(false)) {
-                    try {
-                        subjects.add(this.getSubject(PermsManager.addServerToIdentifier(keys, GroupData.SERVER_LOCAL)).get());
-                    } catch (Exception ignored) {
+                synchronized (this) {
+                    for (String keys : groupsConfig.getConfigurationSection(GROUP_SECTION).getKeys(false)) {
+                        try {
+                            subjects.add(this.getSubject(getGroupId(keys)).get());
+                        } catch (Exception ignored) {
+                        }
                     }
                 }
             } else {
@@ -770,19 +833,26 @@ public class SpigotFileDataManager extends DataManager {
         return future;
     }
 
+    public synchronized UUID getGroupId(String groupName) {
+        ConfigurationSection section = groupsConfig.getConfigurationSection(GROUP_SECTION + "." + groupName);
+        return UUID.fromString(section.getString(GROUP_DATA_ID));
+    }
+
     @Override
     public CompletableFuture<Void> clearAllData() {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
-            groupsConfig.set(GROUP_SECTION, null);
-            groupsConfig.createSection(GROUP_SECTION);
+            synchronized (this) {
+                groupsConfig.set(GROUP_SECTION, null);
+                groupsConfig.createSection(GROUP_SECTION);
 
-            usersConfig.set(USER_SECTION, null);
-            usersConfig.createSection(USER_SECTION);
+                usersConfig.set(USER_SECTION, null);
+                usersConfig.createSection(USER_SECTION);
 
-            saveGroupsConfig();
-            saveUsersConfig();
+                saveGroupsConfig();
+                saveUsersConfig();
 
+            }
             future.complete(null);
             return null;
         });
@@ -790,17 +860,21 @@ public class SpigotFileDataManager extends DataManager {
     }
 
     @Override
-    public CompletableFuture<Void> clearSubjectOfType(String type) {
+    public CompletableFuture<Void> clearSubjectsOfType(String type) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         runAsync(() -> {
             if (Subject.USER.equals(type)) {
-                usersConfig.set(USER_SECTION, null);
-                usersConfig.createSection(USER_SECTION);
-                saveUsersConfig();
+                synchronized (this) {
+                    usersConfig.set(USER_SECTION, null);
+                    usersConfig.createSection(USER_SECTION);
+                    saveUsersConfig();
+                }
             } else if (Subject.GROUP.equals(type)) {
-                groupsConfig.set(GROUP_SECTION, null);
-                groupsConfig.createSection(GROUP_SECTION);
-                saveGroupsConfig();
+                synchronized (this) {
+                    groupsConfig.set(GROUP_SECTION, null);
+                    groupsConfig.createSection(GROUP_SECTION);
+                    saveGroupsConfig();
+                }
             } else {
                 future.complete(null);
                 return null;
@@ -809,5 +883,63 @@ public class SpigotFileDataManager extends DataManager {
             return null;
         });
         return future;
+    }
+
+    @Override
+    public CompletableFuture<List<RankLadder>> getRankLadders() {
+        return runAsync(ArrayList::new);
+    }
+
+    @Override
+    public CompletableFuture<RankLadder> getRankLadder(UUID id) {
+        return null;
+    }
+
+    @Override
+    public CompletableFuture<Void> removeRankLadder(UUID id) {
+        return runAsync(() -> null);
+    }
+
+    @Override
+    public CompletableFuture<Void> addRankLadder(RankLadder ladder) {
+        return runAsync(() -> null);
+    }
+
+    @Override
+    public CompletableFuture<Void> updateRankLadder(RankLadder ladder) {
+        return runAsync(() -> null);
+    }
+
+    @Override
+    public CompletableFuture<Map<Integer, String>> getServerIndex() {
+        CompletableFuture<Map<Integer, String>> future = new CompletableFuture<>();
+        future.complete(new HashMap<>());
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Void> putServerIndex(int serverId, String serverName) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        future.complete(null);
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Void> removeServerIndex(int serverId) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        future.complete(null);
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<Boolean> testBackendConnection() {
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        future.complete(true);
+        return future;
+    }
+
+    @Override
+    public boolean isRemote() {
+        return false;
     }
 }
