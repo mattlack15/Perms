@@ -24,3 +24,9 @@ Group g = new GroupBuilder("default").setPrefix("[&7Default&f] ").setDescription
                 .addPermission(new PPermission("modifyworld.*")).build();
 GroupManager.instance.addGroup(g);
 ```
+### Saving
+All users and groups will queue updates to send to the data storage system automatically (auto-queueing), however this can be disabled using setAutoQueue(false).
+You may manually queue a save by calling queueSave().
+
+### User/Group data
+User/Group data may be accessed by called getData() on either a User or a Group, it will return the corresponding SubjectData object.
