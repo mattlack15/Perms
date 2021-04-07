@@ -8,6 +8,15 @@ This is a permissions plugin.
 ```java
 User user = UserManager.instance.getUser(player.getUniqueId());
 ```
+### Contexts
+Contexts are conditions in which something will apply. A ContextSet is a set of one or more contexts that define when something should apply. ContextSets can be satisfied by other ContextSets. For satisfaction of a ContextSet, the set is divided into groups of like-keys (eg. server) and the set is satisfied if each group in set A has at least one match with a context in set B. For example, if set A is {server:sv1, server:sv2, world:w1} and B is {server:sv1), then A is NOT satisfied by B because the group "world" does not have at least one match in set B. However, if set B is instead, {server:sv1, world:w1} then A IS satisfied by B because B contains a matching context for both groups (server and world).<br><br>
+Contexts can be created like this
+```java
+Context context = new Context("key", "value");
+Context serverContext = new Context(Context.SERVER_IDENTIFIER, "prison");
+ContextSet contexts = new ContextSet(context, serverContext);
+```
+
 ### Adding a permission
 ```java
 ContextSet contextSet = new MutableContextSet(Context.CONTEXT_SERVER_LOCAL);
