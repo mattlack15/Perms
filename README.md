@@ -14,7 +14,7 @@ Contexts can be created like this
 ```java
 Context context = new Context("key", "value");
 Context serverContext = new Context(Context.SERVER_IDENTIFIER, "prison");
-ContextSet contexts = new ContextSet(context, serverContext);
+ContextSet contexts = new MutableContextSet(context, serverContext);
 ```
 
 ### Adding a permission
