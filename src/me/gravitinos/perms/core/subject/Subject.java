@@ -322,7 +322,7 @@ public abstract class Subject<T extends SubjectData> {
      */
     public List<PPermission> getAllPermissions(ContextSet contexts) {
 
-        ArrayList<PPermission> perms = new ArrayList<>();
+        List<PPermission> perms = new ArrayList<>();
         this.getPermissions().forEach(p -> {
             if (p.getContext().isSatisfiedBy(contexts))
                 perms.add(p);

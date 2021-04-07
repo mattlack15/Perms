@@ -39,7 +39,7 @@ public abstract class ContextSet implements Iterable<Context> {
     }
 
     /**
-     * Checks if each context in this set has at least one match in the provided context
+     * Checks if each context key in this set has at least one match in the provided context
      * If the other context has 0 of a type, it will match with all of that type
      */
     public synchronized boolean isSatisfiedBy(ContextSet set) {

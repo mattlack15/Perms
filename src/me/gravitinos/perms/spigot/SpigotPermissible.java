@@ -18,6 +18,7 @@ import org.bukkit.permissions.Permission;
 import org.bukkit.permissions.ServerOperator;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class SpigotPermissible extends PermissibleBase {
     private final Player player;
@@ -73,7 +74,7 @@ public class SpigotPermissible extends PermissibleBase {
 
             ContextSet context = new MutableContextSet(Context.CONTEXT_SERVER_LOCAL, new Context(Context.WORLD_IDENTIFIER, player.getWorld().getName()));
 
-            ArrayList<String> perms = new ArrayList<>();
+            List<String> perms = new ArrayList<>();
             user.getAllPermissions(context).forEach(p -> perms.add(p.getPermission()));
 
             if (perms.contains("-" + requ)) {
