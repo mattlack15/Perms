@@ -134,7 +134,7 @@ public class User extends Subject<UserData> {
      * @return The name of the display-group of this user
      */
     public UUID getDisplayGroup() {
-        ArrayList<Subject<?>> subjects = new ArrayList<>();
+        List<Subject<?>> subjects = new ArrayList<>();
         this.getInheritances().forEach(i -> {
             if (i.getContext().appliesToAny(Context.CONTEXT_SERVER_LOCAL)) {
                 subjects.add(i.getParent());
@@ -164,7 +164,7 @@ public class User extends Subject<UserData> {
      * Gets the groups in the inheritance of this user in the order of highest priority
      */
     public List<Group> getGroupsInOrderOfPriority() {
-        ArrayList<Group> groups = new ArrayList<>();
+        List<Group> groups = new ArrayList<>();
         for (Inheritance inheritance : getInheritances()) {
             if (inheritance.getParent() instanceof Group) {
                 groups.add((Group) inheritance.getParent());
@@ -243,14 +243,14 @@ public class User extends Subject<UserData> {
     /**
      * Adds a lot of permissions in bulk, please use this for large amounts of permissions as Transfers to SQL can be a lot quicker
      */
-    public void addPermissions(@NotNull ArrayList<PPermission> permissions) {
+    public void addPermissions(@NotNull List<PPermission> permissions) {
         permissions.forEach(super::addPermission);
     }
 
     /**
      * removes a lot of permissions in bulk, please use this for large amounts of permissions as Transfers to SQL can be a lot quicker
      */
-    public void removeOwnPermissions(@NotNull ArrayList<PPermission> permissions) {
+    public void removeOwnPermissions(@NotNull List<PPermission> permissions) {
         permissions.forEach(super::removePermission);
     }
 

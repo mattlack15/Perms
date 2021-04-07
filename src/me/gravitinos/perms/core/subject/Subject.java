@@ -217,7 +217,7 @@ public abstract class Subject<T extends SubjectData> {
      * @return the last permission that matches the specified permission
      */
     public void removePermission(@NotNull PPermission permission) {
-        this.ownPermissions.removeIf((perm) -> Objects.isNull(perm) || perm.getPermissionIdentifier().equals(permission.getPermissionIdentifier()));
+        this.ownPermissions.removeIf((perm) -> Objects.isNull(perm) || perm.equals(permission));
         if (autoQueue)
             queueSave();
     }
