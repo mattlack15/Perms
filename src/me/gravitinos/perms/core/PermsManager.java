@@ -29,9 +29,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class PermsManager {
@@ -96,10 +94,14 @@ public class PermsManager {
 
         try {
             System.out.println("Loading groups");
-            this.groupManager.loadGroups().get(); //Load groups
+            this.groupManager.loadGroups().get(2, TimeUnit.SECONDS); //Load groups
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            e.printStackTrace();
+        }
+        try {
             System.out.println("Loading ladders");
-            this.ladderManager.loadLadders().get(); //Load rank ladders
-        } catch (InterruptedException | ExecutionException e) {
+            this.ladderManager.loadLadders().get(2, TimeUnit.SECONDS); //Load rank ladders
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
             e.printStackTrace();
         }
 

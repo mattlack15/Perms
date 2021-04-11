@@ -106,7 +106,7 @@ public class SQLDao implements AutoCloseable {
     }
 
     protected String getRankLaddersTableCreationUpdate() {
-        return "CREATE TABLE IF NOT EXISTS " + TABLE_RANK_LADDERS + " (Id varchar(48), Data varchar(1024), Groups varchar(16384), Context varchar(8192))";
+        return "CREATE TABLE IF NOT EXISTS " + TABLE_RANK_LADDERS + " (Id varchar(48), Data varchar(1024), Groups TEXT, Context TEXT)";
     }
 
     protected String getSubjectDataFromSubjectIdQuery() {
