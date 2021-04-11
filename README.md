@@ -38,4 +38,4 @@ All users and groups will queue updates to send to the data storage system autom
 You may manually queue a save by calling queueSave().
 
 ### User/Group data
-User/Group data may be accessed by called getData() on either a User or a Group, it will return the corresponding SubjectData object.
+User/Group data may be accessed by calling getData() on either a User or a Group, it will return the corresponding SubjectData object.
