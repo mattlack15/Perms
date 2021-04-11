@@ -2,6 +2,7 @@ main: me.gravitinos.perms.spigot.SpigotPerms
 name: SoraxusPerms
 version: 2.0
 author: Gravitinos
+api-version: 1.12.2
 description: Permissions Plugin by Gravitinos
 softdepend: [PlaceholderAPI]
 commands:

@@ -27,30 +27,35 @@ public class RankLadder {
 
     public synchronized void setRank(User user, int index) {
         Group group = GroupManager.instance.getGroupExact(groups.get(index));
-        if(group == null)
+        if (group == null)
             return;
         user.addInheritance(group, context);
     }
 
-    public synchronized void setName(String name){
+    public synchronized void setName(String name) {
         this.data.put("name", name);
         dataManager.updateRankLadder(this);
     }
 
-    public synchronized String getName(){
+    public synchronized String getName() {
         return this.data.get("name");
     }
 
     public synchronized void promote(User user) {
         this.cleanupGroups();
         int currentIndex = getRankIndex(user);
-        if(currentIndex+1 >= this.groups.size())
+
+        if (currentIndex + 1 >= this.groups.size())
             return;
-        for(Group group : user.getGroupsInOrderOfPriority()){
-            if(this.groups.contains(group.getSubjectId()))
+
+        for (Group group : user.getGroupsInOrderOfPriority()) {
+            if (this.groups.contains(group.getSubjectId()))
                 user.removeInheritance(group);
         }
-        user.addInheritance(GroupManager.instance.getGroupExact(this.groups.get(currentIndex+1)), context);
+
+        Group group = GroupManager.instance.getGroupExact(this.groups.get(currentIndex + 1));
+        if (group != null)
+            user.addInheritance(group, context);
     }
 
     public synchronized void demote(User user) {
@@ -58,21 +63,24 @@ public class RankLadder {
         int currentIndex = getRankIndex(user);
 
         //Remove if they have it
-        for(Group group : user.getGroupsInOrderOfPriority()){
-            if(this.groups.contains(group.getSubjectId()))
+        for (Group group : user.getGroupsInOrderOfPriority()) {
+            if (this.groups.contains(group.getSubjectId()))
                 user.removeInheritance(group);
         }
 
-        //If there's nothing below, then just leave it at they have nothing that is in this ladder
-        if(currentIndex-1 < 0)
+        //If there's nothing below, then just leave it at: they have nothing that is in this ladder
+        if (currentIndex - 1 < 0)
             return;
-        user.addInheritance(GroupManager.instance.getGroupExact(this.groups.get(currentIndex-1)), context);
+
+        Group group = GroupManager.instance.getGroupExact(this.groups.get(currentIndex - 1));
+        if (group != null)
+            user.addInheritance(group, context);
     }
 
-    public synchronized int getRankIndex(User user){
+    public synchronized int getRankIndex(User user) {
         List<Group> groups = user.getGroupsInOrderOfPriority();
-        for(Group g : groups){
-            if(this.groups.contains(g.getSubjectId()))
+        for (Group g : groups) {
+            if (this.groups.contains(g.getSubjectId()))
                 return this.groups.indexOf(g.getSubjectId());
         }
         return -1;
@@ -81,22 +89,22 @@ public class RankLadder {
     /**
      * Setting context might remove certain groups that become incompatible
      */
-    public synchronized void setContext(ContextSet set){
+    public synchronized void setContext(ContextSet set) {
         this.context = set;
         dataManager.updateRankLadder(this);
         this.cleanupGroups();
     }
 
-    public String getDataEncoded(){
+    public String getDataEncoded() {
         return MapUtil.mapToString(data);
     }
 
-    public synchronized List<UUID> cleanupGroups(){
+    public synchronized List<UUID> cleanupGroups() {
         List<UUID> removed = new ArrayList<>();
         this.groups.removeIf(g -> {
             Group m = GroupManager.instance.getGroupExact(g);
             boolean rem = m == null || !canAddGroup(m);
-            if(rem)
+            if (rem)
                 removed.add(g);
             return rem;
         });
@@ -108,29 +116,30 @@ public class RankLadder {
         return Boolean.parseBoolean(this.data.get("locked"));
     }
 
-    public synchronized void setGodLocked(boolean locked){
+    public synchronized void setGodLocked(boolean locked) {
         this.data.put("locked", Boolean.toString(locked));
         dataManager.updateRankLadder(this);
     }
 
-    public synchronized boolean addGroup(Group group){
-        if(!canAddGroup(group))
+    public synchronized boolean addGroup(Group group) {
+        if (!canAddGroup(group))
             return false;
-        if(!this.groups.contains(group.getSubjectId())) {
+        if (!this.groups.contains(group.getSubjectId())) {
             this.groups.add(group.getSubjectId());
             dataManager.updateRankLadder(this);
         }
         return true;
     }
+
     public synchronized boolean removeGroup(Group group) {
         return this.groups.remove(group.getSubjectId());
     }
 
-    public boolean containsGroup(Group group) {
+    public synchronized boolean containsGroup(Group group) {
         return this.groups.contains(group.getSubjectId());
     }
 
-    public boolean canAddGroup(Group group){
+    public synchronized boolean canAddGroup(Group group) {
         return context.isSatisfiedBy(this.context) && this.groups.size() < 200; //Cap of 200 groups due to SQL storage cap
     }
 }

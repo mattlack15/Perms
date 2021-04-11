@@ -271,13 +271,6 @@ public class GroupManager {
      * @return The group
      */
     public Group getGroupExact(UUID groupId) {
-        if (!this.isGroupExactLoaded(groupId)) {
-            try {
-                this.loadGroup(groupId, (id) -> new SubjectRef(this.getGroupExact(id)));
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
         for (Group g : getLoadedGroups()) {
             if (g.getSubjectId().equals(groupId)) {
                 return g;
