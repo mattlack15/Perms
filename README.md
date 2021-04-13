@@ -2,6 +2,7 @@
 This is a permissions plugin.
 
 ## Extensive in-game GUI
+https://imgur.com/a/xbDBbWT
 
 ## API
 ### Getting a user object
