@@ -347,7 +347,7 @@ public abstract class Subject<T extends SubjectData> {
      * @return
      */
     public List<PPermission> getAllPermissions() {
-        ArrayList<PPermission> perms = new ArrayList<>(this.getPermissions().getPermissions());
+        List<PPermission> perms = this.getPermissions().getPermissions();
 
         for (Inheritance inheritances : getInheritances()) {
 
