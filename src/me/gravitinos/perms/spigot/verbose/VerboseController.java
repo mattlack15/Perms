@@ -30,7 +30,7 @@ public class VerboseController {
         return this.enabled;
     }
 
-    public void handlePermissionCheck(Player player, StackTraceElement stackTrackElement, String permission){
+    public void handlePermissionCheck(Player player, StackTraceElement stackTrackElement, String permission, boolean result){
         for(UUID id : enabled.keySet()){
             if(Bukkit.getPlayer(id) == null){
                 continue;
@@ -56,11 +56,11 @@ public class VerboseController {
             if(failedFilters)
                 continue;
 
-            messagePlayer(Bukkit.getPlayer(id), stackTrackElement, permission);
+            messagePlayer(Bukkit.getPlayer(id), stackTrackElement, permission, result);
         }
     }
 
-    public void messagePlayer(Player player, StackTraceElement stackTraceElement, String permission){
+    public void messagePlayer(Player player, StackTraceElement stackTraceElement, String permission, boolean result){
         try {
             Class<?> clazz = Class.forName(stackTraceElement.getClassName());
 
@@ -68,7 +68,7 @@ public class VerboseController {
             if(pluginName.contains(".jar") && pluginName.contains(File.separator) && pluginName.lastIndexOf(File.separator) != pluginName.length()-1){
                 pluginName = pluginName.substring(pluginName.lastIndexOf(File.separator)+1, pluginName.lastIndexOf(".jar"));
             }
-            player.spigot().sendMessage(ComponentUtil.getHoverComponent(SpigotPerms.pluginPrefix + pluginName +
+            player.spigot().sendMessage(ComponentUtil.getHoverComponent(SpigotPerms.pluginPrefix + (result ? "&aTRUE&7 " : "&cFALSE&7 ") + pluginName +
                     ChatColor.WHITE + " checked for " + ChatColor.RED + ChatColor.RED + permission, "&eAt: &7" + stackTraceElement.toString()));
         } catch (ClassNotFoundException ignored) {
         }

@@ -56,57 +56,64 @@ public class SpigotPermissible extends PermissibleBase {
 
             //Verbose
             StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
+
+            boolean result = check(requ);
+
             if (stackTraceElements.length > 1) {
-                VerboseController.instance.handlePermissionCheck(player, stackTraceElements[3], requ);
+                VerboseController.instance.handlePermissionCheck(player, stackTraceElements[3], requ, result);
             }
-
-            //Permission Index
-            PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> SpigotPerms.instance.addPermissionToIndex(requ));
-
-            User user = UserManager.instance.getUser(player.getUniqueId());
-
-            if(PermsManager.instance.getGodUsers().contains(player.getName())) {
-                return true;
-            }
-            if (user == null) {
-                return false;
-            }
-
-            ContextSet context = new MutableContextSet(Context.CONTEXT_SERVER_LOCAL, new Context(Context.WORLD_IDENTIFIER, player.getWorld().getName()));
-
-            List<String> perms = new ArrayList<>();
-            user.getAllPermissions(context).forEach(p -> perms.add(p.getPermission()));
-
-            if (perms.contains("-" + requ)) {
-                return false;
-            }
-            boolean returnValue = false;
-            for (String perm : perms) {
-                boolean value = true;
-                while (perm.startsWith("-")) {
-                    perm = perm.substring(1);
-                    value = !value;
-                }
-                if(perm.length() == 0) {
-                    continue;
-                }
-                if (perm.equals("*") || perm.equalsIgnoreCase(requ)) {
-                    if(!value)
-                        return false;
-                    returnValue = true;
-                    continue;
-                }
-                if (perm.endsWith("*") && requ.startsWith(perm.substring(0, perm.length() - 1))) {
-                    if(!value)
-                        return false;
-                    returnValue = true;
-                }
-            }
-            return returnValue;
+            return result;
         } finally {
             nano = System.nanoTime() - nano;
         }
     }
+
+    public boolean check(String requ) {
+        //Permission Index
+        PermsManager.instance.getImplementation().getAsyncExecutor().execute(() -> SpigotPerms.instance.addPermissionToIndex(requ));
+
+        User user = UserManager.instance.getUser(player.getUniqueId());
+
+        if(PermsManager.instance.getGodUsers().contains(player.getName())) {
+            return true;
+        }
+        if (user == null) {
+            return false;
+        }
+
+        ContextSet context = new MutableContextSet(Context.CONTEXT_SERVER_LOCAL, new Context(Context.WORLD_IDENTIFIER, player.getWorld().getName()));
+
+        List<String> perms = new ArrayList<>();
+        user.getAllPermissions(context).forEach(p -> perms.add(p.getPermission()));
+
+        if (perms.contains("-" + requ)) {
+            return false;
+        }
+        boolean returnValue = false;
+        for (String perm : perms) {
+            boolean value = true;
+            while (perm.startsWith("-")) {
+                perm = perm.substring(1);
+                value = !value;
+            }
+            if(perm.length() == 0) {
+                continue;
+            }
+            if (perm.equals("*") || perm.equalsIgnoreCase(requ)) {
+                if(!value)
+                    return false;
+                returnValue = true;
+                continue;
+            }
+            if (perm.endsWith("*") && requ.startsWith(perm.substring(0, perm.length() - 1))) {
+                if(!value)
+                    return false;
+                returnValue = true;
+            }
+        }
+        return returnValue;
+    }
+
     @Override
     public boolean hasPermission(Permission requ) {
         return requ != null && this.hasPermission(requ.getName());

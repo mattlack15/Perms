@@ -13,7 +13,7 @@ public final class ImmutablePermissionList implements Iterable<PPermission>{
         this.perms = perms;
     }
 
-    public ArrayList<PPermission> getPermissions() {
+    public List<PPermission> getPermissions() {
         return new ArrayList<>(perms);
     }
 

@@ -86,7 +86,7 @@ public abstract class Menu {
         MenuManager.instance.setInfo(p.getUniqueId(), info);
         doInMainThread(() -> {
             //To make sure it is set when the inv is opened
-            if (pastInfo != null && pastInfo.getCurrentInv() != null && pastInfo.getCurrentInv().getSize() == inv.getSize() && pastInfo.getCurrentInv().getTitle().equals(inv.getTitle())) {
+            if (pastInfo != null && pastInfo.getCurrentInv() != null && pastInfo.getCurrentInv().getSize() == inv.getSize()) {
                 pastInfo.getCurrentInv().setContents(inv.getContents());
                 info.setCurrentInv(pastInfo.getCurrentInv());
                 MenuManager.instance.addMenu(this); //Make sure this menu is added to the list
