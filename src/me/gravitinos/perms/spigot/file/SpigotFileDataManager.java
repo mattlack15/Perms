@@ -26,6 +26,8 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 
 /**
  * Spigot data manager
@@ -86,7 +88,9 @@ public class SpigotFileDataManager extends DataManager {
             saveGroups = true;
             SpigotPerms.instance.getImpl().getAsyncExecutor().execute(() -> {
                 try {
-                    groupsConfig.save(Files.GROUPS_FILE);
+                    synchronized (SpigotFileDataManager.this) {
+                        groupsConfig.save(Files.GROUPS_FILE);
+                    }
                     setSavingGroups(false);
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -130,7 +134,7 @@ public class SpigotFileDataManager extends DataManager {
     @Override
     public CompletableFuture<Void> addSubject(Subject subject) {
         CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
+        queueAsync(() -> {
             //If it already exists, remove it, then continue execution
             if (this.subjectExists(subject.getSubjectId())) {
                 try {
@@ -315,7 +319,7 @@ public class SpigotFileDataManager extends DataManager {
     @Override
     public CompletableFuture<Void> removeSubject(UUID name) {
         CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
+        queueAsync(() -> {
             synchronized (this) {
                 if (this.getSubjectType(name).equals(Subject.USER)) {
                     usersConfig.set(USER_SECTION + "." + name, null);
@@ -411,7 +415,7 @@ public class SpigotFileDataManager extends DataManager {
 
     public CompletableFuture<Void> addPermission(Subject<?> subject, PPermission permission) {
         CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
+        queueAsync(() -> {
             ConfigurationSection section;
             synchronized (this) {
                 if (subject.getType().equals(Subject.USER)) {
@@ -567,7 +571,7 @@ public class SpigotFileDataManager extends DataManager {
 
     public CompletableFuture<Void> addInheritance(@NotNull CachedInheritance inheritance) {
         CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
+        queueAsync(() -> {
             ConfigurationSection section = getSection(inheritance.getChild());
 
             if (section == null) {
@@ -633,7 +637,7 @@ public class SpigotFileDataManager extends DataManager {
     @Override
     public CompletableFuture<Void> updateSubjectData(Subject<?> subject) {
         CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
+        queueAsync(() -> {
             ConfigurationSection section = getSection(subject.getSubjectId());
 
             if (section == null) {
@@ -687,7 +691,7 @@ public class SpigotFileDataManager extends DataManager {
 
     public CompletableFuture<Void> addPermissions(Subject<?> subject, ImmutablePermissionList list) {
         CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
+        queueAsync(() -> {
             for (PPermission p : list) {
                 try {
                     this.addPermission(subject, p).get();
@@ -734,7 +738,7 @@ public class SpigotFileDataManager extends DataManager {
 
     public CompletableFuture<Void> addSubjects(List<Subject<?>> subjects) {
         CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
+        queueAsync(() -> {
             for (Subject<?> subject : subjects) {
                 try {
                     this.addSubject(subject).get();
@@ -750,7 +754,7 @@ public class SpigotFileDataManager extends DataManager {
     @Override
     public CompletableFuture<Void> removeSubjects(List<UUID> subjects) {
         CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
+        queueAsync(() -> {
             for (UUID subject : subjects) {
                 try {
                     this.removeSubject(subject).get();
@@ -787,7 +791,7 @@ public class SpigotFileDataManager extends DataManager {
     @Override
     public CompletableFuture<Void> addInheritances(List<Inheritance> inheritances) {
         CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
+        queueAsync(() -> {
             for (Inheritance inheritance : inheritances) {
                 try {
                     this.addInheritance(inheritance.toCachedInheritance()).get();
@@ -803,7 +807,7 @@ public class SpigotFileDataManager extends DataManager {
     @Override
     public CompletableFuture<List<CachedSubject>> getAllSubjectsOfType(String type) {
         CompletableFuture<List<CachedSubject>> future = new CompletableFuture<>();
-        runAsync(() -> {
+        queueAsync(() -> {
             List<CachedSubject> subjects = new ArrayList<>();
             if (Subject.USER.equals(type)) {
                 synchronized (this) {
@@ -841,7 +845,7 @@ public class SpigotFileDataManager extends DataManager {
     @Override
     public CompletableFuture<Void> clearAllData() {
         CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
+        queueAsync(() -> {
             synchronized (this) {
                 groupsConfig.set(GROUP_SECTION, null);
                 groupsConfig.createSection(GROUP_SECTION);
@@ -862,7 +866,7 @@ public class SpigotFileDataManager extends DataManager {
     @Override
     public CompletableFuture<Void> clearSubjectsOfType(String type) {
         CompletableFuture<Void> future = new CompletableFuture<>();
-        runAsync(() -> {
+        queueAsync(() -> {
             if (Subject.USER.equals(type)) {
                 synchronized (this) {
                     usersConfig.set(USER_SECTION, null);
@@ -936,6 +940,47 @@ public class SpigotFileDataManager extends DataManager {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         future.complete(true);
         return future;
+    }
+
+    private List<Runnable> taskQueue = new ArrayList<>();
+    private ReentrantLock taskQueueLock = new ReentrantLock();
+
+    private <T> CompletableFuture<T> queueAsync(Supplier<T> task) {
+        CompletableFuture<T> future = new CompletableFuture<>();
+        taskQueueLock.lock();
+        try {
+            taskQueue.add(() -> {
+                T obj = task.get();
+                future.complete(obj);
+            });
+        } finally {
+            taskQueueLock.unlock();
+        }
+        return future;
+    }
+
+    private CompletableFuture<Void> queueAsync(Runnable runnable) {
+        return queueAsync(() -> {
+            runnable.run();
+            return null;
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> flushUpdateQueue() {
+        runAsync(() -> {
+            taskQueueLock.lock();
+            List<Runnable> list;
+            try {
+                list = new ArrayList<>(taskQueue);
+                taskQueue.clear();
+            } finally {
+                taskQueueLock.unlock();
+            }
+            list.forEach(Runnable::run);
+            return null;
+        });
+        return super.flushUpdateQueue();
     }
 
     @Override
